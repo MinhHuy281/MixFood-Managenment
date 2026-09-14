@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}POS | MixFood Manager{% endblock %}
+{% block body_class %}pos-body{% endblock %}
+{% block page_class %}pos-shell{% endblock %}
+{% block authenticated_header %}{% endblock %}
+{% block content %}
+<div class="pos-window">
+    <header class="pos-menubar">
+        <div class="pos-brand"><span class="brand-mark">MIX</span><strong>DRS Manager</strong><small>3.1.7</small></div>
+        <div class="store-name">MIX FOOD <span>ẨM THỰC THÁI - K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng - Mã: 13255</span></div>
+        <nav class="pos-nav"><button>HỆ THỐNG</button><button>CÀI ĐẶT</button><button>QUẢN LÝ</button><button>BÁO CÁO</button><button>TRỢ GIÚP</button></nav>
+    </header>
+    <div class="pos-layout">
+        <aside class="table-sidebar">
+            <section class="table-zone"><h3>TRONG NHÀ <em>(1/5)</em></h3><div class="table-grid">
+                <button class="table available">5</button><button class="table available">6</button><button class="table active">7</button><button class="table available">8</button><button class="table available">9</button>
+            </div></section>
+            <section class="table-zone"><h3>TẦNG 2 <em>(3/14)</em></h3><div class="table-grid">
+                <button class="table active">10</button><button class="table">11</button><button class="table">12</button><button class="table">13</button><button class="table active">14</button><button class="table active">15</button><button class="table">16</button><button class="table">17</button><button class="table">18</button><button class="table">19</button><button class="table">20</button><button class="table">21</button><button class="table">22</button><button class="table">23</button>
+            </div></section>
+            <section class="table-zone"><h3>NGOÀI TRỜI <em>(1/4)</em></h3><div class="table-grid four"><button class="table">1</button><button class="table active">2</button><button class="table">3</button><button class="table">4</button></div></section>
+            <section class="table-zone"><h3>MANG VỀ <em>(1/5)</em></h3><div class="table-grid five"><button class="table takeaway">V1</button><button class="table">V2</button><button class="table">V3</button><button class="table">V4</button><button class="table">V5</button></div></section>
+            <section class="table-zone"><h3>NHÂN VIÊN (ĐỒ ĂN) <em>(4/15)</em></h3><div class="table-grid five"><button class="table active">NV1</button><button class="table active">NV2</button><button class="table active">NV3</button><button class="table active">NV4</button><button class="table">NV5</button><button class="table">NV6</button><button class="table">NV7</button><button class="table">NV8</button><button class="table">NV9</button><button class="table">NV10</button></div></section>
+            <section class="table-zone"><h3>NHÂN VIÊN (NƯỚC) <em>(1/10)</em></h3><div class="table-grid five"><button class="table active">NVD1</button><button class="table">NVD2</button><button class="table">NVD3</button><button class="table">NVD4</button><button class="table">NVD5</button></div></section>
+        </aside>
+        <section class="order-column">
+            <div class="order-heading"><strong>Bàn <span id="selected-table">19</span></strong><small>06:20 PM · 2 phút</small></div>
+            <div class="order-meta"><span>Tình trạng:</span> <b>Đang phục vụ (4)</b><br><span>Khách:</span> <b>Thu Ngân 2</b></div>
+            <div class="order-items" id="order-items">
+                <div class="order-item"><b>Phồng tôm</b><span><strong>1</strong> Phần <i>15.000 đ</i></span></div>
+                <div class="order-item"><b>Pad Thai gà</b><span><strong>1</strong> Phần <i>75.000 đ</i></span></div>
+                <div class="order-item"><b>Liên Bò + Nấm</b><span><strong>1</strong> Phần <i>95.000 đ</i></span></div>
+                <div class="order-item"><b>Trà tắc</b><span><strong>1</strong> Bình <i>17.000 đ</i></span></div>
+            </div>
+            <div class="order-total"><span>Tiền món: <b>202.000 đ</b></span><span>Phụ thu: <b>0 đ</b></span><span>Giảm giá: <b>0 đ</b></span><strong>THÀNH TIỀN: 202.000 đ</strong></div>
+            <button class="pay-button">Thanh toán</button>
+            <div class="order-actions"><button>Chuyển</button><button>Nhập</button><button>Ghép</button><button>Tách</button></div>
+        </section>
+        <section class="menu-column">
+            <div class="menu-categories" role="tablist"><button class="category active" data-category="KHAI VỊ">KHAI VỊ</button><button class="category" data-category="GỎI">GỎI</button><button class="category" data-category="PAD THAI">PAD THAI</button><button class="category" data-category="TOMYUM">TOMYUM</button><button class="category" data-category="LARB">LARB</button><button class="category" data-category="MỲ XÀO">MỲ XÀO</button><button class="category" data-category="CƠM CHIÊN">CƠM CHIÊN</button><button class="category" data-category="TRÁNG MIỆNG">TRÁNG MIỆNG</button><button class="category" data-category="NƯỚC GIẢI KHÁT">NƯỚC GIẢI KHÁT</button></div>
+            <div class="menu-head"><b id="menu-title">KHAI VỊ</b><button class="collapse-menu">&lt; 1 &gt;</button></div>
+            <div class="dish-grid" id="dish-grid"><button class="dish" data-dish="Pad Thai bò" data-price="85000"><b>Pad Thai bò</b><small>85.000 đ/Phần</small></button><button class="dish" data-dish="Pad Thai gà" data-price="75000"><b>Pad Thai gà</b><small>75.000 đ/Phần</small></button><button class="dish" data-dish="Pad Thai heo" data-price="75000"><b>Pad Thai heo</b><small>75.000 đ/Phần</small></button><button class="dish" data-dish="Pad Thai hải sản" data-price="90000"><b>Pad Thai hải sản</b><small>90.000 đ/Phần</small></button><button class="dish" data-dish="Pad Thai nấm" data-price="70000"><b>Pad Thai nấm</b><small>70.000 đ/Phần</small></button><button class="dish" data-dish="Pad Thai thập cẩm" data-price="95000"><b>Pad Thai thập cẩm</b><small>95.000 đ/Phần</small></button><button class="dish" data-dish="Pad Thai đặc biệt" data-price="105000"><b>Pad Thai đặc biệt</b><small>105.000 đ/Phần</small></button><button class="dish" data-dish="Pad Thai Tôm" data-price="95000"><b>Pad Thai Tôm</b><small>95.000 đ/Phần</small></button></div>
+        </section>
+        <section class="records-column">
+            <div class="record-tabs"><button class="record-tab active">Hóa đơn</button><button class="record-tab">Đếm bàn</button><button class="record-tab">Thời gian</button><button class="record-tab">Nhân viên</button><button class="record-tab">Tiền món</button><button class="record-tab">Tiền giờ</button><button class="record-tab">Phụ thu</button><button class="record-tab">Giảm giá</button><button class="record-tab">VAT</button></div>
+            <div class="invoice-table-wrap"><table class="invoice-table"><thead><tr><th>Hóa đơn</th><th>Bàn</th><th>Thời gian</th><th>Nhân viên</th><th>Tiền món</th><th>Giảm giá</th><th>Thành tiền</th><th>Kiểu thanh toán</th><th>Khu vực</th></tr></thead><tbody><tr><td>00421</td><td>16</td><td>12:27 PM</td><td>Thu Ngân 1</td><td>410.000</td><td>0</td><td>410.000</td><td>Thẻ ngân hàng</td><td>Tầng 2</td></tr><tr><td>00422</td><td>19</td><td>12:34 PM</td><td>Thu Ngân 1</td><td>225.000</td><td>0</td><td>225.000</td><td>Tiền mặt</td><td>Tầng 2</td></tr><tr><td>00423</td><td>15</td><td>12:55 PM</td><td>Thu Ngân 1</td><td>334.000</td><td>0</td><td>334.000</td><td>Tiền mặt</td><td>Tầng 2</td></tr><tr><td>00424</td><td>14</td><td>01:06 PM</td><td>Thu Ngân 1</td><td>315.000</td><td>10%</td><td>284.400</td><td>Thẻ ngân hàng</td><td>Tầng 2</td></tr><tr><td>00425</td><td>V1</td><td>01:20 PM</td><td>Thu Ngân 2</td><td>210.000</td><td>0</td><td>210.000</td><td>Ví điện tử</td><td>Mang về</td></tr><tr><td>00426</td><td>14</td><td>01:42 PM</td><td>Thu Ngân 1</td><td>281.000</td><td>0</td><td>281.000</td><td>Tiền mặt</td><td>Tầng 2</td></tr><tr><td>00427</td><td>19</td><td>02:18 PM</td><td>Thu Ngân 2</td><td>314.000</td><td>0</td><td>314.000</td><td>Thẻ ngân hàng</td><td>Tầng 2</td></tr></tbody></table></div>
+            <div class="activity-panel"><div class="activity-heading"><span>Thời điểm</span><span>Hoạt động</span><span>Chi tiết</span><span>Thực hiện</span></div><div class="activity-row"><time>11:12 AM</time><span>Sửa hóa đơn</span><span>Món Thái gà đã bán thành tiền 14.000 đ</span><b>Thu Ngân 1</b></div><div class="activity-row"><time>12:27 PM</time><span>Sửa món</span><span>Pad Thai bò thêm 1 phần</span><b>Thu Ngân 1</b></div><div class="activity-row danger"><time>12:34 PM</time><span>Hủy món</span><span>Bàn 19 hủy món Phồng tôm</span><b>Thu Ngân 1</b></div><div class="activity-row success"><time>02:58 PM</time><span>Kết ca</span><span>Kết ca chung, tổng 2.058.400 đ</span><b>Thu Ngân 1</b></div></div>
+        </section>
+    </div>
+    <footer class="pos-status"><span>▣ IP 192.168.88.51</span><span>◉ Không có tablet/smartphone kết nối</span><span>◷ Chưa báo cáo qua mạng</span><span>POS-80C</span><span>● {{ user.get_username }}</span><span>14/09/2026 06:20 PM</span><b>Bình thường</b></footer>
+</div>
+<script src="{% static 'js/pos.js' %}"></script>
+{% endblock %}

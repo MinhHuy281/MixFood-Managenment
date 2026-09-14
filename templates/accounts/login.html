@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Đăng nhập | MixFood Manager{% endblock %}
+{% block content %}
+<section class="login-layout">
+    <div class="login-intro">
+        <p class="eyebrow">THAI KITCHEN OPERATIONS</p>
+        <h1>Quản lý cửa hàng gọn gàng, phục vụ nhanh hơn.</h1>
+        <p>Không gian điều hành cho bán hàng, bàn ăn, hóa đơn và kho nguyên liệu.</p>
+    </div>
+    <div class="login-panel">
+        <p class="eyebrow">MIXFOOD MANAGER</p>
+        <h2>Đăng nhập</h2>
+        {% if form.errors %}<p class="form-error">Tên đăng nhập hoặc mật khẩu không đúng.</p>{% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <label for="id_username">Tên đăng nhập</label>
+            {{ form.username }}
+            <label for="id_password">Mật khẩu</label>
+            {{ form.password }}
+            <button type="submit" class="primary-button">Vào hệ thống</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

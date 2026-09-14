@@ -1,0 +1,36 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}MixFood Manager{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% if user.is_authenticated %}
+    {% block authenticated_header %}
+    <header class="topbar">
+        <a class="brand" href="{% url 'dashboard:home' %}">MIXFOOD <span>THAI KITCHEN</span></a>
+        <nav class="topnav" aria-label="Điều hướng chính">
+            <a href="{% url 'dashboard:home' %}">Tổng quan</a>
+            <a href="#">POS</a>
+            <a href="#">Hóa đơn</a>
+            <a href="#">Kho</a>
+            <a href="#">Báo cáo</a>
+        </nav>
+        <div class="account-menu">
+            <span>{{ user.get_username }}</span>
+            <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="link-button">Đăng xuất</button>
+            </form>
+        </div>
+    </header>
+    {% endblock %}
+    {% endif %}
+    <main class="page-shell {% block page_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
