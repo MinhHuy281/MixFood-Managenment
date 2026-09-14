@@ -1,23 +1,16 @@
 {% extends 'base.html' %}
 {% block title %}Đăng nhập | MixFood Manager{% endblock %}
 {% block content %}
-<section class="login-layout">
-    <div class="login-intro">
-        <p class="eyebrow">THAI KITCHEN OPERATIONS</p>
-        <h1>Quản lý cửa hàng gọn gàng, phục vụ nhanh hơn.</h1>
-        <p>Không gian điều hành cho bán hàng, bàn ăn, hóa đơn và kho nguyên liệu.</p>
-    </div>
-    <div class="login-panel">
-        <p class="eyebrow">MIXFOOD MANAGER</p>
-        <h2>Đăng nhập</h2>
-        {% if form.errors %}<p class="form-error">Tên đăng nhập hoặc mật khẩu không đúng.</p>{% endif %}
+<section class="legacy-login">
+    <div class="legacy-dialog-title">Đăng nhập hệ thống - MIX FOOD</div>
+    <div class="legacy-dialog-body">
+        <div class="legacy-login-mark">DRS<br><small>Manager 3.1.7</small></div>
         <form method="post">
             {% csrf_token %}
-            <label for="id_username">Tên đăng nhập</label>
-            {{ form.username }}
-            <label for="id_password">Mật khẩu</label>
-            {{ form.password }}
-            <button type="submit" class="primary-button">Vào hệ thống</button>
+            {% if form.errors %}<p class="form-error">Sai tên đăng nhập hoặc mật khẩu.</p>{% endif %}
+            <label for="id_username">Tên đăng nhập</label>{{ form.username }}
+            <label for="id_password">Mật khẩu</label>{{ form.password }}
+            <div class="legacy-login-actions"><button class="primary-button" type="submit">Đăng nhập</button><button class="secondary-button" type="reset">Hủy</button></div>
         </form>
     </div>
 </section>

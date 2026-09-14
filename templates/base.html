@@ -11,14 +11,15 @@
     {% if user.is_authenticated %}
     {% block authenticated_header %}
     <header class="topbar">
-        <a class="brand" href="{% url 'dashboard:home' %}">MIXFOOD <span>THAI KITCHEN</span></a>
+        <a class="brand" href="{% url 'dashboard:home' %}"><span class="legacy-close">×</span> DRS Manager <small>3.1.7</small></a>
+        <span class="legacy-store">MIX FOOD</span>
+        <span class="legacy-address">ẨM THỰC THÁI - K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng - Mã: 13255</span>
         <nav class="topnav" aria-label="Điều hướng chính">
-            <a href="{% url 'dashboard:home' %}">Tổng quan</a>
-            <a href="#">POS</a>
-            <a href="{% url 'dining:home' %}">Bàn</a>
-            <a href="{% url 'sales:invoices' %}">Hóa đơn</a>
-            <a href="{% url 'catalog:home' %}">Món & kho</a>
-            <a href="#">Báo cáo</a>
+            <a href="{% url 'dashboard:home' %}">HỆ THỐNG</a>
+            <a href="{% url 'catalog:home' %}">CÀI ĐẶT</a>
+            <a href="{% url 'dining:home' %}">QUẢN LÝ</a>
+            <a href="{% url 'sales:invoices' %}">BÁO CÁO</a>
+            <a href="#">TRỢ GIÚP</a>
         </nav>
         <div class="account-menu">
             <span>{{ user.get_username }}</span>

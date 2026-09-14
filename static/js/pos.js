@@ -9,6 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const cart = new Map();
     let selectedTableId = null;
 
+    document.querySelectorAll('.pos-menu-item > button').forEach((menuButton) => {
+        menuButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const currentMenu = menuButton.parentElement;
+            document.querySelectorAll('.pos-menu-item').forEach((menu) => menu.classList.remove('open'));
+            currentMenu.classList.toggle('open');
+        });
+    });
+    document.addEventListener('click', () => document.querySelectorAll('.pos-menu-item').forEach((menu) => menu.classList.remove('open')));
+
     const formatMoney = (amount) => `${amount.toLocaleString('vi-VN')} đ`;
 
     const renderCart = () => {
