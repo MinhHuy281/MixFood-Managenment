@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}Hóa đơn | MixFood Manager{% endblock %}
+{% block content %}
+<section class="list-header"><div><p class="eyebrow">SALES / INVOICES</p><h1>Hóa đơn thanh toán</h1><p class="muted">Các hóa đơn được tạo từ luồng thanh toán POS.</p></div><a class="secondary-button" href="{% url 'dashboard:home' %}">Về POS</a></section>
+<div class="data-table"><table><thead><tr><th>Mã hóa đơn</th><th>Mã đơn</th><th>Bàn</th><th>Thời gian</th><th>Thu ngân</th><th>Thanh toán</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead><tbody>{% for invoice in invoices %}<tr><td><strong>{{ invoice.invoice_code }}</strong></td><td>{{ invoice.order.order_code }}</td><td>{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}Mang về{% endif %}</td><td>{{ invoice.paid_at|date:'d/m/Y H:i' }}</td><td>{{ invoice.cashier.username }}</td><td>{% for payment in invoice.payments.all %}{{ payment.get_method_display }}{% endfor %}</td><td>{{ invoice.total_amount|floatformat:0 }} đ</td><td><span class="status good">{{ invoice.get_status_display }}</span></td></tr>{% empty %}<tr><td colspan="8">Chưa có hóa đơn thanh toán.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

@@ -95,3 +95,20 @@ python manage.py seed_demo
 ```
 
 Lệnh này có thể chạy nhiều lần và cập nhật theo mã/tên dữ liệu demo. Các đơn hàng, hóa đơn và thanh toán chưa được tạo ở Phase 3; chúng thuộc Phase 4.
+
+## Phase 4: Đơn hàng, hóa đơn và thanh toán
+
+```powershell
+python manage.py makemigrations sales
+python manage.py migrate
+python manage.py test catalog dining dashboard sales
+```
+
+Luồng thanh toán POS:
+
+1. Chọn bàn.
+2. Chọn món, mỗi lần bấm món sẽ tăng số lượng trong giỏ.
+3. Chọn phương thức thanh toán.
+4. Bấm `Thanh toán`.
+
+Hệ thống tạo `Order`, `OrderItem`, `Invoice` và `Payment` trong cùng một database transaction. Hóa đơn thành công được hiển thị tại `/sales/invoices/` và bàn được trả về trạng thái trống.

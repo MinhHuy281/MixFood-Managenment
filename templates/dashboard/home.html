@@ -5,6 +5,7 @@
 {% block page_class %}pos-shell{% endblock %}
 {% block authenticated_header %}{% endblock %}
 {% block content %}
+<span hidden>{% csrf_token %}</span>
 <div class="pos-window">
     <header class="pos-menubar">
         <div class="pos-brand"><span class="brand-mark">MIX</span><strong>DRS Manager</strong><small>3.1.7</small></div>
@@ -17,25 +18,21 @@
         </aside>
         <section class="order-column">
                         <div class="order-heading"><strong>Bàn <span id="selected-table">-</span></strong><small>Chưa chọn bàn</small></div>
-            <div class="order-meta"><span>Tình trạng:</span> <b>Đang phục vụ (4)</b><br><span>Khách:</span> <b>Thu Ngân 2</b></div>
-            <div class="order-items" id="order-items">
-                <div class="order-item"><b>Phồng tôm</b><span><strong>1</strong> Phần <i>15.000 đ</i></span></div>
-                <div class="order-item"><b>Pad Thai gà</b><span><strong>1</strong> Phần <i>75.000 đ</i></span></div>
-                <div class="order-item"><b>Liên Bò + Nấm</b><span><strong>1</strong> Phần <i>95.000 đ</i></span></div>
-                <div class="order-item"><b>Trà tắc</b><span><strong>1</strong> Bình <i>17.000 đ</i></span></div>
-            </div>
-            <div class="order-total"><span>Tiền món: <b>202.000 đ</b></span><span>Phụ thu: <b>0 đ</b></span><span>Giảm giá: <b>0 đ</b></span><strong>THÀNH TIỀN: 202.000 đ</strong></div>
-            <button class="pay-button">Thanh toán</button>
+            <div class="order-meta"><span>Tình trạng:</span> <b id="order-status">Chưa chọn bàn</b><br><span>Khách:</span> <b>{{ user.get_username }}</b></div>
+            <div class="order-items" id="order-items"><p class="empty-order">Chọn bàn và món để bắt đầu.</p></div>
+            <div class="order-total"><span>Tiền món: <b id="order-subtotal">0 đ</b></span><span>Phụ thu: <b>0 đ</b></span><span>Giảm giá: <b>0 đ</b></span><strong>THÀNH TIỀN: <span id="order-total">0 đ</span></strong></div>
+            <select class="payment-method" id="payment-method" aria-label="Phương thức thanh toán"><option value="cash">Tiền mặt</option><option value="bank">Chuyển khoản</option><option value="card">Thẻ ngân hàng</option><option value="e_wallet">Ví điện tử</option></select>
+            <button class="pay-button" id="pay-button" disabled>Thanh toán</button>
             <div class="order-actions"><button>Chuyển</button><button>Nhập</button><button>Ghép</button><button>Tách</button></div>
         </section>
         <section class="menu-column">
             <div class="menu-categories" role="tablist">{% for category in categories %}<button class="category {% if forloop.first %}active{% endif %}" data-category-id="{{ category.pk }}" data-category="{{ category.name }}" style="background: {{ category.color }}">{{ category.name|upper }}</button>{% empty %}<small class="empty-sidebar">Chưa có danh mục</small>{% endfor %}</div>
             <div class="menu-head"><b id="menu-title">{% if categories %}{{ categories.0.name|upper }}{% else %}DANH MỤC MÓN{% endif %}</b><button class="collapse-menu">&lt; 1 &gt;</button></div>
-            <div class="dish-grid" id="dish-grid">{% for product in products %}<button class="dish" data-category-id="{{ product.category_id }}" data-dish="{{ product.name }}" data-price="{{ product.price }}"><b>{{ product.name }}</b><small>{{ product.price|floatformat:0 }} đ/{{ product.unit }}</small></button>{% empty %}<p class="empty-menu">Chưa có món đang bán. <a href="{% url 'catalog:products' %}">Thêm món</a></p>{% endfor %}</div>
+            <div class="dish-grid" id="dish-grid">{% for product in products %}<button class="dish" data-product-id="{{ product.pk }}" data-category-id="{{ product.category_id }}" data-dish="{{ product.name }}" data-unit="{{ product.unit }}" data-price="{{ product.price }}"><b>{{ product.name }}</b><small>{{ product.price|floatformat:0 }} đ/{{ product.unit }}</small></button>{% empty %}<p class="empty-menu">Chưa có món đang bán. <a href="{% url 'catalog:products' %}">Thêm món</a></p>{% endfor %}</div>
         </section>
         <section class="records-column">
             <div class="record-tabs"><button class="record-tab active">Hóa đơn</button><button class="record-tab">Đếm bàn</button><button class="record-tab">Thời gian</button><button class="record-tab">Nhân viên</button><button class="record-tab">Tiền món</button><button class="record-tab">Tiền giờ</button><button class="record-tab">Phụ thu</button><button class="record-tab">Giảm giá</button><button class="record-tab">VAT</button></div>
-            <div class="invoice-table-wrap"><table class="invoice-table"><thead><tr><th>Hóa đơn</th><th>Bàn</th><th>Thời gian</th><th>Nhân viên</th><th>Tiền món</th><th>Giảm giá</th><th>Thành tiền</th><th>Kiểu thanh toán</th><th>Khu vực</th></tr></thead><tbody><tr><td>00421</td><td>16</td><td>12:27 PM</td><td>Thu Ngân 1</td><td>410.000</td><td>0</td><td>410.000</td><td>Thẻ ngân hàng</td><td>Tầng 2</td></tr><tr><td>00422</td><td>19</td><td>12:34 PM</td><td>Thu Ngân 1</td><td>225.000</td><td>0</td><td>225.000</td><td>Tiền mặt</td><td>Tầng 2</td></tr><tr><td>00423</td><td>15</td><td>12:55 PM</td><td>Thu Ngân 1</td><td>334.000</td><td>0</td><td>334.000</td><td>Tiền mặt</td><td>Tầng 2</td></tr><tr><td>00424</td><td>14</td><td>01:06 PM</td><td>Thu Ngân 1</td><td>315.000</td><td>10%</td><td>284.400</td><td>Thẻ ngân hàng</td><td>Tầng 2</td></tr><tr><td>00425</td><td>V1</td><td>01:20 PM</td><td>Thu Ngân 2</td><td>210.000</td><td>0</td><td>210.000</td><td>Ví điện tử</td><td>Mang về</td></tr><tr><td>00426</td><td>14</td><td>01:42 PM</td><td>Thu Ngân 1</td><td>281.000</td><td>0</td><td>281.000</td><td>Tiền mặt</td><td>Tầng 2</td></tr><tr><td>00427</td><td>19</td><td>02:18 PM</td><td>Thu Ngân 2</td><td>314.000</td><td>0</td><td>314.000</td><td>Thẻ ngân hàng</td><td>Tầng 2</td></tr></tbody></table></div>
+            <div class="invoice-table-wrap"><table class="invoice-table"><thead><tr><th>Hóa đơn</th><th>Bàn</th><th>Thời gian</th><th>Nhân viên</th><th>Tiền món</th><th>Giảm giá</th><th>Thành tiền</th><th>Kiểu thanh toán</th><th>Khu vực</th></tr></thead><tbody>{% for invoice in invoices %}<tr><td>{{ invoice.invoice_code }}</td><td>{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}-{% endif %}</td><td>{{ invoice.paid_at|date:'H:i' }}</td><td>{{ invoice.cashier.username }}</td><td>{{ invoice.subtotal|floatformat:0 }}</td><td>{{ invoice.discount_amount|floatformat:0 }}</td><td>{{ invoice.total_amount|floatformat:0 }}</td><td>{% for payment in invoice.payments.all %}{{ payment.get_method_display }}{% endfor %}</td><td>{% if invoice.order.table %}{{ invoice.order.table.area.name }}{% else %}Mang về{% endif %}</td></tr>{% empty %}<tr><td colspan="9">Chưa có hóa đơn.</td></tr>{% endfor %}</tbody></table></div>
             <div class="activity-panel"><div class="activity-heading"><span>Thời điểm</span><span>Hoạt động</span><span>Chi tiết</span><span>Thực hiện</span></div><div class="activity-row"><time>11:12 AM</time><span>Sửa hóa đơn</span><span>Món Thái gà đã bán thành tiền 14.000 đ</span><b>Thu Ngân 1</b></div><div class="activity-row"><time>12:27 PM</time><span>Sửa món</span><span>Pad Thai bò thêm 1 phần</span><b>Thu Ngân 1</b></div><div class="activity-row danger"><time>12:34 PM</time><span>Hủy món</span><span>Bàn 19 hủy món Phồng tôm</span><b>Thu Ngân 1</b></div><div class="activity-row success"><time>02:58 PM</time><span>Kết ca</span><span>Kết ca chung, tổng 2.058.400 đ</span><b>Thu Ngân 1</b></div></div>
         </section>
     </div>
