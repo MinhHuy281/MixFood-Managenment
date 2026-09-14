@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}Nguyên liệu | MixFood Manager{% endblock %}
+{% block content %}
+<section class="list-header"><div><p class="eyebrow">INVENTORY / INGREDIENTS</p><h1>Nguyên liệu</h1></div><a class="primary-button" href="{% url 'catalog:ingredient_create' %}">+ Thêm nguyên liệu</a></section>
+<form class="filter-bar" method="get"><input name="q" value="{{ query }}" placeholder="Tìm mã, tên hoặc nhà cung cấp..."><button class="primary-button" type="submit">Tìm kiếm</button></form>
+<div class="data-table"><table><thead><tr><th>Mã</th><th>Tên nguyên liệu</th><th>ĐVT</th><th>Tồn hiện tại</th><th>Tồn tối thiểu</th><th>Giá vốn</th><th>Nhà cung cấp</th><th></th></tr></thead><tbody>{% for ingredient in ingredients %}<tr class="{% if ingredient.is_low_stock %}low-stock{% endif %}"><td>{{ ingredient.code }}</td><td><strong>{{ ingredient.name }}</strong></td><td>{{ ingredient.unit }}</td><td>{{ ingredient.current_stock }}</td><td>{{ ingredient.minimum_stock }}</td><td>{{ ingredient.average_cost|floatformat:0 }} đ</td><td>{{ ingredient.supplier|default:'-' }}</td><td class="row-actions"><a href="{% url 'catalog:ingredient_update' ingredient.pk %}">Sửa</a><form method="post" action="{% url 'catalog:ingredient_delete' ingredient.pk %}">{% csrf_token %}<button type="submit">Tắt</button></form></td></tr>{% empty %}<tr><td colspan="8">Chưa có nguyên liệu nào.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

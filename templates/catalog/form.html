@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} | MixFood Manager{% endblock %}
+{% block content %}
+<section class="list-header"><div><p class="eyebrow">CATALOG / EDITOR</p><h1>{{ title }}</h1></div><a class="secondary-button" href="{% url back_url %}">Quay lại</a></section>
+<form class="entity-form" method="post" enctype="multipart/form-data">{% csrf_token %}{% for field in form %}<div class="field-group">{{ field.label_tag }}{{ field }}{% if field.errors %}<small class="field-error">{{ field.errors|striptags }}</small>{% endif %}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</div>{% endfor %}<div class="form-actions"><a class="secondary-button" href="{% url back_url %}">Hủy</a><button class="primary-button" type="submit">Lưu dữ liệu</button></div></form>
+{% endblock %}

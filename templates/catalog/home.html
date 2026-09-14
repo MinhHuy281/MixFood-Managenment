@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}Danh mục dữ liệu | MixFood Manager{% endblock %}
+{% block content %}
+<section class="catalog-header"><div><p class="eyebrow">PHASE 2 · CATALOG</p><h1>Danh mục vận hành</h1><p class="muted">Quản lý món bán và nguyên liệu dùng cho cửa hàng đồ ăn Thái.</p></div><a class="primary-button" href="{% url 'catalog:products' %}">Mở danh sách món</a></section>
+<section class="catalog-cards"><a class="catalog-card" href="{% url 'catalog:categories' %}"><span>01</span><strong>{{ categories|length }}</strong><b>Danh mục món</b><small>Nhóm Pad Thai, Tom Yum, đồ uống...</small></a><a class="catalog-card" href="{% url 'catalog:products' %}"><span>02</span><strong>{{ products|length }}</strong><b>Món ăn đang dùng</b><small>Giá bán, đơn vị, trạng thái bán</small></a><a class="catalog-card" href="{% url 'catalog:ingredients' %}"><span>03</span><strong>{{ ingredients|length }}</strong><b>Nguyên liệu</b><small>Tồn kho tối thiểu và nhà cung cấp</small></a></section>
+{% endblock %}

@@ -15,8 +15,9 @@
         <nav class="topnav" aria-label="Điều hướng chính">
             <a href="{% url 'dashboard:home' %}">Tổng quan</a>
             <a href="#">POS</a>
+            <a href="{% url 'dining:home' %}">Bàn</a>
             <a href="#">Hóa đơn</a>
-            <a href="#">Kho</a>
+            <a href="{% url 'catalog:home' %}">Món & kho</a>
             <a href="#">Báo cáo</a>
         </nav>
         <div class="account-menu">
@@ -30,6 +31,7 @@
     {% endblock %}
     {% endif %}
     <main class="page-shell {% block page_class %}{% endblock %}">
+        {% if messages %}<div class="flash-messages">{% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
         {% block content %}{% endblock %}
     </main>
 </body>

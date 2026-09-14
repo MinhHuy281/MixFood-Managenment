@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}Danh mục món | MixFood Manager{% endblock %}
+{% block content %}
+<section class="list-header"><div><p class="eyebrow">CATALOG / CATEGORIES</p><h1>Danh mục món</h1></div><a class="primary-button" href="{% url 'catalog:category_create' %}">+ Thêm danh mục</a></section>
+<form class="filter-bar" method="get"><input name="q" value="{{ query }}" placeholder="Tìm theo tên danh mục..."><button class="primary-button" type="submit">Tìm kiếm</button></form>
+<div class="data-table"><table><thead><tr><th>Tên danh mục</th><th>Mô tả</th><th>Thứ tự</th><th>Trạng thái</th><th></th></tr></thead><tbody>{% for category in categories %}<tr><td><span class="color-dot" style="background: {{ category.color }}"></span><strong>{{ category.name }}</strong></td><td>{{ category.description|default:'-' }}</td><td>{{ category.display_order }}</td><td>{% if category.is_active %}<span class="status good">Đang dùng</span>{% else %}<span class="status">Đã tắt</span>{% endif %}</td><td class="row-actions"><a href="{% url 'catalog:category_update' category.pk %}">Sửa</a><form method="post" action="{% url 'catalog:category_delete' category.pk %}">{% csrf_token %}<button type="submit">Tắt</button></form></td></tr>{% empty %}<tr><td colspan="5">Chưa có danh mục nào.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

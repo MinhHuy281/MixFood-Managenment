@@ -16,8 +16,18 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.category').forEach((button) => button.classList.remove('active'));
             categoryButton.classList.add('active');
             menuTitle.textContent = categoryButton.dataset.category;
+                document.querySelectorAll('.dish').forEach((dishButton) => {
+                    dishButton.hidden = dishButton.dataset.categoryId !== categoryButton.dataset.categoryId;
+                });
         });
     });
+
+        const firstCategory = document.querySelector('.category.active');
+        if (firstCategory) {
+            document.querySelectorAll('.dish').forEach((dishButton) => {
+                dishButton.hidden = dishButton.dataset.categoryId !== firstCategory.dataset.categoryId;
+            });
+        }
 
     document.querySelectorAll('.dish').forEach((dishButton) => {
         dishButton.addEventListener('click', () => {
