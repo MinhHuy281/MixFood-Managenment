@@ -3,14 +3,17 @@ from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from accounts.decorators import role_required
 from catalog.models import Product
 from dining.models import DiningTable
+from inventory.services import deduct_for_sale
 
 from .models import Invoice, Order, OrderItem, Payment
 
@@ -24,6 +27,7 @@ def _money(value, default='0'):
 
 
 @login_required
+@role_required('Owner', 'Manager', 'Sales')
 @require_POST
 def checkout(request):
 	try:
@@ -107,6 +111,7 @@ def checkout(request):
 			order.total_amount = total_amount
 			order.status = Order.Status.PAID
 			order.save(update_fields=('subtotal', 'discount_amount', 'surcharge_amount', 'tax_amount', 'total_amount', 'status', 'updated_at'))
+			deduct_for_sale(order.items.all(), request.user, order.pk)
 
 			invoice = Invoice.objects.create(
 				invoice_code=f'INV-{timezone.now():%Y%m%d%H%M%S}-{uuid4().hex[:4].upper()}',
@@ -123,6 +128,8 @@ def checkout(request):
 				table.status = DiningTable.Status.AVAILABLE
 				table.save(update_fields=('status', 'updated_at'))
 
+	except ValidationError as error:
+		return JsonResponse({'error': error.message}, status=400)
 	except Exception:
 		return JsonResponse({'error': 'Không thể hoàn tất thanh toán. Vui lòng thử lại.'}, status=500)
 

@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}Công thức món | MixFood Manager{% endblock %}
+{% block content %}
+<section class="list-header"><div><h1>Công thức món</h1><p class="muted">Định lượng được dùng để tự động trừ kho khi thanh toán.</p></div><a class="primary-button" href="/admin/inventory/recipe/add/">Mở quản trị công thức</a></section>
+<div class="data-table"><table><thead><tr><th>Món ăn</th><th>Nguyên liệu</th><th>Định lượng</th><th>ĐVT</th></tr></thead><tbody>{% for recipe in recipes %}{% for item in recipe.items.all %}<tr><td>{{ recipe.product.name }}</td><td>{{ item.ingredient.name }}</td><td>{{ item.quantity }}</td><td>{{ item.unit }}</td></tr>{% empty %}<tr><td>{{ recipe.product.name }}</td><td colspan="3">Chưa có nguyên liệu định lượng.</td></tr>{% endfor %}{% empty %}<tr><td colspan="4">Chưa có công thức. Hãy tạo trong Django Admin.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

@@ -112,3 +112,48 @@ Luồng thanh toán POS:
 4. Bấm `Thanh toán`.
 
 Hệ thống tạo `Order`, `OrderItem`, `Invoice` và `Payment` trong cùng một database transaction. Hóa đơn thành công được hiển thị tại `/sales/invoices/` và bàn được trả về trạng thái trống.
+
+## Phase 5: Kho, công thức và tự động trừ nguyên liệu
+
+```powershell
+python manage.py makemigrations inventory
+python manage.py migrate
+python manage.py test catalog dining dashboard sales inventory
+```
+
+Các màn hình:
+
+- `/inventory/`: tồn nguyên liệu và lịch sử biến động kho.
+- `/inventory/recipes/`: danh sách công thức món.
+- `/admin/inventory/recipe/add/`: tạo công thức và định lượng nguyên liệu.
+- `/catalog/ingredients/`: cập nhật nguyên liệu, tồn tối thiểu và giá vốn.
+
+Khi một món có công thức được thanh toán, hệ thống khóa các nguyên liệu liên quan, kiểm tra đủ tồn, trừ tồn và ghi `StockTransaction` trong cùng transaction với `Order`, `Invoice` và `Payment`. Nếu thiếu bất kỳ nguyên liệu nào, toàn bộ thanh toán bị rollback và tồn kho không thay đổi.
+
+Phiếu nhập kho có thể tạo trong Django Admin tại `/admin/inventory/stockreceipt/add/`. Nghiệp vụ nhập kho cập nhật tồn, tính lại giá vốn bình quân và tạo lịch sử nhập kho.
+
+## Phase 6: Nhật ký hoạt động và phân quyền
+
+Phase này không tạo module quản lý nhân viên hoặc ca làm việc theo phạm vi đã thống nhất. Tài khoản Django chỉ được dùng để đăng nhập, phân quyền và xác định người thực hiện thao tác.
+
+```powershell
+python manage.py makemigrations audit
+python manage.py migrate
+python manage.py setup_roles
+python manage.py test audit sales inventory
+```
+
+Nhật ký hoạt động:
+
+- `/audit/`: xem, tìm kiếm và lọc lịch sử thao tác.
+- `/admin/audit/activitylog/`: quản trị toàn bộ nhật ký.
+- Các request `POST` có người đăng nhập được ghi lại cùng người thực hiện, đường dẫn, IP, mã trạng thái và thời điểm.
+
+Các nhóm quyền:
+
+- `Owner`: toàn quyền.
+- `Manager`: catalog, bàn, bán hàng, kho và audit.
+- `Sales`: catalog cơ bản, bàn và bán hàng.
+- `Warehouse`: nguyên liệu, món và nghiệp vụ kho.
+
+Phân quyền được kiểm tra trực tiếp tại view bằng `role_required`: thanh toán chỉ dành cho `Owner`, `Manager`, `Sales`; kho và công thức dành cho `Owner`, `Manager`, `Warehouse`; nhật ký hoạt động dành cho `Owner`, `Manager`. Tài khoản đăng nhập nhưng không có role phù hợp nhận HTTP 403.

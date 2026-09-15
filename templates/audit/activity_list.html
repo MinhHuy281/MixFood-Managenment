@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}Lịch sử hoạt động | MixFood Manager{% endblock %}
+{% block content %}
+<section class="list-header"><div><h1>Lịch sử hoạt động</h1><p class="muted">Theo dõi thao tác trên POS, kho và hệ thống.</p></div><a class="secondary-button" href="{% url 'dashboard:home' %}">Về POS</a></section>
+<form class="filter-bar" method="get"><input name="q" value="{{ query }}" placeholder="Tìm người dùng hoặc chi tiết..."><select name="action"><option value="">Tất cả thao tác</option>{% for value, label in actions %}<option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="primary-button" type="submit">Lọc</button></form>
+<div class="data-table"><table><thead><tr><th>Thời điểm</th><th>Người thực hiện</th><th>Hoạt động</th><th>Chi tiết</th><th>Đường dẫn</th><th>Trạng thái</th></tr></thead><tbody>{% for log in logs %}<tr><td>{{ log.created_at|date:'d/m/Y H:i:s' }}</td><td>{{ log.actor.username|default:'Hệ thống' }}</td><td>{{ log.get_action_display }}</td><td>{{ log.description }}</td><td>{{ log.path }}</td><td>{{ log.status_code }}</td></tr>{% empty %}<tr><td colspan="6">Chưa có lịch sử hoạt động.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

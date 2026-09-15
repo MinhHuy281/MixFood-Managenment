@@ -1,11 +1,13 @@
 import json
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
 
 from catalog.models import Category, Product
 from dining.models import Area, DiningTable
+from inventory.models import Recipe, RecipeItem, StockTransaction
 
 from .models import Invoice, Order, OrderItem, Payment
 
@@ -13,6 +15,8 @@ from .models import Invoice, Order, OrderItem, Payment
 class CheckoutTests(TestCase):
 	def setUp(self):
 		self.user = get_user_model().objects.create_user('cashier-test', password='test-password')
+		self.sales_group = Group.objects.create(name='Sales')
+		self.user.groups.add(self.sales_group)
 		self.category = Category.objects.create(name='Pad Thai')
 		self.product = Product.objects.create(category=self.category, code='PT-TEST', name='Pad Thai test', unit='Phần', price=95000)
 		self.area = Area.objects.create(name='Trong nhà')
@@ -43,6 +47,29 @@ class CheckoutTests(TestCase):
 		}), content_type='application/json')
 		self.assertEqual(response.status_code, 400)
 		self.assertEqual(Order.objects.count(), 0)
+
+	def test_checkout_requires_sales_role(self):
+		self.user.groups.clear()
+		response = self.client.post(reverse('sales:checkout'), data=json.dumps({
+			'table_id': self.table.pk,
+			'items': [{'product_id': self.product.pk, 'quantity': 1}],
+		}), content_type='application/json')
+		self.assertEqual(response.status_code, 403)
+
+	def test_checkout_deducts_recipe_ingredients(self):
+		from catalog.models import Ingredient
+
+		ingredient = Ingredient.objects.create(code='ING-SALE', name='Nguyên liệu bán', current_stock=3, minimum_stock=1)
+		recipe = Recipe.objects.create(product=self.product)
+		RecipeItem.objects.create(recipe=recipe, ingredient=ingredient, quantity='0.5', unit='Kg')
+		response = self.client.post(reverse('sales:checkout'), data=json.dumps({
+			'table_id': self.table.pk,
+			'items': [{'product_id': self.product.pk, 'quantity': 2}],
+		}), content_type='application/json')
+		self.assertEqual(response.status_code, 200)
+		ingredient.refresh_from_db()
+		self.assertEqual(ingredient.current_stock, 2)
+		self.assertEqual(StockTransaction.objects.count(), 1)
 from django.test import TestCase
 
 # Create your tests here.
