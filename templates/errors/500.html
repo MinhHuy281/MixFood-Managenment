@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block title %}Lỗi hệ thống | MixFood Manager{% endblock %}
+{% block content %}<section class="legacy-error"><strong>LỖI 500</strong><h1>Hệ thống đang gặp sự cố.</h1><p>Vui lòng thử lại sau hoặc liên hệ quản lý.</p><a class="secondary-button" href="{% url 'dashboard:home' %}">Quay lại POS</a></section>{% endblock %}

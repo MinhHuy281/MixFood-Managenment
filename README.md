@@ -157,3 +157,25 @@ Các nhóm quyền:
 - `Warehouse`: nguyên liệu, món và nghiệp vụ kho.
 
 Phân quyền được kiểm tra trực tiếp tại view bằng `role_required`: thanh toán chỉ dành cho `Owner`, `Manager`, `Sales`; kho và công thức dành cho `Owner`, `Manager`, `Warehouse`; nhật ký hoạt động dành cho `Owner`, `Manager`. Tài khoản đăng nhập nhưng không có role phù hợp nhận HTTP 403.
+
+## Phase 7: Dashboard và báo cáo
+
+Màn hình báo cáo tại `/reports/` dùng dữ liệu hóa đơn đã thanh toán trong MySQL.
+
+- Lọc từ ngày đến ngày.
+- Tổng doanh thu.
+- Số lượng hóa đơn.
+- Giá trị đơn hàng trung bình.
+- Doanh thu theo phương thức thanh toán.
+- Doanh thu theo danh mục món.
+- Top món bán chạy theo số lượng và doanh thu.
+
+Quyền xem báo cáo dành cho `Owner` và `Manager`. Không có hóa đơn thì báo cáo hiển thị trạng thái trống, không dùng số liệu mẫu.
+
+## Phase 8: Validation, bảo mật và xử lý lỗi
+
+- Trang lỗi POS cho HTTP 403, 404 và 500.
+- Checkout kiểm tra số lượng, món đang bán, bàn hợp lệ và giảm giá không vượt tiền món trước khi ghi database.
+- Các dòng trùng món trong một request được gộp số lượng.
+- Production bật cookie secure, HSTS, chống MIME sniffing và cấu hình CSRF trusted origins qua `.env`.
+- Test toàn bộ nghiệp vụ trước khi phát hành.

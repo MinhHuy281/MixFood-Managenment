@@ -49,7 +49,8 @@ def checkout(request):
 	if order_type not in {choice[0] for choice in Order.OrderType.choices}:
 		return JsonResponse({'error': 'Loại đơn không hợp lệ.'}, status=400)
 
-	validated_items = []
+	validated_items = {}
+	validated_products = {}
 	for raw_item in raw_items:
 		try:
 			product_id = int(raw_item.get('product_id'))
@@ -61,7 +62,12 @@ def checkout(request):
 		product = Product.objects.filter(pk=product_id, is_active=True, is_available=True).first()
 		if product is None:
 			return JsonResponse({'error': 'Một món trong đơn không còn được bán.'}, status=400)
-		validated_items.append((product, quantity))
+		validated_items[product.pk] = validated_items.get(product.pk, 0) + quantity
+		validated_products[product.pk] = product
+	subtotal = sum((validated_products[product_id].price * quantity for product_id, quantity in validated_items.items()), Decimal('0'))
+	discount_amount = _money(payload.get('discount_amount'))
+	if discount_amount > subtotal:
+		return JsonResponse({'error': 'Giảm giá không được lớn hơn tiền món.'}, status=400)
 
 	table = None
 	if table_id:
@@ -89,7 +95,8 @@ def checkout(request):
 				created_by=request.user,
 			)
 			subtotal = Decimal('0')
-			for product, quantity in validated_items:
+			for product_id, quantity in validated_items.items():
+				product = validated_products[product_id]
 				OrderItem.objects.create(
 					order=order,
 					product=product,

@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block title %}Không có quyền | MixFood Manager{% endblock %}
+{% block content %}<section class="legacy-error"><strong>LỖI 403</strong><h1>Bạn không có quyền thực hiện thao tác này.</h1><p>Vui lòng liên hệ quản lý để được cấp quyền phù hợp.</p><a class="secondary-button" href="{% url 'dashboard:home' %}">Quay lại POS</a></section>{% endblock %}

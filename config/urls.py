@@ -27,3 +27,7 @@ urlpatterns = [
     path('audit/', include('audit.urls', namespace='audit')),
     path('', include('dashboard.urls', namespace='dashboard')),
 ]
+
+handler403 = 'config.views.permission_denied'
+handler404 = 'config.views.page_not_found'
+handler500 = 'config.views.server_error'

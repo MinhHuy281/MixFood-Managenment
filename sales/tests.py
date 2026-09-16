@@ -56,6 +56,26 @@ class CheckoutTests(TestCase):
 		}), content_type='application/json')
 		self.assertEqual(response.status_code, 403)
 
+	def test_checkout_rejects_discount_above_subtotal(self):
+		response = self.client.post(reverse('sales:checkout'), data=json.dumps({
+			'table_id': self.table.pk,
+			'discount_amount': 95001,
+			'items': [{'product_id': self.product.pk, 'quantity': 1}],
+		}), content_type='application/json')
+		self.assertEqual(response.status_code, 400)
+		self.assertEqual(Order.objects.count(), 0)
+
+	def test_checkout_merges_duplicate_product_items(self):
+		response = self.client.post(reverse('sales:checkout'), data=json.dumps({
+			'table_id': self.table.pk,
+			'items': [
+				{'product_id': self.product.pk, 'quantity': 1},
+				{'product_id': self.product.pk, 'quantity': 2},
+			],
+		}), content_type='application/json')
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(OrderItem.objects.get().quantity, 3)
+
 	def test_checkout_deducts_recipe_ingredients(self):
 		from catalog.models import Ingredient
 

@@ -14,7 +14,7 @@
             <div class="pos-menu-item"><button>HỆ THỐNG</button><div class="pos-dropdown"><a href="{% url 'dashboard:home' %}">Mở màn hình bán hàng</a><a href="{% url 'audit:activity' %}">Nhật ký hoạt động</a><form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="dropdown-action" type="submit">Đăng xuất</button></form></div></div>
             <div class="pos-menu-item"><button>CÀI ĐẶT</button><div class="pos-dropdown"><a href="{% url 'catalog:categories' %}">Thực đơn</a><a href="{% url 'catalog:products' %}">Mặt hàng</a><a href="{% url 'catalog:ingredients' %}">Định lượng nguyên liệu</a></div></div>
             <div class="pos-menu-item"><button>QUẢN LÝ</button><div class="pos-dropdown"><a href="{% url 'dining:home' %}">Khu vực - Điểm bán</a><a href="{% url 'catalog:ingredients' %}">Kho hàng</a><a href="{% url 'sales:invoices' %}">Hóa đơn</a></div></div>
-            <div class="pos-menu-item"><button>BÁO CÁO</button><div class="pos-dropdown"><a href="{% url 'sales:invoices' %}">Hóa đơn thanh toán</a><a href="{% url 'sales:invoices' %}">Doanh thu theo thời gian</a><a href="{% url 'sales:invoices' %}">Thống kê bán hàng</a></div></div>
+            <div class="pos-menu-item"><button>BÁO CÁO</button><div class="pos-dropdown"><a href="{% url 'sales:invoices' %}">Hóa đơn thanh toán</a><a href="{% url 'dashboard:reports' %}">Doanh thu theo thời gian</a><a href="{% url 'dashboard:reports' %}">Thống kê bán hàng</a></div></div>
             <div class="pos-menu-item"><button>TRỢ GIÚP</button><div class="pos-dropdown"><a href="#">Hướng dẫn</a><a href="#">Thông tin</a></div></div>
         </nav>
     </header>
@@ -22,7 +22,7 @@
         <aside class="table-sidebar">
             {% for area in areas %}<section class="table-zone"><h3>{{ area.name|upper }} <em>({{ area.tables.all|length }})</em></h3><div class="table-grid {% if area.tables.all|length < 5 %}four{% endif %}">{% for table in area.tables.all %}<button class="table {{ table.status }}" data-table-id="{{ table.pk }}" data-table-name="{{ table.name }}">{{ table.name }}</button>{% empty %}<small class="empty-sidebar">Chưa có bàn</small>{% endfor %}</div></section>{% empty %}<section class="empty-sidebar-panel"><b>Chưa có khu vực/bàn</b><a href="{% url 'dining:home' %}">Thiết lập ngay</a></section>{% endfor %}
         </aside>
-        <section class="order-column">
+        <section class="order-column" id="order-column">
                         <div class="order-heading"><strong>Bàn <span id="selected-table">-</span></strong><small>Chưa chọn bàn</small></div>
             <div class="order-meta"><span>Tình trạng:</span> <b id="order-status">Chưa chọn bàn</b><br><span>Khách:</span> <b>{{ user.get_username }}</b></div>
             <div class="order-items" id="order-items"><p class="empty-order">Chọn bàn và món để bắt đầu.</p></div>
@@ -43,6 +43,17 @@
         </section>
     </div>
     <footer class="pos-status"><span>▣ IP 192.168.88.51</span><span>◉ Không có tablet/smartphone kết nối</span><span>◷ Chưa báo cáo qua mạng</span><span>POS-80C</span><span>● {{ user.get_username }}</span><span>14/09/2026 06:20 PM</span><b>Bình thường</b></footer>
+</div>
+<div class="legacy-order-dialog" id="order-dialog" hidden>
+    <div class="legacy-dialog-title"><span id="dialog-title">Bàn - - Yêu cầu món mới</span><button type="button" class="dialog-close" id="dialog-close">×</button></div>
+    <div class="legacy-order-body">
+        <div class="dialog-product-name" id="dialog-product-name">Tên món</div>
+        <label>Số lượng</label><div class="quantity-control"><button type="button" id="quantity-minus">−</button><input id="dialog-quantity" type="text" value="1"><button type="button" id="quantity-plus">+</button></div>
+        <label>Ghi chú</label><input id="dialog-note" type="text" placeholder="Không...">
+        <div class="quick-notes"><button type="button">Nhiều</button><button type="button">Ít</button><button type="button">Nóng</button><button type="button">Không</button><button type="button">Đường</button><button type="button">Ngọt</button></div>
+        <div class="dialog-price"><span>Giá món (đ)</span><input id="dialog-price" type="text" readonly><span>Giảm (%)</span><input id="dialog-discount" type="text" value="0"></div>
+        <div class="dialog-actions"><button type="button" id="dialog-confirm">Đồng ý</button><button type="button" id="dialog-cancel">Bỏ qua</button></div>
+    </div>
 </div>
 <script src="{% static 'js/pos.js' %}"></script>
 {% endblock %}
