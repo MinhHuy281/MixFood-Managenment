@@ -1,13 +1,25 @@
 # MixFood Manager
 
-Hệ thống quản lý bán hàng cho cửa hàng đồ ăn Thái, xây dựng bằng Django và MySQL.
+Hệ thống quản lý bán hàng cho cửa hàng đồ ăn Thái, xây dựng bằng Django,
+MySQL, HTML/CSS và JavaScript. Dữ liệu món ăn, bàn, đơn hàng, hóa đơn, kho
+và báo cáo đều được lưu trong cơ sở dữ liệu.
+
+## Chức năng đã hoàn thành
+
+- Đăng nhập, phân quyền `Owner`, `Manager`, `Sales`, `Warehouse` và nhật ký hoạt động.
+- Quản lý danh mục, món ăn, nguyên liệu, khu vực và bàn.
+- POS: chọn bàn/món, thanh toán, tạo đơn hàng, hóa đơn và thanh toán.
+- Công thức món, nhập kho và tự động trừ nguyên liệu khi thanh toán.
+- Danh sách hóa đơn, dashboard và báo cáo doanh thu theo khoảng ngày.
+- Validation checkout, trang lỗi 403/404/500 và cấu hình bảo mật production.
 
 ## Yêu cầu
 
-- Python 3.14 hoặc mới hơn
+- Python 3.14+ (hoặc phiên bản tương thích với các package trong `requirements.txt`)
 - MySQL 8+
+- Pip và MySQL client development libraries (cần thiết để cài `mysqlclient`)
 
-## Cài đặt
+## Cài đặt môi trường phát triển
 
 ```powershell
 python -m venv .venv
@@ -16,166 +28,69 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Tạo database và user MySQL, sau đó cập nhật các giá trị trong `.env`:
+Tạo cơ sở dữ liệu và tài khoản MySQL, sau đó thay các giá trị `DB_*` trong
+`.env`. Không commit file `.env`.
 
 ```sql
 CREATE DATABASE thai_food_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'mixfood'@'localhost' IDENTIFIED BY 'change-this-password';
+CREATE USER 'mixfood'@'localhost' IDENTIFIED BY 'a-strong-password';
 GRANT ALL PRIVILEGES ON thai_food_manager.* TO 'mixfood'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-Đổi `DB_USER`, `DB_PASSWORD` trong `.env` thành tài khoản vừa tạo. Không commit `.env`.
-
-## Khởi chạy Phase 1
+Chạy migration, tạo nhóm quyền và tài khoản quản trị:
 
 ```powershell
 python manage.py migrate
 python manage.py setup_roles
 python manage.py createsuperuser
+python manage.py seed_demo
 python manage.py runserver
 ```
 
-Mở `http://127.0.0.1:8000/accounts/login/` để đăng nhập. Dashboard yêu cầu xác thực; tài khoản quản trị được tạo bằng `createsuperuser`.
+Truy cập `http://127.0.0.1:8000/accounts/login/` để đăng nhập. `seed_demo`
+là tùy chọn và có thể chạy lại an toàn để tạo dữ liệu minh họa.
 
-## Kiểm tra
+## Kiểm thử
 
 ```powershell
 python manage.py check
+python manage.py test accounts audit catalog dining dashboard sales inventory
 ```
 
-Lệnh kiểm tra cần MySQL đang chạy và các thông tin `DB_*` trong `.env` hợp lệ.
+Các test kiểm tra phân quyền, CRUD chính, POS checkout, chống tạo dữ liệu dở
+dang khi request lỗi, trừ kho theo công thức, báo cáo và nhật ký hoạt động.
 
-## Phạm vi Phase 1
+## Chuẩn bị triển khai
 
-- Django project và cấu hình MySQL.
-- Biến môi trường cho secret key, host và database credentials.
-- Đăng nhập, đăng xuất và CSRF.
-- Nhóm quyền `Owner`, `Manager`, `Sales`, `Warehouse`.
-- Layout responsive và dashboard nền.
+1. Sao chép `.env.example` thành `.env`; đặt `DEBUG=False`, secret key mới,
+   `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` và thông tin MySQL production.
+2. Chạy migration và thu thập static:
 
-Các module món ăn, POS, hóa đơn, kho và báo cáo sẽ được triển khai ở các phase tiếp theo.
-
-## Phase 2: Danh mục, món ăn và nguyên liệu
-
-Sau khi cập nhật code Phase 2:
-
-```powershell
-python manage.py makemigrations catalog
+```bash
 python manage.py migrate
-python manage.py test catalog
+python manage.py collectstatic --noinput
+python manage.py check --deploy
 ```
 
-Các màn hình:
+3. Đặt Django sau reverse proxy HTTPS (ví dụ Nginx). Khi HTTPS đã hoạt động,
+   giữ `SECURE_SSL_REDIRECT=True`; khi chưa có HTTPS, đặt nó là `False` để
+   tránh vòng chuyển hướng.
+4. Trên Linux, có thể chạy ứng dụng bằng Gunicorn:
 
-- `/catalog/`: tổng quan dữ liệu catalog.
-- `/catalog/categories/`: thêm, sửa, tìm kiếm và ngừng sử dụng danh mục.
-- `/catalog/products/`: quản lý mã món, giá bán, loại món và trạng thái bán.
-- `/catalog/ingredients/`: quản lý tồn hiện tại, tồn tối thiểu và nhà cung cấp.
+```bash
+gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3
+```
 
-Dữ liệu được lưu trong các bảng `catalog_category`, `catalog_product` và `catalog_ingredient`. Xóa trên giao diện là ngừng sử dụng (`soft delete`) để không phá lịch sử bán hàng về sau.
+Nginx/IIS cần phục vụ thư mục `staticfiles/` và chuyển request ứng dụng đến
+Gunicorn (hoặc WSGI server tương đương). Không chạy `runserver` trong môi
+trường production.
 
-## Phase 3: Khu vực, bàn và POS dùng dữ liệu thật
+## Lệnh hữu ích
 
 ```powershell
-python manage.py makemigrations dining
+python manage.py makemigrations
 python manage.py migrate
-python manage.py test catalog dining dashboard
+python manage.py test
+python manage.py check --deploy
 ```
-
-Các màn hình:
-
-- `/dining/`: quản lý khu vực và bàn.
-- `/`: POS lấy danh sách khu vực, bàn, danh mục và món trực tiếp từ MySQL.
-
-Để tạo nhanh dữ liệu minh họa trong môi trường phát triển:
-
-```powershell
-python manage.py seed_demo
-```
-
-Lệnh này có thể chạy nhiều lần và cập nhật theo mã/tên dữ liệu demo. Các đơn hàng, hóa đơn và thanh toán chưa được tạo ở Phase 3; chúng thuộc Phase 4.
-
-## Phase 4: Đơn hàng, hóa đơn và thanh toán
-
-```powershell
-python manage.py makemigrations sales
-python manage.py migrate
-python manage.py test catalog dining dashboard sales
-```
-
-Luồng thanh toán POS:
-
-1. Chọn bàn.
-2. Chọn món, mỗi lần bấm món sẽ tăng số lượng trong giỏ.
-3. Chọn phương thức thanh toán.
-4. Bấm `Thanh toán`.
-
-Hệ thống tạo `Order`, `OrderItem`, `Invoice` và `Payment` trong cùng một database transaction. Hóa đơn thành công được hiển thị tại `/sales/invoices/` và bàn được trả về trạng thái trống.
-
-## Phase 5: Kho, công thức và tự động trừ nguyên liệu
-
-```powershell
-python manage.py makemigrations inventory
-python manage.py migrate
-python manage.py test catalog dining dashboard sales inventory
-```
-
-Các màn hình:
-
-- `/inventory/`: tồn nguyên liệu và lịch sử biến động kho.
-- `/inventory/recipes/`: danh sách công thức món.
-- `/admin/inventory/recipe/add/`: tạo công thức và định lượng nguyên liệu.
-- `/catalog/ingredients/`: cập nhật nguyên liệu, tồn tối thiểu và giá vốn.
-
-Khi một món có công thức được thanh toán, hệ thống khóa các nguyên liệu liên quan, kiểm tra đủ tồn, trừ tồn và ghi `StockTransaction` trong cùng transaction với `Order`, `Invoice` và `Payment`. Nếu thiếu bất kỳ nguyên liệu nào, toàn bộ thanh toán bị rollback và tồn kho không thay đổi.
-
-Phiếu nhập kho có thể tạo trong Django Admin tại `/admin/inventory/stockreceipt/add/`. Nghiệp vụ nhập kho cập nhật tồn, tính lại giá vốn bình quân và tạo lịch sử nhập kho.
-
-## Phase 6: Nhật ký hoạt động và phân quyền
-
-Phase này không tạo module quản lý nhân viên hoặc ca làm việc theo phạm vi đã thống nhất. Tài khoản Django chỉ được dùng để đăng nhập, phân quyền và xác định người thực hiện thao tác.
-
-```powershell
-python manage.py makemigrations audit
-python manage.py migrate
-python manage.py setup_roles
-python manage.py test audit sales inventory
-```
-
-Nhật ký hoạt động:
-
-- `/audit/`: xem, tìm kiếm và lọc lịch sử thao tác.
-- `/admin/audit/activitylog/`: quản trị toàn bộ nhật ký.
-- Các request `POST` có người đăng nhập được ghi lại cùng người thực hiện, đường dẫn, IP, mã trạng thái và thời điểm.
-
-Các nhóm quyền:
-
-- `Owner`: toàn quyền.
-- `Manager`: catalog, bàn, bán hàng, kho và audit.
-- `Sales`: catalog cơ bản, bàn và bán hàng.
-- `Warehouse`: nguyên liệu, món và nghiệp vụ kho.
-
-Phân quyền được kiểm tra trực tiếp tại view bằng `role_required`: thanh toán chỉ dành cho `Owner`, `Manager`, `Sales`; kho và công thức dành cho `Owner`, `Manager`, `Warehouse`; nhật ký hoạt động dành cho `Owner`, `Manager`. Tài khoản đăng nhập nhưng không có role phù hợp nhận HTTP 403.
-
-## Phase 7: Dashboard và báo cáo
-
-Màn hình báo cáo tại `/reports/` dùng dữ liệu hóa đơn đã thanh toán trong MySQL.
-
-- Lọc từ ngày đến ngày.
-- Tổng doanh thu.
-- Số lượng hóa đơn.
-- Giá trị đơn hàng trung bình.
-- Doanh thu theo phương thức thanh toán.
-- Doanh thu theo danh mục món.
-- Top món bán chạy theo số lượng và doanh thu.
-
-Quyền xem báo cáo dành cho `Owner` và `Manager`. Không có hóa đơn thì báo cáo hiển thị trạng thái trống, không dùng số liệu mẫu.
-
-## Phase 8: Validation, bảo mật và xử lý lỗi
-
-- Trang lỗi POS cho HTTP 403, 404 và 500.
-- Checkout kiểm tra số lượng, món đang bán, bàn hợp lệ và giảm giá không vượt tiền món trước khi ghi database.
-- Các dòng trùng món trong một request được gộp số lượng.
-- Production bật cookie secure, HSTS, chống MIME sniffing và cấu hình CSRF trusted origins qua `.env`.
-- Test toàn bộ nghiệp vụ trước khi phát hành.
