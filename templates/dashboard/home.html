@@ -8,30 +8,76 @@
 <span hidden>{% csrf_token %}</span>
 <div class="pos-window">
     <header class="pos-menubar">
-        <div class="pos-brand"><span class="brand-mark">MIX</span><strong>DRS Manager</strong><small>3.1.7</small></div>
+        <div class="pos-brand" aria-label="DRS Manager 3.1.7"><span class="window-minimize">−</span><span class="window-close">×</span><strong>DRS Manager 3.1.7</strong></div>
         <div class="store-name">MIX FOOD <span>ẨM THỰC THÁI - K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng - Mã: 13255</span></div>
         <nav class="pos-nav">
-            <div class="pos-menu-item"><button>HỆ THỐNG</button><div class="pos-dropdown"><a href="{% url 'dashboard:home' %}">Mở màn hình bán hàng</a><a href="{% url 'audit:activity' %}">Nhật ký hoạt động</a><form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="dropdown-action" type="submit">Đăng xuất</button></form></div></div>
-            <div class="pos-menu-item"><button>CÀI ĐẶT</button><div class="pos-dropdown"><a href="{% url 'catalog:categories' %}">Thực đơn</a><a href="{% url 'catalog:products' %}">Mặt hàng</a><a href="{% url 'catalog:ingredients' %}">Định lượng nguyên liệu</a></div></div>
-            <div class="pos-menu-item"><button>QUẢN LÝ</button><div class="pos-dropdown"><a href="{% url 'dining:home' %}">Khu vực - Điểm bán</a><a href="{% url 'catalog:ingredients' %}">Kho hàng</a><a href="{% url 'sales:invoices' %}">Hóa đơn</a></div></div>
-            <div class="pos-menu-item"><button>BÁO CÁO</button><div class="pos-dropdown"><a href="{% url 'sales:invoices' %}">Hóa đơn thanh toán</a><a href="{% url 'dashboard:reports' %}">Doanh thu theo thời gian</a><a href="{% url 'dashboard:reports' %}">Thống kê bán hàng</a></div></div>
+            <div class="pos-menu-item system-menu"><button type="button" aria-expanded="false">HỆ THỐNG</button><div class="pos-dropdown" role="menu">
+                <button type="button" class="dropdown-action system-action" data-action="shift">Đăng thoát - Ra ca</button>
+                <button type="button" class="dropdown-action system-action" data-action="closing">Kết ca - Giao tiền</button>
+                <a href="{% url 'accounts:change_password' %}" role="menuitem">Đổi mật khẩu</a>
+                <button type="button" class="dropdown-action system-action" data-action="drawer">Mở két đựng tiền</button>
+                <button type="button" class="dropdown-action system-action" data-action="device">Thiết bị</button>
+                <span class="dropdown-separator"></span>
+                <button type="button" class="dropdown-action system-action" data-action="maintenance">Bảo trì dữ liệu</button>
+                <a href="{% url 'admin:index' %}" role="menuitem">Phân quyền sử dụng</a>
+                <a href="{% url 'audit:activity' %}" role="menuitem">Nhật ký hoạt động</a>
+                <span class="dropdown-separator"></span>
+                <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="dropdown-action" type="submit">Thoát</button></form>
+            </div></div>
+            <div class="pos-menu-item settings-menu"><button type="button" aria-expanded="false">CÀI ĐẶT</button><div class="pos-dropdown" role="menu">
+                <a href="{% url 'dining:home' %}" role="menuitem">Khu vực - Điểm bán</a>
+                <span class="dropdown-separator"></span>
+                <a href="{% url 'catalog:categories' %}" role="menuitem">Thực đơn (món bán → khách)</a>
+                <a href="{% url 'catalog:products' %}" role="menuitem">Mặt hàng (món bán)</a>
+                <a href="{% url 'inventory:recipes' %}" role="menuitem">Định lượng (món bán &lt;-&gt; món mua)</a>
+                <span class="dropdown-separator"></span>
+                <button type="button" class="dropdown-action settings-action" data-setting="price-policy">Chính sách giá - Sự kiện</button>
+                <button type="button" class="dropdown-action settings-action" data-setting="coupon">Mã giảm giá</button>
+                <button type="button" class="dropdown-action settings-action" data-setting="options">Các tùy chọn</button>
+            </div></div>
+            <div class="pos-menu-item management-menu"><button type="button" aria-expanded="false">QUẢN LÝ</button><div class="pos-dropdown" role="menu">
+                <a href="{% url 'admin:auth_user_changelist' %}" role="menuitem">Người dùng</a>
+                <button type="button" class="dropdown-action management-action" data-management="customers">Khách hàng</button>
+                <span class="dropdown-separator"></span>
+                <a href="{% url 'inventory:home' %}" role="menuitem">Kho hàng</a>
+                <button type="button" class="dropdown-action management-action" data-management="cashbook">Sổ thu chi</button>
+                <button type="button" class="dropdown-action management-action" data-management="debt">Công nợ</button>
+                <span class="dropdown-separator"></span>
+                <a href="{% url 'dining:home' %}" role="menuitem">Phân công</a>
+                <a href="{% url 'sales:invoices' %}" role="menuitem">Sổ kết ca</a>
+            </div></div>
+            <div class="pos-menu-item reports-menu"><button type="button" aria-expanded="false">BÁO CÁO</button><div class="pos-dropdown" role="menu">
+                <a href="{% url 'sales:invoices' %}" role="menuitem">Hóa đơn thanh toán</a>
+                <a href="{% url 'dashboard:reports' %}" role="menuitem">Doanh thu (theo thời gian)</a>
+                <button type="button" class="dropdown-action report-action" data-report="customer-revenue">Doanh thu (theo khách hàng)</button>
+                <a href="{% url 'dashboard:reports' %}" role="menuitem">Thống kê bán hàng</a>
+                <a href="{% url 'sales:invoices' %}" role="menuitem">Hàng bán chi tiết</a>
+                <span class="dropdown-separator"></span>
+                <a href="{% url 'inventory:home' %}" role="menuitem">Xuất nhập tồn kho</a>
+                <button type="button" class="dropdown-action report-action" data-report="purchases">Hoạt động mua hàng</button>
+                <button type="button" class="dropdown-action report-action" data-report="cash">Thống kê các khoản tiền</button>
+                <span class="dropdown-separator"></span>
+                <button type="button" class="dropdown-action report-action" data-report="guest-count">Lượng khách hôm nay</button>
+                <a href="{% url 'dashboard:reports' %}" role="menuitem">Báo cáo cuối ngày</a>
+            </div></div>
             <div class="pos-menu-item"><button>TRỢ GIÚP</button><div class="pos-dropdown"><a href="#">Hướng dẫn</a><a href="#">Thông tin</a></div></div>
         </nav>
     </header>
     <div class="pos-layout">
         <aside class="table-sidebar">
-            {% for area in areas %}<section class="table-zone"><h3>{{ area.name|upper }} <em>({{ area.tables.all|length }})</em></h3><div class="table-grid {% if area.tables.all|length < 5 %}four{% endif %}">{% for table in area.tables.all %}<button class="table {{ table.status }}" data-table-id="{{ table.pk }}" data-table-name="{{ table.name }}">{{ table.name }}</button>{% empty %}<small class="empty-sidebar">Chưa có bàn</small>{% endfor %}</div></section>{% empty %}<section class="empty-sidebar-panel"><b>Chưa có khu vực/bàn</b><a href="{% url 'dining:home' %}">Thiết lập ngay</a></section>{% endfor %}
+            {% for area in areas %}<section class="table-zone"><h3>{{ area.name|upper }} <em>({{ area.tables.all|length }})</em></h3><div class="table-grid {% if area.tables.all|length < 5 %}four{% endif %}">{% for table in area.tables.all %}<button class="table {{ table.status }}" data-table-id="{{ table.pk }}" data-table-name="{{ table.name }}" data-area="{{ area.name }}">{{ table.name }}</button>{% empty %}<small class="empty-sidebar">Chưa có bàn</small>{% endfor %}</div></section>{% empty %}<section class="empty-sidebar-panel"><b>Chưa có khu vực/bàn</b><a href="{% url 'dining:home' %}">Thiết lập ngay</a></section>{% endfor %}
         </aside>
-        <section class="order-column" id="order-column">
-                        <div class="order-heading"><strong>Bàn <span id="selected-table">-</span></strong><small>Chưa chọn bàn</small></div>
-            <div class="order-meta"><span>Tình trạng:</span> <b id="order-status">Chưa chọn bàn</b><br><span>Khách:</span> <b>{{ user.get_username }}</b></div>
+        <section class="order-column" id="order-column" data-current-user="{{ user.get_username }}">
+            <div class="order-heading"><strong id="order-title">Bàn -</strong><span id="selected-table" hidden>-</span><small id="order-mode">Chưa chọn bàn</small></div>
+            <div class="order-meta"><span>Giờ đến:</span> <b id="order-time">-</b><br><span>Tình trạng:</span> <b id="order-status" class="pending">Chưa chọn bàn</b><br><span>Khách:</span> <b id="order-customer">-</b><br><span>Yêu cầu:</span> <b id="order-requested-by">{{ user.get_username }}</b></div>
             <div class="order-items" id="order-items"><p class="empty-order">Chọn bàn và món để bắt đầu.</p></div>
             <div class="order-total"><span>Tiền món: <b id="order-subtotal">0 đ</b></span><span>Phụ thu: <b>0 đ</b></span><span>Giảm giá: <b>0 đ</b></span><strong>THÀNH TIỀN: <span id="order-total">0 đ</span></strong></div>
-            <select class="payment-method" id="payment-method" aria-label="Phương thức thanh toán"><option value="cash">Tiền mặt</option><option value="bank">Chuyển khoản</option><option value="card">Thẻ ngân hàng</option><option value="e_wallet">Ví điện tử</option></select>
-            <button class="pay-button" id="pay-button" disabled>Thanh toán</button>
+            <select class="payment-method" id="payment-method" aria-label="Phương thức thanh toán" hidden><option value="cash">Tiền mặt</option><option value="bank">Chuyển khoản</option><option value="card">Thẻ ngân hàng</option><option value="e_wallet">Ví điện tử</option></select>
+            <div class="table-selection-actions" id="table-selection-actions" hidden><button type="button" id="cancel-selected-table">Mở bàn</button><button type="button" id="open-menu">Gọi món</button></div>
+            <div class="order-open-actions" id="order-open-actions" hidden><button type="button" id="order-primary-action">Hủy bàn</button><button type="button" id="collapse-order-menu">&lt;&lt;</button></div>
             <div class="order-actions"><button>Chuyển</button><button>Nhập</button><button>Ghép</button><button>Tách</button></div>
         </section>
-        <section class="menu-column">
+        <section class="menu-column" id="menu-column" hidden>
             <div class="menu-categories" role="tablist">{% for category in categories %}<button class="category {% if forloop.first %}active{% endif %}" data-category-id="{{ category.pk }}" data-category="{{ category.name }}" style="background: {{ category.color }}">{{ category.name|upper }}</button>{% empty %}<small class="empty-sidebar">Chưa có danh mục</small>{% endfor %}</div>
             <div class="menu-head"><b id="menu-title">{% if categories %}{{ categories.0.name|upper }}{% else %}DANH MỤC MÓN{% endif %}</b><button class="collapse-menu">&lt; 1 &gt;</button></div>
             <div class="dish-grid" id="dish-grid">{% for product in products %}<button class="dish" data-product-id="{{ product.pk }}" data-category-id="{{ product.category_id }}" data-dish="{{ product.name }}" data-unit="{{ product.unit }}" data-price="{{ product.price }}"><b>{{ product.name }}</b><small>{{ product.price|floatformat:0 }} đ/{{ product.unit }}</small></button>{% empty %}<p class="empty-menu">Chưa có món đang bán. <a href="{% url 'catalog:products' %}">Thêm món</a></p>{% endfor %}</div>
@@ -44,6 +90,7 @@
     </div>
     <footer class="pos-status"><span>▣ IP 192.168.88.51</span><span>◉ Không có tablet/smartphone kết nối</span><span>◷ Chưa báo cáo qua mạng</span><span>POS-80C</span><span>● {{ user.get_username }}</span><span>14/09/2026 06:20 PM</span><b>Bình thường</b></footer>
 </div>
+<div class="system-notice" id="system-notice" role="status" aria-live="polite" hidden></div>
 <div class="legacy-order-dialog" id="order-dialog" hidden>
     <div class="legacy-dialog-title"><span id="dialog-title">Bàn - - Yêu cầu món mới</span><button type="button" class="dialog-close" id="dialog-close">×</button></div>
     <div class="legacy-order-body">
