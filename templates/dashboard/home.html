@@ -12,9 +12,9 @@
         <div class="store-name">MIX FOOD <span>ẨM THỰC THÁI - K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng - Mã: 13255</span></div>
         <nav class="pos-nav">
             <div class="pos-menu-item system-menu"><button type="button" aria-expanded="false">HỆ THỐNG</button><div class="pos-dropdown" role="menu">
-                <button type="button" class="dropdown-action system-action" data-action="shift">Đăng thoát - Ra ca</button>
+                <form method="post" action="{% url 'accounts:logout' %}" role="none">{% csrf_token %}<button type="submit" class="dropdown-action">Đăng thoát - Ra ca</button></form>
                 <button type="button" class="dropdown-action system-action" data-action="closing">Kết ca - Giao tiền</button>
-                <a href="{% url 'accounts:change_password' %}" role="menuitem">Đổi mật khẩu</a>
+                <a href="{% url 'accounts:change_password' %}" class="dropdown-action password-change-action" role="menuitem">Đổi mật khẩu</a>
                 <button type="button" class="dropdown-action system-action" data-action="drawer">Mở két đựng tiền</button>
                 <button type="button" class="dropdown-action system-action" data-action="device">Thiết bị</button>
                 <span class="dropdown-separator"></span>
@@ -84,13 +84,101 @@
         </section>
         <section class="records-column">
             <div class="record-tabs"><button class="record-tab active">Hóa đơn</button><button class="record-tab">Đếm bàn</button><button class="record-tab">Thời gian</button><button class="record-tab">Nhân viên</button><button class="record-tab">Tiền món</button><button class="record-tab">Tiền giờ</button><button class="record-tab">Phụ thu</button><button class="record-tab">Giảm giá</button><button class="record-tab">VAT</button></div>
-            <div class="invoice-table-wrap"><table class="invoice-table"><thead><tr><th>Hóa đơn</th><th>Bàn</th><th>Thời gian</th><th>Nhân viên</th><th>Tiền món</th><th>Giảm giá</th><th>Thành tiền</th><th>Kiểu thanh toán</th><th>Khu vực</th></tr></thead><tbody>{% for invoice in invoices %}<tr><td>{{ invoice.invoice_code }}</td><td>{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}-{% endif %}</td><td>{{ invoice.paid_at|date:'H:i' }}</td><td>{{ invoice.cashier.username }}</td><td>{{ invoice.subtotal|floatformat:0 }}</td><td>{{ invoice.discount_amount|floatformat:0 }}</td><td>{{ invoice.total_amount|floatformat:0 }}</td><td>{% for payment in invoice.payments.all %}{{ payment.get_method_display }}{% endfor %}</td><td>{% if invoice.order.table %}{{ invoice.order.table.area.name }}{% else %}Mang về{% endif %}</td></tr>{% empty %}<tr><td colspan="9">Chưa có hóa đơn.</td></tr>{% endfor %}</tbody></table></div>
-            <div class="activity-panel"><div class="activity-heading"><span>Thời điểm</span><span>Hoạt động</span><span>Chi tiết</span><span>Thực hiện</span></div><div class="activity-row"><time>11:12 AM</time><span>Sửa hóa đơn</span><span>Món Thái gà đã bán thành tiền 14.000 đ</span><b>Thu Ngân 1</b></div><div class="activity-row"><time>12:27 PM</time><span>Sửa món</span><span>Pad Thai bò thêm 1 phần</span><b>Thu Ngân 1</b></div><div class="activity-row danger"><time>12:34 PM</time><span>Hủy món</span><span>Bàn 19 hủy món Phồng tôm</span><b>Thu Ngân 1</b></div><div class="activity-row success"><time>02:58 PM</time><span>Kết ca</span><span>Kết ca chung, tổng 2.058.400 đ</span><b>Thu Ngân 1</b></div></div>
+            <div class="invoice-table-wrap"><table class="invoice-table"><thead><tr><th>Hóa đơn</th><th>Bàn</th><th>Thời gian</th><th>Nhân viên</th><th>Tiền món</th><th>Giảm giá</th><th>Thành tiền</th><th>Kiểu thanh toán</th><th>Khu vực</th></tr></thead><tbody>{% for invoice in invoices %}{% with first_item=invoice.order.items.all|first %}<tr data-invoice-code="{{ invoice.invoice_code }}" data-item-name="{{ first_item.product_name|default:'Chi tiết hóa đơn' }}" data-item-price="{{ first_item.unit_price|default:invoice.subtotal }}" data-item-quantity="{{ first_item.quantity|default:1 }}"><td>{{ invoice.invoice_code }}</td><td>{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}-{% endif %}</td><td>{{ invoice.paid_at|date:'H:i' }}</td><td>{{ invoice.cashier.username }}</td><td>{{ invoice.subtotal|floatformat:0 }}</td><td>{{ invoice.discount_amount|floatformat:0 }}</td><td>{{ invoice.total_amount|floatformat:0 }}</td><td>{% for payment in invoice.payments.all %}{{ payment.get_method_display }}{% endfor %}</td><td>{% if invoice.order.table %}{{ invoice.order.table.area.name }}{% else %}Mang về{% endif %}</td></tr>{% endwith %}{% empty %}<tr><td colspan="9">Chưa có hóa đơn.</td></tr>{% endfor %}</tbody></table></div>
+            <div class="activity-panel"><div class="activity-heading"><span>Thời điểm</span><span>Hoạt động</span><span>Chi tiết</span><span>Thực hiện</span></div>{% for log in activity_logs %}<div class="activity-row {% if log.action == 'delete' %}danger{% elif log.action == 'payment' %}success{% endif %}"><time>{{ log.created_at|date:'h:i A' }}</time><span>{% if log.action == 'update' %}Sửa hóa đơn{% elif log.action == 'delete' %}Hủy hóa đơn{% elif log.action == 'payment' %}Thanh toán{% else %}{{ log.get_action_display }}{% endif %}</span><span>{{ log.description }}</span><b>{{ log.actor.username|default:'Hệ thống' }}</b></div>{% empty %}<div class="activity-row"><time>-</time><span>-</span><span>Chưa có nhật ký hoạt động.</span><b>-</b></div>{% endfor %}</div>
         </section>
     </div>
-    <footer class="pos-status"><span>▣ IP 192.168.88.51</span><span>◉ Không có tablet/smartphone kết nối</span><span>◷ Chưa báo cáo qua mạng</span><span>POS-80C</span><span>● {{ user.get_username }}</span><span>14/09/2026 06:20 PM</span><b>Bình thường</b></footer>
+    <footer class="pos-status"><span>▣ IP 192.168.88.51</span><span>◉ Không có tablet/smartphone kết nối</span><span>◷ Chưa báo cáo qua mạng</span><span>POS-80C</span><span>● {{ user.get_username }}</span><span>{{ current_time|date:'d/m/Y h:i A' }}</span><b>Bình thường</b></footer>
 </div>
 <div class="system-notice" id="system-notice" role="status" aria-live="polite" hidden></div>
+<div class="invoice-context-menu" id="invoice-context-menu" data-edit-url="{% url 'sales:edit_invoice' %}" data-delete-url="{% url 'sales:delete_invoice' %}" role="menu" hidden>
+    <button type="button" data-invoice-action="print">In lại hóa đơn</button>
+    <button type="button" data-invoice-action="change" disabled>Tính lại tiền thừa</button>
+    <span class="dropdown-separator"></span>
+    <button type="button" data-invoice-action="complete">Hoàn tất thanh toán</button>
+    <span class="dropdown-separator"></span>
+    <button type="button" data-invoice-action="edit">Sửa hóa đơn</button>
+    <button type="button" data-invoice-action="delete">Xóa hóa đơn</button>
+    <span class="dropdown-separator"></span>
+    <button type="button" data-invoice-action="summary">Tổng hợp</button>
+</div>
+<div class="legacy-order-dialog invoice-edit-dialog" id="invoice-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-edit-title" hidden>
+    <div class="invoice-edit-title"><span id="invoice-edit-title">Sửa hóa đơn</span><button type="button" class="dialog-close" id="invoice-edit-close" aria-label="Đóng">×</button></div>
+    <div class="invoice-edit-body">
+        <div class="invoice-edit-meta"><span>Bàn: <b id="invoice-edit-table">-</b></span><label>Nhân viên: <select id="invoice-edit-cashier"><option id="invoice-edit-cashier-option">-</option></select></label><label>Kiểu thanh toán: <select id="invoice-edit-payment"><option>Tiền mặt</option><option>Thẻ ngân hàng</option><option>Thẻ tín dụng</option><option>Ví điện tử</option><option>Tiền mặt</option><option>Tiếp khách</option><option>Ghi nợ</option></select></label></div>
+        <div class="invoice-edit-items"><div class="invoice-edit-item-head"><span>Tên món</span><span>ĐG (đ)</span><span>GG (%)</span><span>SL</span></div><div class="invoice-edit-item-row"><span id="invoice-edit-item-name">Chi tiết hóa đơn</span><span id="invoice-edit-item-price">0</span><span>0</span><span id="invoice-edit-item-quantity">1</span></div></div>
+        <div class="invoice-edit-item-buttons"><button type="button">+</button><button type="button">-</button></div>
+        <select class="invoice-edit-wide"><option>&lt;Thêm món khác / Thay tiền tính&gt;</option></select>
+        <select class="invoice-edit-wide"><option>&lt;Thêm món mới&gt;</option></select>
+        <div class="invoice-edit-totals"><label>Tiền món: <b id="invoice-edit-subtotal">0 đ</b></label><label>Phụ thu (%) đ: <select><option>0</option></select></label><label>Giảm giá (%) đ: <select><option>0</option></select></label><label>VAT (%): <select><option>0</option></select></label><strong>Thành tiền: <b id="invoice-edit-total">0 đ</b></strong></div>
+        <label class="invoice-reason-toggle"><input id="invoice-edit-reason-enabled" type="checkbox"> Nhập lý do sửa hóa đơn</label>
+        <input id="invoice-edit-reason" class="invoice-reason-input" type="text" maxlength="255" placeholder="Lý do sửa hóa đơn" hidden>
+        <div class="dialog-actions"><button type="button" id="invoice-edit-confirm">Xác nhận sửa</button><button type="button" id="invoice-edit-cancel">Bỏ qua</button></div>
+    </div>
+</div>
+<div class="legacy-order-dialog invoice-reason-dialog" id="invoice-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-delete-title" hidden>
+    <div class="invoice-reason-title"><span id="invoice-delete-title">Xóa hóa đơn</span><button type="button" class="dialog-close" id="invoice-delete-close" aria-label="Đóng">×</button></div>
+    <div class="invoice-reason-body"><p>Hóa đơn sẽ được chuyển sang trạng thái đã hủy.</p><label><input id="invoice-delete-reason-enabled" type="checkbox"> Nhập lý do xóa hóa đơn</label><input id="invoice-delete-reason" class="invoice-reason-input" type="text" maxlength="255" placeholder="Lý do xóa hóa đơn" hidden><div class="dialog-actions"><button type="button" id="invoice-delete-confirm">Xác nhận</button><button type="button" id="invoice-delete-cancel">Bỏ qua</button></div></div>
+</div>
+<div class="legacy-order-dialog payment-dialog" id="payment-dialog" data-checkout-url="{% url 'sales:checkout' %}" role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title" hidden>
+    <div class="payment-dialog-title"><span id="payment-dialog-title">Bàn - - Thanh toán</span><button type="button" class="dialog-close" id="payment-dialog-close" aria-label="Đóng">×</button></div>
+    <div class="payment-dialog-body">
+        <div class="payment-line"><span>Số tiền cần thanh toán</span><strong id="payment-total">0 đ</strong></div>
+        <label for="payment-method-dialog">Phương thức thanh toán</label>
+        <select id="payment-method-dialog">
+            <option value="cash">Tiền mặt</option>
+            <option value="bank">Thẻ ngân hàng</option>
+            <option value="card">Thẻ tín dụng</option>
+            <option value="e_wallet">Ví điện tử</option>
+            <option value="other">Khác</option>
+        </select>
+        <label for="customer-paid">Số tiền khách đưa</label>
+        <input id="customer-paid" type="number" min="0" step="1000" value="0">
+        <label for="change-amount">Số tiền thối lại</label>
+        <input id="change-amount" type="text" value="0 đ" readonly>
+        <label class="print-invoice-option"><input id="print-invoice" type="checkbox" checked> In hóa đơn</label>
+        <div class="dialog-actions"><button type="button" id="payment-confirm">Xác nhận</button><button type="button" id="payment-cancel">Hủy bỏ</button></div>
+    </div>
+</div>
+<div class="legacy-order-dialog closing-dialog" id="closing-dialog" data-close-url="{% url 'dashboard:close_shift' %}" role="dialog" aria-modal="true" aria-labelledby="closing-dialog-title" hidden>
+    <div class="legacy-dialog-title"><span id="closing-dialog-title">Kết ca - Giao tiền</span><button type="button" class="dialog-close" id="closing-dialog-close" aria-label="Đóng">×</button></div>
+    <div class="closing-dialog-body">
+        <p class="closing-heading">Kết ca chung theo thời gian</p>
+        <dl class="closing-summary">
+            <div><dt>Thời điểm mở ca:</dt><dd>{{ shift_started_at|date:'d/m/Y H:i' }}</dd></div>
+            <div><dt>Số hóa đơn đến lúc này:</dt><dd>{{ shift_invoice_count }}</dd></div>
+            <div><dt>Doanh thu đến lúc này:</dt><dd>{{ shift_total|floatformat:0 }} đ</dd></div>
+        </dl>
+        <div class="closing-payment-list">
+            {% for row in shift_payment_rows %}<div><span>Hóa đơn {{ row.label|lower }}:</span><b>{{ row.count }}</b><strong>{{ row.total|floatformat:0 }}</strong></div>{% endfor %}
+        </div>
+        <p class="closing-total">Tổng kết ca: <b>{{ shift_total|floatformat:0 }} đ</b></p>
+        <p class="closing-help">Nhấn OK để kết ca và in báo cáo. Nhấn Hủy bỏ để quay lại màn hình bán hàng.</p>
+        <div class="dialog-actions"><button type="button" id="closing-confirm">OK</button><button type="button" id="closing-cancel">Hủy bỏ</button></div>
+    </div>
+</div>
+<div class="legacy-order-dialog closing-success-dialog" id="closing-success-dialog" role="status" aria-live="assertive" hidden>
+    <div class="legacy-dialog-title">Kết ca - Giao tiền</div>
+    <div class="closing-success-body"><b>Đã in bill kết ca thành công.</b><span>Đang trở về màn hình đăng nhập...</span></div>
+</div>
+<form method="post" action="{% url 'accounts:logout' %}" id="closing-logout-form" hidden>{% csrf_token %}</form>
+<div class="password-dialog-backdrop" id="password-dialog-backdrop" hidden></div>
+<div class="legacy-order-dialog password-dialog" id="password-dialog" role="dialog" aria-modal="true" aria-labelledby="password-dialog-title" hidden>
+    <div class="password-dialog-title" id="password-dialog-title">Đổi mật khẩu - {{ user.get_full_name|default:user.get_username }}</div>
+    <form method="post" action="{% url 'accounts:change_password' %}" id="password-change-form" class="password-dialog-body">
+        {% csrf_token %}
+        <label for="password-old">Mật khẩu hiện tại</label>
+        <input id="password-old" name="old_password" type="password" autocomplete="current-password">
+        <label for="password-new">Mật khẩu mới</label>
+        <input id="password-new" name="new_password1" type="password" autocomplete="new-password">
+        <label for="password-confirm">Nhắc lại mật khẩu mới</label>
+        <input id="password-confirm" name="new_password2" type="password" autocomplete="new-password">
+        <div class="password-dialog-actions">
+            <button type="submit" id="password-confirm-button" disabled>Xác nhận</button>
+            <button type="button" id="password-cancel-button">Bỏ qua</button>
+        </div>
+    </form>
+</div>
 <div class="legacy-order-dialog" id="order-dialog" hidden>
     <div class="legacy-dialog-title"><span id="dialog-title">Bàn - - Yêu cầu món mới</span><button type="button" class="dialog-close" id="dialog-close">×</button></div>
     <div class="legacy-order-body">

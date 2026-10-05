@@ -1,24 +1,102 @@
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from datetime import datetime, time, timedelta
 
 from django.db.models import Count, Prefetch, Q, Sum
 from django.utils import timezone
 from django.shortcuts import render
+from django.views.decorators.http import require_POST
 
 from catalog.models import Category, Product
 from dining.models import Area, DiningTable
-from sales.models import Invoice, OrderItem, Payment
+from sales.models import Invoice, OrderItem, Payment, Shift
 from accounts.decorators import role_required
+from audit.models import ActivityLog
 
 
 @login_required
 def home(request):
+	shift = Shift.objects.filter(status=Shift.Status.OPEN).order_by('started_at').first()
+	now = timezone.localtime()
+	day_started_at = timezone.make_aware(datetime.combine(now.date(), time.min))
+	if shift is not None and timezone.localtime(shift.started_at).date() < now.date():
+		shift.status = Shift.Status.CLOSED
+		shift.ended_at = day_started_at
+		shift.closed_by = request.user
+		shift.save(update_fields=('status', 'ended_at', 'closed_by'))
+		shift = None
+	if shift is None:
+		shift = Shift.objects.create(opened_by=request.user)
+		first_invoice = Invoice.objects.filter(status=Invoice.Status.PAID, paid_at__gte=day_started_at).order_by('paid_at').first()
+		if first_invoice is not None:
+			shift.started_at = first_invoice.paid_at
+			shift.save(update_fields=('started_at',))
+	shift_started_at = shift.started_at
+	shift_invoices = Invoice.objects.filter(
+		status=Invoice.Status.PAID,
+		paid_at__gte=max(shift_started_at, day_started_at),
+	)
+	payment_totals = {
+		row['payments__method']: row
+		for row in shift_invoices.values('payments__method').annotate(
+			count=Count('pk', distinct=True), total=Sum('payments__amount'),
+		)
+	}
+	shift_payment_rows = [
+		{
+			'label': label,
+			'count': payment_totals.get(method, {}).get('count', 0),
+			'total': payment_totals.get(method, {}).get('total', 0),
+		}
+		for method, label in Payment.Method.choices
+	]
 	return render(request, 'dashboard/home.html', {
 		'areas': Area.objects.filter(is_active=True).prefetch_related(Prefetch('tables', queryset=DiningTable.objects.filter(is_active=True))),
 		'categories': Category.objects.filter(is_active=True),
 		'products': Product.objects.filter(is_active=True, is_available=True).select_related('category'),
-		'invoices': Invoice.objects.select_related('order', 'cashier', 'order__table').prefetch_related('payments')[:30],
+		'invoices': Invoice.objects.filter(paid_at__gte=day_started_at, paid_at__lt=day_started_at + timedelta(days=1)).select_related('order', 'cashier', 'order__table').prefetch_related('payments')[:30],
+		'shift_started_at': shift_started_at,
+		'shift_invoice_count': shift_invoices.count(),
+		'shift_total': shift_invoices.aggregate(total=Sum('total_amount'))['total'] or 0,
+		'shift_payment_rows': shift_payment_rows,
+		'shift': shift,
+		'activity_logs': ActivityLog.objects.filter(created_at__gte=day_started_at).select_related('actor')[:12],
+		'current_time': now,
 	})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales')
+@require_POST
+def close_shift(request):
+	shift = Shift.objects.filter(status=Shift.Status.OPEN).order_by('started_at').first()
+	if shift is None:
+		return JsonResponse({'error': 'Không có ca đang mở.'}, status=400)
+	ended_at = timezone.now()
+	shift_invoices = Invoice.objects.filter(status=Invoice.Status.PAID, paid_at__gte=shift.started_at, paid_at__lte=ended_at)
+	payment_totals = {
+		row['payments__method']: row
+		for row in shift_invoices.values('payments__method').annotate(
+			count=Count('pk', distinct=True), total=Sum('payments__amount'),
+		)
+	}
+	total = shift_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+	shift.status = Shift.Status.CLOSED
+	shift.ended_at = ended_at
+	shift.closed_by = request.user
+	shift.save(update_fields=('status', 'ended_at', 'closed_by'))
+	ActivityLog.objects.create(
+		actor=request.user,
+		action=ActivityLog.Action.OTHER,
+		method=request.method,
+		path=request.path,
+		object_type='Shift',
+		object_id=shift.pk,
+		description=f'Kết ca chung ({shift_invoices.count()} hóa đơn, tổng {total:,.0f} đ)',
+		status_code=200,
+		ip_address=request.META.get('REMOTE_ADDR'),
+	)
+	return JsonResponse({'ok': True, 'invoice_count': shift_invoices.count(), 'total': str(total), 'payments': {method: {'count': row['count'], 'total': str(row['total'] or 0)} for method, row in payment_totals.items()}})
 
 
 @login_required

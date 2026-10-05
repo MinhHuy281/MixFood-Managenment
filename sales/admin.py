@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Invoice, Order, OrderItem, Payment
+from .models import Invoice, Order, OrderItem, Payment, Shift
 
 
 class OrderItemInline(admin.TabularInline):
@@ -28,3 +28,9 @@ class InvoiceAdmin(admin.ModelAdmin):
 class PaymentAdmin(admin.ModelAdmin):
 	list_display = ('invoice', 'method', 'amount', 'created_by', 'paid_at')
 	list_filter = ('method', 'paid_at')
+
+
+@admin.register(Shift)
+class ShiftAdmin(admin.ModelAdmin):
+	list_display = ('started_at', 'ended_at', 'status', 'opened_by', 'closed_by')
+	list_filter = ('status', 'started_at')

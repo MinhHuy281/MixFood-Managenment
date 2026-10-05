@@ -98,6 +98,23 @@ class Invoice(models.Model):
 		return self.invoice_code
 
 
+class Shift(models.Model):
+	class Status(models.TextChoices):
+		OPEN = 'open', 'Đang mở'
+		CLOSED = 'closed', 'Đã kết'
+
+	status = models.CharField('Trạng thái', max_length=10, choices=Status.choices, default=Status.OPEN)
+	started_at = models.DateTimeField(auto_now_add=True)
+	ended_at = models.DateTimeField(null=True, blank=True)
+	opened_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='opened_shifts')
+	closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='closed_shifts')
+
+	class Meta:
+		ordering = ('-started_at',)
+		verbose_name = 'Ca làm việc'
+		verbose_name_plural = 'Ca làm việc'
+
+
 class Payment(models.Model):
 	class Method(models.TextChoices):
 		CASH = 'cash', 'Tiền mặt'

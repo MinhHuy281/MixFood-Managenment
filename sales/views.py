@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from accounts.decorators import role_required
+from audit.models import ActivityLog
 from catalog.models import Product
 from dining.models import DiningTable
 from inventory.services import deduct_for_sale
@@ -148,3 +149,67 @@ def checkout(request):
 def invoice_list(request):
 	invoices = Invoice.objects.select_related('order', 'cashier', 'order__table').prefetch_related('payments')[:100]
 	return render(request, 'sales/invoice_list.html', {'invoices': invoices})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales')
+@require_POST
+def edit_invoice(request):
+	try:
+		payload = json.loads(request.body or '{}')
+	except json.JSONDecodeError:
+		return JsonResponse({'error': 'Dữ liệu sửa hóa đơn không hợp lệ.'}, status=400)
+	reason = str(payload.get('reason', '')).strip()
+	invoice_code = str(payload.get('invoice_code', '')).strip()
+	if not reason:
+		return JsonResponse({'error': 'Vui lòng nhập lý do sửa hóa đơn.'}, status=400)
+	invoice = Invoice.objects.filter(invoice_code=invoice_code).first()
+	if invoice is None:
+		return JsonResponse({'error': 'Không tìm thấy hóa đơn.'}, status=404)
+	ActivityLog.objects.create(
+		actor=request.user,
+		action=ActivityLog.Action.UPDATE,
+		method=request.method,
+		path=request.path,
+		object_type='Invoice',
+		object_id=invoice.pk,
+		description=f'Sửa hóa đơn số {invoice.invoice_code} (lý do: {reason})',
+		status_code=200,
+		ip_address=request.META.get('REMOTE_ADDR'),
+	)
+	return JsonResponse({'ok': True})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales')
+@require_POST
+def delete_invoice(request):
+	try:
+		payload = json.loads(request.body or '{}')
+	except json.JSONDecodeError:
+		return JsonResponse({'error': 'Dữ liệu xóa hóa đơn không hợp lệ.'}, status=400)
+	reason = str(payload.get('reason', '')).strip()
+	invoice_code = str(payload.get('invoice_code', '')).strip()
+	if not reason:
+		return JsonResponse({'error': 'Vui lòng nhập lý do xóa hóa đơn.'}, status=400)
+	invoice = Invoice.objects.select_related('order').filter(invoice_code=invoice_code).first()
+	if invoice is None:
+		return JsonResponse({'error': 'Không tìm thấy hóa đơn.'}, status=404)
+	invoice.status = Invoice.Status.CANCELLED
+	invoice.cancelled_at = timezone.now()
+	invoice.cancel_reason = reason[:255]
+	invoice.save(update_fields=('status', 'cancelled_at', 'cancel_reason'))
+	invoice.order.status = Order.Status.CANCELLED
+	invoice.order.save(update_fields=('status', 'updated_at'))
+	ActivityLog.objects.create(
+		actor=request.user,
+		action=ActivityLog.Action.DELETE,
+		method=request.method,
+		path=request.path,
+		object_type='Invoice',
+		object_id=invoice.pk,
+		description=f'Hủy hóa đơn số {invoice.invoice_code} (lý do: {reason})',
+		status_code=200,
+		ip_address=request.META.get('REMOTE_ADDR'),
+	)
+	return JsonResponse({'ok': True})

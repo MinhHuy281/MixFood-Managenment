@@ -21,6 +21,21 @@ class PosDataTests(TestCase):
 		self.assertContains(response, 'Pad Thai tôm')
 		self.assertContains(response, 'data-table-name="1"', status_code=200)
 
+	def test_closing_dialog_uses_paid_invoice_totals(self):
+		user = get_user_model().objects.create_user('closing-cashier', password='test-password')
+		category = Category.objects.create(name='Kết ca')
+		product = Product.objects.create(category=category, code='CLOSE-01', name='Món kết ca', price=120000)
+		order = Order.objects.create(order_code='CLOSING-ORDER', status=Order.Status.PAID, subtotal=120000, total_amount=120000, created_by=user)
+		invoice = Invoice.objects.create(invoice_code='CLOSING-INV', order=order, cashier=user, subtotal=120000, total_amount=120000)
+		Payment.objects.create(invoice=invoice, method=Payment.Method.CASH, amount=120000, created_by=user)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('dashboard:home'))
+
+		self.assertEqual(response.context['shift_invoice_count'], 1)
+		self.assertEqual(response.context['shift_total'], 120000)
+		self.assertContains(response, 'Hóa đơn tiền mặt:')
+
 
 class ReportTests(TestCase):
 	def test_report_uses_paid_invoice_data(self):

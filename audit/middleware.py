@@ -7,7 +7,8 @@ class ActivityLogMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        if request.method == 'POST' and getattr(request, 'user', None) and request.user.is_authenticated:
+        manual_audit_paths = ('/invoices/edit/', '/invoices/delete/')
+        if request.method == 'POST' and not request.path.endswith(manual_audit_paths) and getattr(request, 'user', None) and request.user.is_authenticated:
             action = ActivityLog.Action.PAYMENT if request.path.endswith('/checkout/') else ActivityLog.Action.OTHER
             description = f'{request.method} {request.path}'
             if action == ActivityLog.Action.PAYMENT:
