@@ -1,194 +1,2191 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}POS | MixFood Manager{% endblock %}
+{% load menu_tags %}
+{% block title %}MixFood POS 2026 | Cloud Management{% endblock %}
 {% block body_class %}pos-body{% endblock %}
 {% block page_class %}pos-shell{% endblock %}
 {% block authenticated_header %}{% endblock %}
 {% block content %}
 <span hidden>{% csrf_token %}</span>
+
 <div class="pos-window">
+    <!-- TOP NAVIGATION BAR -->
     <header class="pos-menubar">
-        <div class="pos-brand" aria-label="DRS Manager 3.1.7"><span class="window-minimize">−</span><span class="window-close">×</span><strong>DRS Manager 3.1.7</strong></div>
-        <div class="store-name">MIX FOOD <span>ẨM THỰC THÁI - K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng - Mã: 13255</span></div>
-        <nav class="pos-nav">
-            <div class="pos-menu-item system-menu"><button type="button" aria-expanded="false">HỆ THỐNG</button><div class="pos-dropdown" role="menu">
-                <form method="post" action="{% url 'accounts:logout' %}" role="none">{% csrf_token %}<button type="submit" class="dropdown-action">Đăng thoát - Ra ca</button></form>
-                <button type="button" class="dropdown-action system-action" data-action="closing">Kết ca - Giao tiền</button>
-                <a href="{% url 'accounts:change_password' %}" class="dropdown-action password-change-action" role="menuitem">Đổi mật khẩu</a>
-                <button type="button" class="dropdown-action system-action" data-action="drawer">Mở két đựng tiền</button>
-                <button type="button" class="dropdown-action system-action" data-action="device">Thiết bị</button>
-                <span class="dropdown-separator"></span>
-                <button type="button" class="dropdown-action system-action" data-action="maintenance">Bảo trì dữ liệu</button>
-                <a href="{% url 'admin:index' %}" role="menuitem">Phân quyền sử dụng</a>
-                <a href="{% url 'audit:activity' %}" role="menuitem">Nhật ký hoạt động</a>
-                <span class="dropdown-separator"></span>
-                <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="dropdown-action" type="submit">Thoát</button></form>
-            </div></div>
-            <div class="pos-menu-item settings-menu"><button type="button" aria-expanded="false">CÀI ĐẶT</button><div class="pos-dropdown" role="menu">
-                <a href="{% url 'dining:home' %}" role="menuitem">Khu vực - Điểm bán</a>
-                <span class="dropdown-separator"></span>
-                <a href="{% url 'catalog:categories' %}" role="menuitem">Thực đơn (món bán → khách)</a>
-                <a href="{% url 'catalog:products' %}" role="menuitem">Mặt hàng (món bán)</a>
-                <a href="{% url 'inventory:recipes' %}" role="menuitem">Định lượng (món bán &lt;-&gt; món mua)</a>
-                <span class="dropdown-separator"></span>
-                <button type="button" class="dropdown-action settings-action" data-setting="price-policy">Chính sách giá - Sự kiện</button>
-                <button type="button" class="dropdown-action settings-action" data-setting="coupon">Mã giảm giá</button>
-                <button type="button" class="dropdown-action settings-action" data-setting="options">Các tùy chọn</button>
-            </div></div>
-            <div class="pos-menu-item management-menu"><button type="button" aria-expanded="false">QUẢN LÝ</button><div class="pos-dropdown" role="menu">
-                <a href="{% url 'admin:auth_user_changelist' %}" role="menuitem">Người dùng</a>
-                <button type="button" class="dropdown-action management-action" data-management="customers">Khách hàng</button>
-                <span class="dropdown-separator"></span>
-                <a href="{% url 'inventory:home' %}" role="menuitem">Kho hàng</a>
-                <button type="button" class="dropdown-action management-action" data-management="cashbook">Sổ thu chi</button>
-                <button type="button" class="dropdown-action management-action" data-management="debt">Công nợ</button>
-                <span class="dropdown-separator"></span>
-                <a href="{% url 'dining:home' %}" role="menuitem">Phân công</a>
-                <a href="{% url 'sales:invoices' %}" role="menuitem">Sổ kết ca</a>
-            </div></div>
-            <div class="pos-menu-item reports-menu"><button type="button" aria-expanded="false">BÁO CÁO</button><div class="pos-dropdown" role="menu">
-                <a href="{% url 'sales:invoices' %}" role="menuitem">Hóa đơn thanh toán</a>
-                <a href="{% url 'dashboard:reports' %}" role="menuitem">Doanh thu (theo thời gian)</a>
-                <button type="button" class="dropdown-action report-action" data-report="customer-revenue">Doanh thu (theo khách hàng)</button>
-                <a href="{% url 'dashboard:reports' %}" role="menuitem">Thống kê bán hàng</a>
-                <a href="{% url 'sales:invoices' %}" role="menuitem">Hàng bán chi tiết</a>
-                <span class="dropdown-separator"></span>
-                <a href="{% url 'inventory:home' %}" role="menuitem">Xuất nhập tồn kho</a>
-                <button type="button" class="dropdown-action report-action" data-report="purchases">Hoạt động mua hàng</button>
-                <button type="button" class="dropdown-action report-action" data-report="cash">Thống kê các khoản tiền</button>
-                <span class="dropdown-separator"></span>
-                <button type="button" class="dropdown-action report-action" data-report="guest-count">Lượng khách hôm nay</button>
-                <a href="{% url 'dashboard:reports' %}" role="menuitem">Báo cáo cuối ngày</a>
-            </div></div>
-            <div class="pos-menu-item"><button>TRỢ GIÚP</button><div class="pos-dropdown"><a href="#">Hướng dẫn</a><a href="#">Thông tin</a></div></div>
+        <div class="pos-brand" aria-label="MixFood Cloud POS 2026">
+            <span class="brand-logo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+            </span>
+            <div class="brand-text">
+                <strong>MIX FOOD</strong>
+                <span class="brand-badge">POS 2026</span>
+            </div>
+        </div>
+
+        <div class="store-name">
+            <div class="store-badge">
+                <span class="store-dot"></span>
+                <strong>CHI NHÁNH ĐÀ NẴNG</strong>
+            </div>
+            <span class="store-detail">Ẩm Thực Thái • K38/37 Nguyễn Duy Hiệu, Sơn Trà • Mã POS: <strong>13255</strong></span>
+        </div>
+
+        <nav class="pos-nav" aria-label="Thanh điều hướng POS">
+            <div class="pos-menu-item system-menu">
+                <button type="button" aria-expanded="false" class="nav-menu-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    HỆ THỐNG
+                    <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="pos-dropdown" role="menu">
+                    <form method="post" action="{% url 'accounts:logout' %}" role="none">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-action">
+                            <span class="dropdown-icon">🚪</span> Đăng thoát - Ra ca
+                        </button>
+                    </form>
+                    <button type="button" class="dropdown-action system-action" data-action="closing">
+                        <span class="dropdown-icon">💰</span> Kết ca - Giao tiền
+                    </button>
+                    <a href="{% url 'accounts:change_password' %}" class="dropdown-action password-change-action" role="menuitem">
+                        <span class="dropdown-icon">🔑</span> Đổi mật khẩu
+                    </a>
+                    <button type="button" class="dropdown-action system-action" data-action="drawer">
+                        <span class="dropdown-icon">📥</span> Mở két đựng tiền
+                    </button>
+                    <button type="button" class="dropdown-action system-action" data-action="device">
+                        <span class="dropdown-icon">🖨️</span> Thiết bị POS
+                    </button>
+                    <span class="dropdown-separator"></span>
+                    <button type="button" class="dropdown-action system-action" data-action="maintenance">
+                        <span class="dropdown-icon">🛠️</span> Bảo trì dữ liệu
+                    </button>
+                    <a href="{% url 'admin:index' %}" role="menuitem">
+                        <span class="dropdown-icon">🛡️</span> Phân quyền sử dụng
+                    </a>
+                    <a href="{% url 'audit:activity' %}" role="menuitem">
+                        <span class="dropdown-icon">📋</span> Nhật ký hoạt động
+                    </a>
+                    <span class="dropdown-separator"></span>
+                    <form method="post" action="{% url 'accounts:logout' %}">
+                        {% csrf_token %}
+                        <button class="dropdown-action text-danger" type="submit">
+                            <span class="dropdown-icon">🛑</span> Thoát hệ thống
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="pos-menu-item settings-menu">
+                <button type="button" aria-expanded="false" class="nav-menu-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    CÀI ĐẶT
+                    <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="pos-dropdown" role="menu">
+                    <a href="{% url 'dining:home' %}" role="menuitem">
+                        <span class="dropdown-icon">🪑</span> Khu vực - Điểm bán
+                    </a>
+                    <span class="dropdown-separator"></span>
+                    <a href="{% url 'catalog:menu_admin' %}" role="menuitem" id="open-menu-admin-menu" class="dropdown-action">
+                        <span class="dropdown-icon">📑</span> Thực đơn (món bán → khách)
+                    </a>
+                    <a href="{% url 'catalog:products' %}" role="menuitem">
+                        <span class="dropdown-icon">🍜</span> Mặt hàng (Món bán)
+                    </a>
+                    <a href="{% url 'inventory:recipes' %}" role="menuitem">
+                        <span class="dropdown-icon">⚖️</span> Định lượng nguyên liệu
+                    </a>
+                    <span class="dropdown-separator"></span>
+                    <button type="button" class="dropdown-action settings-action" data-setting="price-policy">
+                        <span class="dropdown-icon">🏷️</span> Chính sách giá & Sự kiện
+                    </button>
+                    <button type="button" class="dropdown-action settings-action" data-setting="coupon">
+                        <span class="dropdown-icon">🎟️</span> Mã giảm giá & Coupon
+                    </button>
+                    <button type="button" class="dropdown-action settings-action" data-setting="options">
+                        <span class="dropdown-icon">⚙️</span> Các tùy chọn POS
+                    </button>
+                </div>
+            </div>
+
+            <div class="pos-menu-item management-menu">
+                <button type="button" aria-expanded="false" class="nav-menu-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    QUẢN LÝ
+                    <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="pos-dropdown" role="menu">
+                    <a href="{% url 'admin:auth_user_changelist' %}" role="menuitem">
+                        <span class="dropdown-icon">👤</span> Người dùng hệ thống
+                    </a>
+                    <button type="button" class="dropdown-action management-action" data-management="customers">
+                        <span class="dropdown-icon">👥</span> Danh sách khách hàng
+                    </button>
+                    <span class="dropdown-separator"></span>
+                    <a href="{% url 'inventory:home' %}" role="menuitem">
+                        <span class="dropdown-icon">📦</span> Quản lý kho hàng
+                    </a>
+                    <button type="button" class="dropdown-action management-action" data-management="cashbook">
+                        <span class="dropdown-icon">📖</span> Sổ thu chi tiền mặt
+                    </button>
+                    <button type="button" class="dropdown-action management-action" data-management="debt">
+                        <span class="dropdown-icon">📑</span> Quản lý công nợ
+                    </button>
+                    <span class="dropdown-separator"></span>
+                    <a href="{% url 'dining:home' %}" role="menuitem">
+                        <span class="dropdown-icon">📋</span> Phân công bàn ca
+                    </a>
+                    <a href="{% url 'sales:invoices' %}" role="menuitem">
+                        <span class="dropdown-icon">🧾</span> Sổ hóa đơn kết ca
+                    </a>
+                </div>
+            </div>
+
+            <div class="pos-menu-item reports-menu">
+                <button type="button" aria-expanded="false" class="nav-menu-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    BÁO CÁO
+                    <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="pos-dropdown" role="menu">
+                    <a href="{% url 'sales:invoices' %}" role="menuitem" id="open-invoice-report-menu" class="dropdown-action">
+                        <span class="dropdown-icon">🧾</span> Hóa đơn thanh toán
+                    </a>
+                    <a href="{% url 'dashboard:reports' %}" role="menuitem">
+                        <span class="dropdown-icon">📈</span> Doanh thu (Theo thời gian)
+                    </a>
+                    <button type="button" class="dropdown-action report-action" data-report="customer-revenue">
+                        <span class="dropdown-icon">👑</span> Doanh thu theo khách
+                    </button>
+                    <a href="{% url 'dashboard:reports' %}" role="menuitem">
+                        <span class="dropdown-icon">📊</span> Thống kê bán hàng
+                    </a>
+                    <a href="{% url 'sales:invoices' %}" role="menuitem" id="open-invoice-report-menu-detail" class="dropdown-action">
+                        <span class="dropdown-icon">🍱</span> Hàng bán chi tiết
+                    </a>
+                    <span class="dropdown-separator"></span>
+                    <a href="{% url 'inventory:home' %}" role="menuitem">
+                        <span class="dropdown-icon">🔄</span> Xuất nhập tồn kho
+                    </a>
+                    <button type="button" class="dropdown-action report-action" data-report="purchases">
+                        <span class="dropdown-icon">🛒</span> Hoạt động mua hàng
+                    </button>
+                    <button type="button" class="dropdown-action report-action" data-report="cash">
+                        <span class="dropdown-icon">💵</span> Thống kê các khoản tiền
+                    </button>
+                    <span class="dropdown-separator"></span>
+                    <button type="button" class="dropdown-action report-action" data-report="guest-count">
+                        <span class="dropdown-icon">🚶</span> Lượng khách hôm nay
+                    </button>
+                    <a href="{% url 'dashboard:reports' %}" role="menuitem">
+                        <span class="dropdown-icon">📅</span> Báo cáo cuối ngày
+                    </a>
+                </div>
+            </div>
+
+            <div class="pos-menu-item">
+                <button type="button" class="nav-menu-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    TRỢ GIÚP
+                </button>
+                <div class="pos-dropdown">
+                    <a href="#"><span class="dropdown-icon">📖</span> Hướng dẫn sử dụng POS</a>
+                    <a href="#"><span class="dropdown-icon">ℹ️</span> Thông tin phiên bản Cloud</a>
+                </div>
+            </div>
+
+            <div class="cashier-chip">
+                <span class="cashier-avatar">{{ user.get_username|slice:":1"|upper }}</span>
+                <span class="cashier-name">{{ user.get_username }}</span>
+            </div>
         </nav>
     </header>
+
+    <!-- MAIN 4-COLUMN POS WORKSPACE -->
     <div class="pos-layout">
+        <!-- COLUMN 1: DINING AREAS & TABLES -->
         <aside class="table-sidebar">
-            {% for area in areas %}<section class="table-zone"><h3>{{ area.name|upper }} <em>({{ area.tables.all|length }})</em></h3><div class="table-grid {% if area.tables.all|length < 5 %}four{% endif %}">{% for table in area.tables.all %}<button class="table {{ table.status }}" data-table-id="{{ table.pk }}" data-table-name="{{ table.name }}" data-area="{{ area.name }}">{{ table.name }}</button>{% empty %}<small class="empty-sidebar">Chưa có bàn</small>{% endfor %}</div></section>{% empty %}<section class="empty-sidebar-panel"><b>Chưa có khu vực/bàn</b><a href="{% url 'dining:home' %}">Thiết lập ngay</a></section>{% endfor %}
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    <span>SƠ ĐỒ BÀN</span>
+                </div>
+                <div class="table-legend">
+                    <span class="legend-item"><i class="dot empty"></i>Trống</span>
+                    <span class="legend-item"><i class="dot occupied"></i>Khách</span>
+                    <span class="legend-item"><i class="dot sent"></i>Bếp</span>
+                </div>
+            </div>
+
+            <div class="table-zones-scroll">
+                {% for area in areas %}
+                <section class="table-zone">
+                    <div class="table-zone-head">
+                        <h3>{{ area.name|upper }}</h3>
+                        <span class="zone-badge">{{ area.tables.all|length }} bàn</span>
+                    </div>
+                    <div class="table-grid {% if area.tables.all|length < 5 %}four{% endif %}">
+                        {% for table in area.tables.all %}
+                        <button class="table {{ table.status }}" data-table-id="{{ table.pk }}" data-table-name="{{ table.name }}" data-area="{{ area.name }}" type="button">
+                            <span class="table-card-status"></span>
+                            <strong class="table-card-name">{{ table.name }}</strong>
+                            <small class="table-card-sub">{{ area.name }}</small>
+                        </button>
+                        {% empty %}
+                        <div class="empty-sidebar">Khu vực chưa có bàn</div>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% empty %}
+                <section class="empty-sidebar-panel">
+                    <div class="empty-icon">🪑</div>
+                    <b>Chưa có khu vực / bàn</b>
+                    <p>Hãy thiết lập sơ đồ khu vực phục vụ để bắt đầu bán hàng.</p>
+                    <a href="{% url 'dining:home' %}" class="btn-setup">Thiết lập ngay</a>
+                </section>
+                {% endfor %}
+            </div>
         </aside>
+
+        <!-- COLUMN 2: CURRENT ORDER TICKET / CART -->
         <section class="order-column" id="order-column" data-current-user="{{ user.get_username }}">
-            <div class="order-heading"><strong id="order-title">Bàn -</strong><span id="selected-table" hidden>-</span><small id="order-mode">Chưa chọn bàn</small></div>
-            <div class="order-meta"><span>Giờ đến:</span> <b id="order-time">-</b><br><span>Tình trạng:</span> <b id="order-status" class="pending">Chưa chọn bàn</b><br><span>Khách:</span> <b id="order-customer">-</b><br><span>Yêu cầu:</span> <b id="order-requested-by">{{ user.get_username }}</b></div>
-            <div class="order-items" id="order-items"><p class="empty-order">Chọn bàn và món để bắt đầu.</p></div>
-            <div class="order-total"><span>Tiền món: <b id="order-subtotal">0 đ</b></span><span>Phụ thu: <b>0 đ</b></span><span>Giảm giá: <b>0 đ</b></span><strong>THÀNH TIỀN: <span id="order-total">0 đ</span></strong></div>
-            <select class="payment-method" id="payment-method" aria-label="Phương thức thanh toán" hidden><option value="cash">Tiền mặt</option><option value="bank">Chuyển khoản</option><option value="card">Thẻ ngân hàng</option><option value="e_wallet">Ví điện tử</option></select>
-            <div class="table-selection-actions" id="table-selection-actions" hidden><button type="button" id="cancel-selected-table">Mở bàn</button><button type="button" id="open-menu">Gọi món</button></div>
-            <div class="order-open-actions" id="order-open-actions" hidden><button type="button" id="order-primary-action">Hủy bàn</button><button type="button" id="collapse-order-menu">&lt;&lt;</button></div>
-            <div class="order-actions"><button>Chuyển</button><button>Nhập</button><button>Ghép</button><button>Tách</button></div>
+            <!-- Ticket Header -->
+            <div class="order-heading">
+                <div class="order-heading-main">
+                    <div class="table-indicator-pill">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        <strong id="order-title">Bàn -</strong>
+                    </div>
+                    <span id="selected-table" hidden>-</span>
+                </div>
+                <small id="order-mode" class="order-mode-pill">Chưa chọn bàn</small>
+            </div>
+
+            <!-- Order Metadata Chips -->
+            <div class="order-meta">
+                <div class="meta-row">
+                    <div class="meta-chip">
+                        <span class="meta-label">Giờ vào:</span>
+                        <b id="order-time" class="meta-value">-</b>
+                    </div>
+                    <div class="meta-chip">
+                        <span class="meta-label">Trạng thái:</span>
+                        <b id="order-status" class="meta-value pending">Chưa chọn bàn</b>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-chip">
+                        <span class="meta-label">Khách:</span>
+                        <b id="order-customer" class="meta-value">-</b>
+                    </div>
+                    <div class="meta-chip">
+                        <span class="meta-label">Thu ngân:</span>
+                        <b id="order-requested-by" class="meta-value">{{ user.get_username }}</b>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Item List -->
+            <div class="order-items-container">
+                <div class="order-items" id="order-items">
+                    <div class="empty-order-state">
+                        <div class="empty-icon-pulse">🍽️</div>
+                        <p class="empty-order">Vui lòng chọn bàn và món để bắt đầu gọi món.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Bill Summary -->
+            <div class="order-total-card">
+                <div class="order-total-lines">
+                    <div class="calc-row"><span>Tiền món</span><b id="order-subtotal">0 đ</b></div>
+                    <div class="calc-row"><span>Phụ thu</span><b>0 đ</b></div>
+                    <div class="calc-row"><span>Giảm giá</span><b>0 đ</b></div>
+                </div>
+                <div class="order-total-divider"></div>
+                <div class="order-total-main">
+                    <span>TỔNG CỘNG</span>
+                    <strong id="order-total">0 đ</strong>
+                </div>
+            </div>
+
+            <select class="payment-method" id="payment-method" aria-label="Phương thức thanh toán" hidden>
+                <option value="cash">Tiền mặt</option>
+                <option value="bank">Chuyển khoản</option>
+                <option value="card">Thẻ ngân hàng</option>
+                <option value="e_wallet">Ví điện tử</option>
+            </select>
+
+            <!-- Table Selection Actions (When table is previewed) -->
+            <div class="table-selection-actions" id="table-selection-actions" hidden>
+                <button type="button" id="cancel-selected-table" class="btn-action-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    Mở bàn
+                </button>
+                <button type="button" id="open-menu" class="btn-action-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    Gọi món
+                </button>
+            </div>
+
+            <!-- Order Open Actions (When table is open & dishes are selected) -->
+            <div class="order-open-actions" id="order-open-actions" hidden>
+                <button type="button" id="order-primary-action" class="btn-action-cta">Hủy bàn</button>
+                <button type="button" id="collapse-order-menu" class="btn-action-collapse" title="Thu gọn thực đơn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+            </div>
+
+            <!-- Secondary Actions Toolbar -->
+            <div class="order-actions">
+                <button type="button" class="btn-tool"><span class="btn-tool-icon">🔄</span> Chuyển</button>
+                <button type="button" class="btn-tool"><span class="btn-tool-icon">📥</span> Nhập</button>
+                <button type="button" class="btn-tool"><span class="btn-tool-icon">🔗</span> Ghép</button>
+                <button type="button" class="btn-tool"><span class="btn-tool-icon">✂️</span> Tách</button>
+            </div>
         </section>
+
+        <!-- COLUMN 3: MENU & DISHES (SLIDES IN WHEN ORDERING) -->
         <section class="menu-column" id="menu-column" hidden>
-            <div class="menu-categories" role="tablist">{% for category in categories %}<button class="category {% if forloop.first %}active{% endif %}" data-category-id="{{ category.pk }}" data-category="{{ category.name }}" style="background: {{ category.color }}">{{ category.name|upper }}</button>{% empty %}<small class="empty-sidebar">Chưa có danh mục</small>{% endfor %}</div>
-            <div class="menu-head"><b id="menu-title">{% if categories %}{{ categories.0.name|upper }}{% else %}DANH MỤC MÓN{% endif %}</b><button class="collapse-menu">&lt; 1 &gt;</button></div>
-            <div class="dish-grid" id="dish-grid">{% for product in products %}<button class="dish" data-product-id="{{ product.pk }}" data-category-id="{{ product.category_id }}" data-dish="{{ product.name }}" data-unit="{{ product.unit }}" data-price="{{ product.price }}"><b>{{ product.name }}</b><small>{{ product.price|floatformat:0 }} đ/{{ product.unit }}</small></button>{% empty %}<p class="empty-menu">Chưa có món đang bán. <a href="{% url 'catalog:products' %}">Thêm món</a></p>{% endfor %}</div>
+            <div class="menu-categories" role="tablist">
+                {% for category in categories %}
+                <button class="category {% if forloop.first %}active{% endif %}" data-category-id="{{ category.pk }}" data-category="{{ category.name }}" style="--cat-color: {{ category.color|default:'#10b981' }};" type="button">
+                    <span class="category-indicator"></span>
+                    <span class="category-name">{{ category.name|upper }}</span>
+                </button>
+                {% empty %}
+                <small class="empty-sidebar">Chưa có danh mục</small>
+                {% endfor %}
+            </div>
+
+            <div class="menu-main-content">
+                <div class="menu-head">
+                    <div class="menu-title-wrap">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                        <b id="menu-title">{% if categories %}{{ categories.0.name|upper }}{% else %}DANH MỤC MÓN{% endif %}</b>
+                    </div>
+                    <button class="collapse-menu" type="button" title="Đóng thực đơn">&times;</button>
+                </div>
+
+                <!-- Search bar: Tìm theo mã hoặc tên món -->
+                <div class="menu-search-bar">
+                    <div class="search-input-pill">
+                        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="pos-dish-search" placeholder="Tìm theo mã món (VD: KTC, 7UP) hoặc tên món..." autocomplete="off">
+                        <button type="button" id="pos-dish-clear-search" class="btn-clear-search" title="Xóa tìm kiếm" hidden>&times;</button>
+                    </div>
+                </div>
+
+                <!-- Subgroup filter chips bar -->
+                <div class="subgroup-chips-bar" id="subgroup-chips-bar" hidden>
+                    <div class="subgroup-chips-list" id="subgroup-chips-list"></div>
+                </div>
+
+                <div class="dish-grid" id="dish-grid">
+                    {% for product in products %}
+                    <button class="dish" data-product-id="{{ product.pk }}" data-category-id="{{ product.category_id }}" data-code="{{ product.code|upper }}" data-dish="{{ product.name }}" data-subgroup="{{ product.subgroup }}" data-unit="{{ product.unit }}" data-price="{{ product.price }}" type="button">
+                        <div class="dish-info">
+                            <div class="dish-name-row">
+                                <b class="dish-name">{{ product.name }}</b>
+                                {% if product.code %}
+                                <span class="dish-code-tag">{{ product.code }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="dish-meta">
+                                <span class="dish-price">{{ product.price|vnd }} đ</span>
+                                <span class="dish-unit">/ {{ product.unit }}</span>
+                            </div>
+                        </div>
+                        <span class="dish-add-pill">+</span>
+                    </button>
+                    {% empty %}
+                    <div class="empty-menu-box">
+                        <p class="empty-menu">Chưa có món đang bán trong danh mục này.</p>
+                        <a href="{% url 'catalog:products' %}" class="btn-add-product">+ Thêm món mới</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </section>
+
+        <!-- COLUMN 4: INVOICE RECORDS & LIVE ACTIVITY AUDIT -->
         <section class="records-column">
-            <div class="record-tabs"><button class="record-tab active">Hóa đơn</button><button class="record-tab">Đếm bàn</button><button class="record-tab">Thời gian</button><button class="record-tab">Nhân viên</button><button class="record-tab">Tiền món</button><button class="record-tab">Tiền giờ</button><button class="record-tab">Phụ thu</button><button class="record-tab">Giảm giá</button><button class="record-tab">VAT</button></div>
-            <div class="invoice-table-wrap"><table class="invoice-table"><thead><tr><th>Hóa đơn</th><th>Bàn</th><th>Thời gian</th><th>Nhân viên</th><th>Tiền món</th><th>Giảm giá</th><th>Thành tiền</th><th>Kiểu thanh toán</th><th>Khu vực</th></tr></thead><tbody>{% for invoice in invoices %}{% with first_item=invoice.order.items.all|first %}<tr data-invoice-code="{{ invoice.invoice_code }}" data-item-name="{{ first_item.product_name|default:'Chi tiết hóa đơn' }}" data-item-price="{{ first_item.unit_price|default:invoice.subtotal }}" data-item-quantity="{{ first_item.quantity|default:1 }}"><td>{{ invoice.invoice_code }}</td><td>{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}-{% endif %}</td><td>{{ invoice.paid_at|date:'H:i' }}</td><td>{{ invoice.cashier.username }}</td><td>{{ invoice.subtotal|floatformat:0 }}</td><td>{{ invoice.discount_amount|floatformat:0 }}</td><td>{{ invoice.total_amount|floatformat:0 }}</td><td>{% for payment in invoice.payments.all %}{{ payment.get_method_display }}{% endfor %}</td><td>{% if invoice.order.table %}{{ invoice.order.table.area.name }}{% else %}Mang về{% endif %}</td></tr>{% endwith %}{% empty %}<tr><td colspan="9">Chưa có hóa đơn.</td></tr>{% endfor %}</tbody></table></div>
-            <div class="activity-panel"><div class="activity-heading"><span>Thời điểm</span><span>Hoạt động</span><span>Chi tiết</span><span>Thực hiện</span></div>{% for log in activity_logs %}<div class="activity-row {% if log.action == 'delete' %}danger{% elif log.action == 'payment' %}success{% endif %}"><time>{{ log.created_at|date:'h:i A' }}</time><span>{% if log.action == 'update' %}Sửa hóa đơn{% elif log.action == 'delete' %}Hủy hóa đơn{% elif log.action == 'payment' %}Thanh toán{% else %}{{ log.get_action_display }}{% endif %}</span><span>{{ log.description }}</span><b>{{ log.actor.username|default:'Hệ thống' }}</b></div>{% empty %}<div class="activity-row"><time>-</time><span>-</span><span>Chưa có nhật ký hoạt động.</span><b>-</b></div>{% endfor %}</div>
+            <!-- Segmented Control Tabs -->
+            <div class="record-tabs-wrapper">
+                <div class="record-tabs">
+                    <button class="record-tab active" type="button">🧾 Hóa đơn</button>
+                    <button class="record-tab" type="button">📊 Đếm bàn</button>
+                    <button class="record-tab" type="button">⏰ Thời gian</button>
+                    <button class="record-tab" type="button">👤 Nhân viên</button>
+                    <button class="record-tab" type="button">🍲 Tiền món</button>
+                    <button class="record-tab" type="button">⏱️ Tiền giờ</button>
+                    <button class="record-tab" type="button">➕ Phụ thu</button>
+                    <button class="record-tab" type="button">🏷️ Giảm giá</button>
+                    <button class="record-tab" type="button">📋 VAT</button>
+                </div>
+            </div>
+
+            <!-- Invoices Data Table -->
+            <div class="invoice-table-wrap">
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>MÃ HĐ</th>
+                            <th>BÀN</th>
+                            <th>THỜI GIAN</th>
+                            <th>THU NGÂN</th>
+                            <th>TIỀN MÓN</th>
+                            <th>GIẢM GIÁ</th>
+                            <th>THÀNH TIỀN</th>
+                            <th>THANH TOÁN</th>
+                            <th>KHU VỰC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        {% with first_item=invoice.order.items.all|first %}
+                        <tr data-invoice-code="{{ invoice.invoice_code }}" data-item-name="{{ first_item.product_name|default:'Chi tiết hóa đơn' }}" data-item-price="{{ first_item.unit_price|default:invoice.subtotal }}" data-item-quantity="{{ first_item.quantity|default:1 }}">
+                            <td><strong class="invoice-badge-code">#{{ invoice.invoice_code }}</strong></td>
+                            <td><span class="table-pill">{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}Mang về{% endif %}</span></td>
+                            <td class="text-muted">{{ invoice.paid_at|date:'H:i' }}</td>
+                            <td><span class="user-pill">{{ invoice.cashier.username }}</span></td>
+                            <td class="text-right">{{ invoice.subtotal|vnd }} đ</td>
+                            <td class="text-right text-discount">{% if invoice.discount_amount %}-{{ invoice.discount_amount|vnd }} đ{% else %}0 đ{% endif %}</td>
+                            <td class="text-right"><strong class="total-highlight">{{ invoice.total_amount|vnd }} đ</strong></td>
+                            <td>
+                                {% for payment in invoice.payments.all %}
+                                <span class="payment-method-badge method-{{ payment.method }}">{{ payment.get_method_display }}</span>
+                                {% empty %}
+                                <span class="payment-method-badge">Tiền mặt</span>
+                                {% endfor %}
+                            </td>
+                            <td><span class="area-pill">{% if invoice.order.table %}{{ invoice.order.table.area.name }}{% else %}Mang về{% endif %}</span></td>
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr class="empty-table-row">
+                            <td colspan="9">
+                                <div class="empty-invoices-notice">
+                                    <span>🧾</span>
+                                    <p>Chưa có hóa đơn nào được tạo trong ca làm việc này.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Live Audit Timeline -->
+            <div class="activity-panel">
+                <div class="activity-heading">
+                    <span>THỜI ĐIỂM</span>
+                    <span>LOẠI SỰ KIỆN</span>
+                    <span>CHI TIẾT HOẠT ĐỘNG</span>
+                    <span>NGƯỜI THỰC HIỆN</span>
+                </div>
+                <div class="activity-scroll">
+                    {% for log in activity_logs %}
+                    <div class="activity-row {% if log.action == 'delete' %}danger{% elif log.action == 'payment' %}success{% endif %}">
+                        <time class="activity-time">{{ log.created_at|date:'H:i:s' }}</time>
+                        <span class="activity-badge badge-{{ log.action }}">
+                            {% if log.action == 'update' %}Sửa HĐ{% elif log.action == 'delete' %}Hủy HĐ{% elif log.action == 'payment' %}Thanh toán{% else %}{{ log.get_action_display }}{% endif %}
+                        </span>
+                        <span class="activity-desc">{{ log.description }}</span>
+                        <b class="activity-actor">{{ log.actor.username|default:'Hệ thống' }}</b>
+                    </div>
+                    {% empty %}
+                    <div class="activity-row empty-row">
+                        <time>-</time>
+                        <span>-</span>
+                        <span class="text-muted">Chưa có nhật ký hoạt động nào trong phiên làm việc.</span>
+                        <b>-</b>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </section>
     </div>
-    <footer class="pos-status"><span>▣ IP 192.168.88.51</span><span>◉ Không có tablet/smartphone kết nối</span><span>◷ Chưa báo cáo qua mạng</span><span>POS-80C</span><span>● {{ user.get_username }}</span><span>{{ current_time|date:'d/m/Y h:i A' }}</span><b>Bình thường</b></footer>
-</div>
-<div class="system-notice" id="system-notice" role="status" aria-live="polite" hidden></div>
-<div class="invoice-context-menu" id="invoice-context-menu" data-edit-url="{% url 'sales:edit_invoice' %}" data-delete-url="{% url 'sales:delete_invoice' %}" role="menu" hidden>
-    <button type="button" data-invoice-action="print">In lại hóa đơn</button>
-    <button type="button" data-invoice-action="change" disabled>Tính lại tiền thừa</button>
-    <span class="dropdown-separator"></span>
-    <button type="button" data-invoice-action="complete">Hoàn tất thanh toán</button>
-    <span class="dropdown-separator"></span>
-    <button type="button" data-invoice-action="edit">Sửa hóa đơn</button>
-    <button type="button" data-invoice-action="delete">Xóa hóa đơn</button>
-    <span class="dropdown-separator"></span>
-    <button type="button" data-invoice-action="summary">Tổng hợp</button>
-</div>
-<div class="legacy-order-dialog invoice-edit-dialog" id="invoice-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-edit-title" hidden>
-    <div class="invoice-edit-title"><span id="invoice-edit-title">Sửa hóa đơn</span><button type="button" class="dialog-close" id="invoice-edit-close" aria-label="Đóng">×</button></div>
-    <div class="invoice-edit-body">
-        <div class="invoice-edit-meta"><span>Bàn: <b id="invoice-edit-table">-</b></span><label>Nhân viên: <select id="invoice-edit-cashier"><option id="invoice-edit-cashier-option">-</option></select></label><label>Kiểu thanh toán: <select id="invoice-edit-payment"><option>Tiền mặt</option><option>Thẻ ngân hàng</option><option>Thẻ tín dụng</option><option>Ví điện tử</option><option>Tiền mặt</option><option>Tiếp khách</option><option>Ghi nợ</option></select></label></div>
-        <div class="invoice-edit-items"><div class="invoice-edit-item-head"><span>Tên món</span><span>ĐG (đ)</span><span>GG (%)</span><span>SL</span></div><div class="invoice-edit-item-row"><span id="invoice-edit-item-name">Chi tiết hóa đơn</span><span id="invoice-edit-item-price">0</span><span>0</span><span id="invoice-edit-item-quantity">1</span></div></div>
-        <div class="invoice-edit-item-buttons"><button type="button">+</button><button type="button">-</button></div>
-        <select class="invoice-edit-wide"><option>&lt;Thêm món khác / Thay tiền tính&gt;</option></select>
-        <select class="invoice-edit-wide"><option>&lt;Thêm món mới&gt;</option></select>
-        <div class="invoice-edit-totals"><label>Tiền món: <b id="invoice-edit-subtotal">0 đ</b></label><label>Phụ thu (%) đ: <select><option>0</option></select></label><label>Giảm giá (%) đ: <select><option>0</option></select></label><label>VAT (%): <select><option>0</option></select></label><strong>Thành tiền: <b id="invoice-edit-total">0 đ</b></strong></div>
-        <label class="invoice-reason-toggle"><input id="invoice-edit-reason-enabled" type="checkbox"> Nhập lý do sửa hóa đơn</label>
-        <input id="invoice-edit-reason" class="invoice-reason-input" type="text" maxlength="255" placeholder="Lý do sửa hóa đơn" hidden>
-        <div class="dialog-actions"><button type="button" id="invoice-edit-confirm">Xác nhận sửa</button><button type="button" id="invoice-edit-cancel">Bỏ qua</button></div>
-    </div>
-</div>
-<div class="legacy-order-dialog invoice-reason-dialog" id="invoice-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-delete-title" hidden>
-    <div class="invoice-reason-title"><span id="invoice-delete-title">Xóa hóa đơn</span><button type="button" class="dialog-close" id="invoice-delete-close" aria-label="Đóng">×</button></div>
-    <div class="invoice-reason-body"><p>Hóa đơn sẽ được chuyển sang trạng thái đã hủy.</p><label><input id="invoice-delete-reason-enabled" type="checkbox"> Nhập lý do xóa hóa đơn</label><input id="invoice-delete-reason" class="invoice-reason-input" type="text" maxlength="255" placeholder="Lý do xóa hóa đơn" hidden><div class="dialog-actions"><button type="button" id="invoice-delete-confirm">Xác nhận</button><button type="button" id="invoice-delete-cancel">Bỏ qua</button></div></div>
-</div>
-<div class="legacy-order-dialog payment-dialog" id="payment-dialog" data-checkout-url="{% url 'sales:checkout' %}" role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title" hidden>
-    <div class="payment-dialog-title"><span id="payment-dialog-title">Bàn - - Thanh toán</span><button type="button" class="dialog-close" id="payment-dialog-close" aria-label="Đóng">×</button></div>
-    <div class="payment-dialog-body">
-        <div class="payment-line"><span>Số tiền cần thanh toán</span><strong id="payment-total">0 đ</strong></div>
-        <label for="payment-method-dialog">Phương thức thanh toán</label>
-        <select id="payment-method-dialog">
-            <option value="cash">Tiền mặt</option>
-            <option value="bank">Thẻ ngân hàng</option>
-            <option value="card">Thẻ tín dụng</option>
-            <option value="e_wallet">Ví điện tử</option>
-            <option value="other">Khác</option>
-        </select>
-        <label for="customer-paid">Số tiền khách đưa</label>
-        <input id="customer-paid" type="number" min="0" step="1000" value="0">
-        <label for="change-amount">Số tiền thối lại</label>
-        <input id="change-amount" type="text" value="0 đ" readonly>
-        <label class="print-invoice-option"><input id="print-invoice" type="checkbox" checked> In hóa đơn</label>
-        <div class="dialog-actions"><button type="button" id="payment-confirm">Xác nhận</button><button type="button" id="payment-cancel">Hủy bỏ</button></div>
-    </div>
-</div>
-<div class="legacy-order-dialog closing-dialog" id="closing-dialog" data-close-url="{% url 'dashboard:close_shift' %}" role="dialog" aria-modal="true" aria-labelledby="closing-dialog-title" hidden>
-    <div class="legacy-dialog-title"><span id="closing-dialog-title">Kết ca - Giao tiền</span><button type="button" class="dialog-close" id="closing-dialog-close" aria-label="Đóng">×</button></div>
-    <div class="closing-dialog-body">
-        <p class="closing-heading">Kết ca chung theo thời gian</p>
-        <dl class="closing-summary">
-            <div><dt>Thời điểm mở ca:</dt><dd>{{ shift_started_at|date:'d/m/Y H:i' }}</dd></div>
-            <div><dt>Số hóa đơn đến lúc này:</dt><dd>{{ shift_invoice_count }}</dd></div>
-            <div><dt>Doanh thu đến lúc này:</dt><dd>{{ shift_total|floatformat:0 }} đ</dd></div>
-        </dl>
-        <div class="closing-payment-list">
-            {% for row in shift_payment_rows %}<div><span>Hóa đơn {{ row.label|lower }}:</span><b>{{ row.count }}</b><strong>{{ row.total|floatformat:0 }}</strong></div>{% endfor %}
+
+    <!-- MODERN STATUS FOOTER -->
+    <footer class="pos-status">
+        <div class="status-left">
+            <span class="status-badge"><span class="status-indicator online"></span> IP: 192.168.88.51</span>
+            <span class="status-badge"><span class="status-indicator live"></span> Cloud Sync: Đã đồng bộ</span>
+            <span class="status-badge"><span class="status-indicator printer"></span> Máy in: POS-80C Sẵn sàng</span>
         </div>
-        <p class="closing-total">Tổng kết ca: <b>{{ shift_total|floatformat:0 }} đ</b></p>
-        <p class="closing-help">Nhấn OK để kết ca và in báo cáo. Nhấn Hủy bỏ để quay lại màn hình bán hàng.</p>
-        <div class="dialog-actions"><button type="button" id="closing-confirm">OK</button><button type="button" id="closing-cancel">Hủy bỏ</button></div>
+        <div class="status-right">
+            <span class="status-user"><span class="user-dot"></span> {{ user.get_username }}</span>
+            <span class="status-clock" id="live-clock">{{ current_time|date:'d/m/Y H:i:s' }}</span>
+            <b class="status-health">Hoạt động bình thường</b>
+        </div>
+    </footer>
+</div>
+
+<!-- SYSTEM TOAST NOTIFICATIONS -->
+<div class="system-notice" id="system-notice" role="status" aria-live="polite" hidden></div>
+
+<!-- CONTEXT MENU FOR INVOICE TABLE -->
+<div class="invoice-context-menu" id="invoice-context-menu" data-edit-url="{% url 'sales:edit_invoice' %}" data-delete-url="{% url 'sales:delete_invoice' %}" role="menu" hidden>
+    <button type="button" data-invoice-action="print"><span class="menu-icon">🖨️</span> In lại hóa đơn</button>
+    <button type="button" data-invoice-action="change" disabled><span class="menu-icon">🔄</span> Tính lại tiền thừa</button>
+    <span class="dropdown-separator"></span>
+    <button type="button" data-invoice-action="complete"><span class="menu-icon">✅</span> Hoàn tất thanh toán</button>
+    <span class="dropdown-separator"></span>
+    <button type="button" data-invoice-action="edit"><span class="menu-icon">✏️</span> Sửa hóa đơn</button>
+    <button type="button" data-invoice-action="delete" class="text-danger"><span class="menu-icon">🗑️</span> Xóa hóa đơn</button>
+    <span class="dropdown-separator"></span>
+    <button type="button" data-invoice-action="summary"><span class="menu-icon">📊</span> Tổng hợp hóa đơn</button>
+</div>
+
+<!-- MODAL: ORDER NEW DISH / QUANTITY ADJUSTMENT -->
+<div class="legacy-order-dialog" id="order-dialog" hidden>
+    <div class="modern-dialog-backdrop"></div>
+    <div class="modern-dialog-container">
+        <div class="legacy-dialog-title">
+            <div class="dialog-title-text">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+                <span id="dialog-title">Bàn - - Yêu cầu món mới</span>
+            </div>
+            <button type="button" class="dialog-close" id="dialog-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="legacy-order-body">
+            <div class="dialog-product-name" id="dialog-product-name">Tên món</div>
+
+            <div class="form-group">
+                <label>Số lượng món</label>
+                <div class="quantity-control">
+                    <button type="button" id="quantity-minus" aria-label="Giảm">&minus;</button>
+                    <input id="dialog-quantity" type="text" value="1" inputmode="numeric">
+                    <button type="button" id="quantity-plus" aria-label="Tăng">&plus;</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Ghi chú cho bếp</label>
+                <input id="dialog-note" type="text" placeholder="Ví dụ: Ít cay, không hành, nhiều đá...">
+                <div class="quick-notes">
+                    <button type="button">Nhiều đá</button>
+                    <button type="button">Ít cay</button>
+                    <button type="button">Không hành</button>
+                    <button type="button">Nóng</button>
+                    <button type="button">Ít đường</button>
+                    <button type="button">Ngọt vừa</button>
+                </div>
+            </div>
+
+            <div class="dialog-price">
+                <div class="field-wrap">
+                    <label>Giá món (đ)</label>
+                    <input id="dialog-price" type="text" readonly>
+                </div>
+                <div class="field-wrap">
+                    <label>Giảm (%)</label>
+                    <input id="dialog-discount" type="text" value="0">
+                </div>
+            </div>
+
+            <div class="dialog-actions">
+                <button type="button" id="dialog-confirm" class="btn-dialog-primary">Thêm vào bàn</button>
+                <button type="button" id="dialog-cancel" class="btn-dialog-secondary">Bỏ qua</button>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- MODAL: CHECKOUT / PAYMENT -->
+<div class="legacy-order-dialog payment-dialog" id="payment-dialog" data-checkout-url="{% url 'sales:checkout' %}" role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title" hidden>
+    <div class="modern-dialog-backdrop"></div>
+    <div class="modern-dialog-container">
+        <div class="payment-dialog-title">
+            <div class="dialog-title-text">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                <span id="payment-dialog-title">Thanh toán đơn hàng</span>
+            </div>
+            <button type="button" class="dialog-close" id="payment-dialog-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="payment-dialog-body">
+            <div class="payment-total-banner">
+                <span class="banner-label">SỐ TIỀN CẦN THANH TOÁN</span>
+                <strong id="payment-total">0 đ</strong>
+            </div>
+
+            <div class="form-group">
+                <label for="payment-method-dialog">Phương thức thanh toán</label>
+                <select id="payment-method-dialog" class="modern-select">
+                    <option value="cash">💵 Tiền mặt</option>
+                    <option value="bank">🏦 Chuyển khoản QR ngân hàng</option>
+                    <option value="card">💳 Quẹt thẻ POS</option>
+                    <option value="e_wallet">📱 Ví điện tử (Momo / ZaloPay)</option>
+                    <option value="other">✨ Khác</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="customer-paid">Số tiền khách đưa</label>
+                <input id="customer-paid" type="number" min="0" step="1000" value="0" class="modern-input-large">
+            </div>
+
+            <div class="form-group">
+                <label for="change-amount">Số tiền thối lại cho khách</label>
+                <input id="change-amount" type="text" value="0 đ" readonly class="modern-input-change">
+            </div>
+
+            <label class="print-invoice-option">
+                <input id="print-invoice" type="checkbox" checked>
+                <span>Tự động in hóa đơn sau khi hoàn tất</span>
+            </label>
+
+            <div class="dialog-actions">
+                <button type="button" id="payment-confirm" class="btn-dialog-primary">Xác nhận thanh toán</button>
+                <button type="button" id="payment-cancel" class="btn-dialog-secondary">Hủy bỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: EDIT INVOICE -->
+<div class="legacy-order-dialog invoice-edit-dialog" id="invoice-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-edit-title" hidden>
+    <div class="modern-dialog-backdrop"></div>
+    <div class="modern-dialog-container">
+        <div class="invoice-edit-title">
+            <div class="dialog-title-text">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span id="invoice-edit-title">Sửa hóa đơn</span>
+            </div>
+            <button type="button" class="dialog-close" id="invoice-edit-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="invoice-edit-body">
+            <div class="invoice-edit-meta">
+                <div class="meta-row">
+                    <span>Bàn: <b id="invoice-edit-table">-</b></span>
+                    <label>Thu ngân:
+                        <select id="invoice-edit-cashier">
+                            <option id="invoice-edit-cashier-option">-</option>
+                        </select>
+                    </label>
+                </div>
+                <label>Hình thức:
+                    <select id="invoice-edit-payment">
+                        <option>Tiền mặt</option>
+                        <option>Chuyển khoản</option>
+                        <option>Thẻ ngân hàng</option>
+                        <option>Ví điện tử</option>
+                        <option>Tiếp khách</option>
+                        <option>Ghi nợ</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="invoice-edit-items">
+                <div class="invoice-edit-item-head">
+                    <span>Tên món</span>
+                    <span>Đơn giá</span>
+                    <span>GG(%)</span>
+                    <span>SL</span>
+                </div>
+                <div class="invoice-edit-item-row">
+                    <span id="invoice-edit-item-name">Chi tiết hóa đơn</span>
+                    <span id="invoice-edit-item-price">0</span>
+                    <span>0</span>
+                    <span id="invoice-edit-item-quantity">1</span>
+                </div>
+            </div>
+
+            <div class="invoice-edit-item-buttons">
+                <button type="button">+</button>
+                <button type="button">&minus;</button>
+            </div>
+
+            <select class="invoice-edit-wide"><option>&lt;Thêm món khác / Thay tiền tính&gt;</option></select>
+            <select class="invoice-edit-wide"><option>&lt;Thêm món mới&gt;</option></select>
+
+            <div class="invoice-edit-totals">
+                <label>Tiền món: <b id="invoice-edit-subtotal">0 đ</b></label>
+                <label>Phụ thu (%): <select><option>0</option></select></label>
+                <label>Giảm giá (%): <select><option>0</option></select></label>
+                <label>VAT (%): <select><option>0</option></select></label>
+                <strong class="edit-total-row">Thành tiền: <b id="invoice-edit-total">0 đ</b></strong>
+            </div>
+
+            <label class="invoice-reason-toggle">
+                <input id="invoice-edit-reason-enabled" type="checkbox">
+                <span>Nhập lý do điều chỉnh hóa đơn</span>
+            </label>
+            <input id="invoice-edit-reason" class="invoice-reason-input" type="text" maxlength="255" placeholder="Lý do sửa hóa đơn..." hidden>
+
+            <div class="dialog-actions">
+                <button type="button" id="invoice-edit-confirm" class="btn-dialog-primary">Xác nhận sửa</button>
+                <button type="button" id="invoice-edit-cancel" class="btn-dialog-secondary">Bỏ qua</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: DELETE INVOICE -->
+<div class="legacy-order-dialog invoice-reason-dialog" id="invoice-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-delete-title" hidden>
+    <div class="modern-dialog-backdrop"></div>
+    <div class="modern-dialog-container">
+        <div class="invoice-reason-title">
+            <div class="dialog-title-text">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span id="invoice-delete-title">Xóa hóa đơn</span>
+            </div>
+            <button type="button" class="dialog-close" id="invoice-delete-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="invoice-reason-body">
+            <p class="warning-text">⚠️ Hóa đơn sau khi xác nhận sẽ được hủy và ghi nhật ký kiểm toán hệ thống.</p>
+            <label class="invoice-reason-toggle">
+                <input id="invoice-delete-reason-enabled" type="checkbox">
+                <span>Nhập lý do hủy hóa đơn</span>
+            </label>
+            <input id="invoice-delete-reason" class="invoice-reason-input" type="text" maxlength="255" placeholder="Lý do xóa hóa đơn..." hidden>
+            <div class="dialog-actions">
+                <button type="button" id="invoice-delete-confirm" class="btn-dialog-danger">Xác nhận hủy</button>
+                <button type="button" id="invoice-delete-cancel" class="btn-dialog-secondary">Bỏ qua</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: SHIFT CLOSING -->
+<div class="legacy-order-dialog closing-dialog" id="closing-dialog" data-close-url="{% url 'dashboard:close_shift' %}" role="dialog" aria-modal="true" aria-labelledby="closing-dialog-title" hidden>
+    <div class="modern-dialog-backdrop"></div>
+    <div class="modern-dialog-container">
+        <div class="legacy-dialog-title">
+            <div class="dialog-title-text">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span id="closing-dialog-title">Kết ca & Bàn giao tiền</span>
+            </div>
+            <button type="button" class="dialog-close" id="closing-dialog-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="closing-dialog-body">
+            <p class="closing-heading">Tổng hợp doanh thu ca làm việc hiện tại</p>
+            <dl class="closing-summary">
+                <div class="summary-item"><dt>Thời điểm mở ca:</dt><dd>{{ shift_started_at|date:'d/m/Y H:i' }}</dd></div>
+                <div class="summary-item"><dt>Số hóa đơn hoàn tất:</dt><dd><strong>{{ shift_invoice_count }}</strong></dd></div>
+                <div class="summary-item"><dt>Doanh thu đến lúc này:</dt><dd class="total-text">{{ shift_total|vnd }} đ</dd></div>
+            </dl>
+            <div class="closing-payment-list">
+                {% for row in shift_payment_rows %}
+                <div class="payment-stat-row">
+                    <span>Hóa đơn {{ row.label|lower }}:</span>
+                    <b>{{ row.count }} đơn</b>
+                    <strong>{{ row.total|vnd }} đ</strong>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="closing-total-box">
+                <span>Tổng tiền kết ca:</span>
+                <b>{{ shift_total|vnd }} đ</b>
+            </div>
+            <p class="closing-help">Nhấn "Xác nhận kết ca" để in báo cáo và đăng xuất an toàn khỏi hệ thống POS.</p>
+            <div class="dialog-actions">
+                <button type="button" id="closing-confirm" class="btn-dialog-primary">Xác nhận kết ca</button>
+                <button type="button" id="closing-cancel" class="btn-dialog-secondary">Hủy bỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: SHIFT CLOSING SUCCESS -->
 <div class="legacy-order-dialog closing-success-dialog" id="closing-success-dialog" role="status" aria-live="assertive" hidden>
-    <div class="legacy-dialog-title">Kết ca - Giao tiền</div>
-    <div class="closing-success-body"><b>Đã in bill kết ca thành công.</b><span>Đang trở về màn hình đăng nhập...</span></div>
+    <div class="modern-dialog-backdrop"></div>
+    <div class="modern-dialog-container">
+        <div class="legacy-dialog-title">Kết ca thành công</div>
+        <div class="closing-success-body">
+            <div class="success-icon">🎉</div>
+            <b>Đã in bill kết ca thành công!</b>
+            <span>Hệ thống đang chuyển về màn hình đăng nhập...</span>
+        </div>
+    </div>
 </div>
 <form method="post" action="{% url 'accounts:logout' %}" id="closing-logout-form" hidden>{% csrf_token %}</form>
+
+<!-- MODAL: PASSWORD CHANGE -->
 <div class="password-dialog-backdrop" id="password-dialog-backdrop" hidden></div>
 <div class="legacy-order-dialog password-dialog" id="password-dialog" role="dialog" aria-modal="true" aria-labelledby="password-dialog-title" hidden>
     <div class="password-dialog-title" id="password-dialog-title">Đổi mật khẩu - {{ user.get_full_name|default:user.get_username }}</div>
     <form method="post" action="{% url 'accounts:change_password' %}" id="password-change-form" class="password-dialog-body">
         {% csrf_token %}
-        <label for="password-old">Mật khẩu hiện tại</label>
-        <input id="password-old" name="old_password" type="password" autocomplete="current-password">
-        <label for="password-new">Mật khẩu mới</label>
-        <input id="password-new" name="new_password1" type="password" autocomplete="new-password">
-        <label for="password-confirm">Nhắc lại mật khẩu mới</label>
-        <input id="password-confirm" name="new_password2" type="password" autocomplete="new-password">
+        <div class="form-group">
+            <label for="password-old">Mật khẩu hiện tại</label>
+            <input id="password-old" name="old_password" type="password" autocomplete="current-password" class="modern-input">
+        </div>
+        <div class="form-group">
+            <label for="password-new">Mật khẩu mới</label>
+            <input id="password-new" name="new_password1" type="password" autocomplete="new-password" class="modern-input">
+        </div>
+        <div class="form-group">
+            <label for="password-confirm">Nhắc lại mật khẩu mới</label>
+            <input id="password-confirm" name="new_password2" type="password" autocomplete="new-password" class="modern-input">
+        </div>
         <div class="password-dialog-actions">
-            <button type="submit" id="password-confirm-button" disabled>Xác nhận</button>
-            <button type="button" id="password-cancel-button">Bỏ qua</button>
+            <button type="submit" id="password-confirm-button" class="btn-dialog-primary" disabled>Xác nhận</button>
+            <button type="button" id="password-cancel-button" class="btn-dialog-secondary">Bỏ qua</button>
         </div>
     </form>
 </div>
-<div class="legacy-order-dialog" id="order-dialog" hidden>
-    <div class="legacy-dialog-title"><span id="dialog-title">Bàn - - Yêu cầu món mới</span><button type="button" class="dialog-close" id="dialog-close">×</button></div>
-    <div class="legacy-order-body">
-        <div class="dialog-product-name" id="dialog-product-name">Tên món</div>
-        <label>Số lượng</label><div class="quantity-control"><button type="button" id="quantity-minus">−</button><input id="dialog-quantity" type="text" value="1"><button type="button" id="quantity-plus">+</button></div>
-        <label>Ghi chú</label><input id="dialog-note" type="text" placeholder="Không...">
-        <div class="quick-notes"><button type="button">Nhiều</button><button type="button">Ít</button><button type="button">Nóng</button><button type="button">Không</button><button type="button">Đường</button><button type="button">Ngọt</button></div>
-        <div class="dialog-price"><span>Giá món (đ)</span><input id="dialog-price" type="text" readonly><span>Giảm (%)</span><input id="dialog-discount" type="text" value="0"></div>
-        <div class="dialog-actions"><button type="button" id="dialog-confirm">Đồng ý</button><button type="button" id="dialog-cancel">Bỏ qua</button></div>
+
+<!-- MODAL: HÓA ĐƠN THANH TOÁN (FULL INVOICE REPORT MODAL AS SHOWN IN PHOTO) -->
+<div class="legacy-order-dialog invoice-report-dialog" id="invoice-report-dialog" data-url="{% url 'sales:invoices' %}" role="dialog" aria-modal="true" aria-labelledby="invoice-report-title" hidden>
+    <div class="modern-dialog-backdrop" id="invoice-report-backdrop"></div>
+    <div class="modern-dialog-container invoice-report-container">
+        <!-- Title bar -->
+        <div class="invoice-report-title-bar">
+            <div class="dialog-title-text">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <span id="invoice-report-title">Hóa đơn thanh toán - {{ user.get_full_name|default:user.get_username }}</span>
+            </div>
+            <button type="button" class="dialog-close" id="invoice-report-close" aria-label="Đóng">&times;</button>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="invoice-report-filters-bar">
+            <div class="filter-col date-col">
+                <label for="inv-filter-from">Từ</label>
+                <input type="date" id="inv-filter-from" class="filter-date-input" value="{{ current_time|date:'Y-m-d' }}">
+                <label for="inv-filter-to">Đến</label>
+                <input type="date" id="inv-filter-to" class="filter-date-input" value="{{ current_time|date:'Y-m-d' }}">
+            </div>
+
+            <div class="filter-col selects-col">
+                <select id="inv-filter-customer" class="filter-select" title="Khách hàng">
+                    <option value="all">&lt;Khách hàng&gt;</option>
+                </select>
+                <select id="inv-filter-cashier" class="filter-select" title="Nhân viên">
+                    <option value="all">&lt;Nhân viên&gt;</option>
+                    {% for c in cashiers %}
+                    <option value="{{ c.pk }}" {% if c.pk == user.pk %}selected{% endif %}>{{ c.get_full_name|default:c.username }}</option>
+                    {% endfor %}
+                </select>
+                <select id="inv-filter-payment" class="filter-select" title="Kiểu thanh toán">
+                    <option value="all">&lt;Kiểu thanh toán&gt;</option>
+                    <option value="cash">Tiền mặt</option>
+                    <option value="bank">Thẻ ngân hàng / Chuyển khoản</option>
+                    <option value="card">Thẻ tín dụng</option>
+                    <option value="e_wallet">Ví điện tử</option>
+                    <option value="other">Khác</option>
+                </select>
+                <select id="inv-filter-area" class="filter-select" title="Khu vực">
+                    <option value="all">&lt;Khu vực&gt;</option>
+                    {% for a in areas %}
+                    <option value="{{ a.pk }}">{{ a.name }}</option>
+                    {% endfor %}
+                    <option value="takeaway">Mang về</option>
+                </select>
+                <select id="inv-filter-table" class="filter-select" title="Điểm bàn">
+                    <option value="all">&lt;Điểm bàn&gt;</option>
+                    {% for a in areas %}
+                    {% for t in a.tables.all %}
+                    <option value="{{ t.pk }}">{{ t.name }} ({{ a.name }})</option>
+                    {% endfor %}
+                    {% endfor %}
+                </select>
+                <select id="inv-filter-status" class="filter-select" title="Trạng thái">
+                    <option value="paid" selected>Bình thường</option>
+                    <option value="cancelled">Đã hủy</option>
+                    <option value="all">Tất cả</option>
+                </select>
+            </div>
+
+            <div class="filter-col toggles-col">
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="inv-filter-no-paginate">
+                    <span>Không phân trang</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="inv-filter-show-names">
+                    <span>Hiện tên món</span>
+                </label>
+                <button type="button" id="inv-filter-btn" class="btn-filter-action">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Báo cáo
+                </button>
+            </div>
+        </div>
+
+        <!-- Data table wrapper -->
+        <div class="invoice-report-table-scroll">
+            <table class="invoice-report-grid-table">
+                <thead>
+                    <tr>
+                        <th style="width: 75px;">Số HĐ</th>
+                        <th style="width: 145px;">Thời gian</th>
+                        <th style="width: 110px;">Nhân viên</th>
+                        <th style="width: 90px;" class="text-right">Tiền món</th>
+                        <th style="width: 65px;" class="text-right">Tiền giờ</th>
+                        <th style="width: 65px;" class="text-right">Phụ thu</th>
+                        <th style="width: 80px;" class="text-right">Giảm giá</th>
+                        <th style="width: 60px;" class="text-right">VAT</th>
+                        <th style="width: 100px;" class="text-right">Thành tiền</th>
+                        <th style="width: 115px;">Kiểu thanh toán</th>
+                        <th style="width: 90px;">Khu vực</th>
+                        <th style="width: 75px;">Điểm bàn</th>
+                        <th>Các món / Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody id="inv-report-rows">
+                    <!-- Populated dynamically via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer: pagination + summary + excel -->
+        <div class="invoice-report-modal-footer">
+            <div class="inv-footer-pagination">
+                <button type="button" class="btn-inv-page" id="inv-btn-first">Đầu</button>
+                <button type="button" class="btn-inv-page" id="inv-btn-prev">&lt; Trang trước</button>
+                <span class="inv-page-text" id="inv-page-status">Trang 1 / 1</span>
+                <button type="button" class="btn-inv-page" id="inv-btn-next">Trang sau &gt;</button>
+                <button type="button" class="btn-inv-page" id="inv-btn-last">Cuối</button>
+            </div>
+
+            <div class="inv-footer-summary">
+                <div class="sum-line-1" id="inv-sum-line-1">0 hóa đơn, doanh thu: 0 đ</div>
+                <div class="sum-line-2" id="inv-sum-line-2">0 giảm giá (0 mã giảm, 0 thẻ vip, 0 tặng món) giảm 0 đ</div>
+            </div>
+
+            <div class="inv-footer-excel">
+                <button type="button" id="inv-btn-export-excel" class="btn-inv-excel">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    Xuất ra Excel
+                </button>
+            </div>
+        </div>
     </div>
 </div>
-<script src="{% static 'js/pos.js' %}"></script>
+
+<!-- Modal: Thực đơn - Admin (POS Window Modal) -->
+<div class="legacy-order-dialog menu-admin-dialog" id="menu-admin-dialog" role="dialog" aria-modal="true" aria-labelledby="menu-admin-modal-title" hidden>
+    <div class="modern-dialog-backdrop" id="menu-admin-backdrop"></div>
+    <div class="modern-dialog-container menu-admin-modal-container">
+        <!-- Title Bar -->
+        <div class="menu-admin-title-bar">
+            <div class="title-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span id="menu-admin-modal-title">Thực đơn - Admin</span>
+            </div>
+            <div class="title-actions">
+                <button type="button" class="btn-import-excel-modal" id="modal-btn-open-import">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Nhập dữ liệu từ Excel
+                </button>
+                <button type="button" class="dialog-close" id="menu-admin-close" aria-label="Đóng">&times;</button>
+            </div>
+        </div>
+
+        <!-- Section 1: Categories Bar -->
+        <div class="menu-modal-categories-section">
+            <div class="modal-cat-header">
+                <div class="cat-title-wrap">
+                    <span class="section-icon">📁</span>
+                    <span class="section-title">Các hạng mục - nhóm món</span>
+                </div>
+                <div class="modal-cat-controls">
+                    <label class="custom-checkbox-label">
+                        <input type="checkbox" id="modal-allow-custom-dish">
+                        <span>Cho phép món ngoài thực đơn</span>
+                    </label>
+                    <div class="cat-btn-group">
+                        <button type="button" class="btn-cat-action" id="modal-btn-cat-add">+ Thêm</button>
+                        <button type="button" class="btn-cat-action" id="modal-btn-cat-edit" disabled>Sửa</button>
+                        <button type="button" class="btn-cat-action text-danger" id="modal-btn-cat-del" disabled>Xóa</button>
+                        <button type="button" class="btn-cat-action" id="modal-btn-cat-save" disabled>Lưu sự thay đổi</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-categories-pills" id="modal-categories-pills">
+                <button type="button" class="cat-pill active" data-cat-id="all">
+                    <span class="cat-pill-name">Tất cả</span>
+                    <span class="cat-pill-count">{{ all_menu_products|length }}</span>
+                </button>
+                {% for cat in menu_categories %}
+                <button type="button" class="cat-pill" data-cat-id="{{ cat.id }}" data-cat-name="{{ cat.name }}" data-cat-color="{{ cat.color }}" data-cat-order="{{ cat.display_order }}">
+                    <span class="cat-pill-dot" style="background-color: {{ cat.color }};"></span>
+                    <span class="cat-pill-name">{{ cat.name }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Section 2: Split Workspace -->
+        <div class="menu-modal-workspace">
+            <!-- Left: Table of dishes -->
+            <div class="modal-dishes-table-card">
+                <div class="modal-dishes-header">
+                    <div class="modal-dishes-title">
+                        Các món thực đơn <strong id="modal-dish-cat-label">[Tất cả]</strong>
+                        <span class="badge-count" id="modal-dishes-count-badge">{{ all_menu_products|length }} món</span>
+                    </div>
+                    <div class="modal-dishes-actions">
+                        <div class="modal-search-box">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="modal-dish-search" placeholder="Tìm món...">
+                        </div>
+                        <div class="dish-btn-group">
+                            <button type="button" class="btn-dish-action" id="modal-btn-dish-add">+ Thêm</button>
+                            <button type="button" class="btn-dish-action" id="modal-btn-dish-edit" disabled>Sửa</button>
+                            <button type="button" class="btn-dish-action text-danger" id="modal-btn-dish-del" disabled>Xóa</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-dishes-table-scroll">
+                    <table class="modal-dishes-table" id="modal-dishes-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 130px;">Hạng mục</th>
+                                <th style="width: 95px;">Nhóm con</th>
+                                <th style="width: 75px;">Mã món</th>
+                                <th style="min-width: 170px;">Tên món</th>
+                                <th style="width: 60px;" class="text-center">ĐVT</th>
+                                <th style="width: 95px;" class="text-right">Đơn giá (đ)</th>
+                                <th style="width: 95px;" class="text-right">Đơn giá 2</th>
+                                <th style="width: 95px;" class="text-right">Đơn giá 3</th>
+                                <th style="width: 90px;" class="text-center">Loại</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-dishes-tbody">
+                            {% for p in all_menu_products %}
+                            <tr class="dish-row" data-id="{{ p.id }}" data-cat-id="{{ p.category_id }}" data-subgroup="{{ p.subgroup }}" data-code="{{ p.code }}" data-name="{{ p.name }}" data-unit="{{ p.unit }}" data-p1="{{ p.price|floatformat:0 }}" data-p2="{{ p.price_2|floatformat:0 }}" data-p3="{{ p.price_3|floatformat:0 }}" data-type="{{ p.product_type }}">
+                                <td class="col-cat"><span class="badge-cat">{{ p.category.name }}</span></td>
+                                <td class="col-sub">{{ p.subgroup|default:"-" }}</td>
+                                <td class="col-code"><code>{{ p.code }}</code></td>
+                                <td class="col-name"><strong>{{ p.name }}</strong></td>
+                                <td class="col-unit text-center">{{ p.unit }}</td>
+                                <td class="col-price text-right">{{ p.price|vnd }} đ</td>
+                                <td class="col-price-2 text-right">{{ p.price_2|vnd }} đ</td>
+                                <td class="col-price-3 text-right">{{ p.price_3|vnd }} đ</td>
+                                <td class="col-type text-center">
+                                    {% if p.product_type == 'drink' %}
+                                    <span class="badge-type type-drink">Thức uống</span>
+                                    {% elif p.product_type == 'food' %}
+                                    <span class="badge-type type-food">Đồ ăn</span>
+                                    {% elif p.product_type == 'topping' %}
+                                    <span class="badge-type type-topping">Topping</span>
+                                    {% else %}
+                                    <span class="badge-type type-other">Khác</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="9" class="text-center">Chưa có món ăn nào trong thực đơn.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="modal-dishes-footer">
+                    <span class="note-text">Lưu ý: Các thay đổi về đơn giá sẽ không áp dụng cho các điểm bán cũng như các món đã gọi từ trước!</span>
+                    <a href="{% url 'catalog:menu_export_excel' %}" class="btn-modal-excel">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                        Xuất ra Excel
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right: Dish Form Card -->
+            <div class="modal-dish-form-card">
+                <div class="form-title-bar">
+                    <span class="form-title" id="modal-form-title">Thêm món</span>
+                    <span class="badge-mode" id="modal-form-mode">Tạo mới</span>
+                    <button type="button" class="btn-switch-add" id="modal-btn-switch-add" style="display:none;" title="Chuyển sang chế độ thêm món mới">+ Thêm món mới</button>
+                </div>
+                <form id="modal-dish-form" class="modal-editor-form">
+                    {% csrf_token %}
+                    <input type="hidden" id="modal-form-dish-id" value="">
+                    <div class="form-group">
+                        <label for="modal-form-cat">Hạng mục <span class="required">*</span></label>
+                        <select id="modal-form-cat" required class="form-select">
+                            <option value="">-- Chọn hạng mục --</option>
+                            {% for cat in menu_categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-form-subgroup">(Nhóm con)</label>
+                        <input type="text" id="modal-form-subgroup" placeholder="Nhóm con...">
+                    </div>
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="modal-form-code">Mã món <span class="required">*</span></label>
+                            <input type="text" id="modal-form-code" placeholder="Mã món" required class="code-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-form-unit">Đơn vị tính</label>
+                            <input type="text" id="modal-form-unit" value="Phần">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-form-name">Tên món <span class="required">*</span></label>
+                        <input type="text" id="modal-form-name" placeholder="Tên món ăn" required>
+                    </div>
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label for="modal-form-price">Đơn giá (đ) <span class="required">*</span></label>
+                            <input type="text" id="modal-form-price" value="0" inputmode="numeric" class="price-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-form-price-2">Đơn giá 2</label>
+                            <input type="text" id="modal-form-price-2" value="0" inputmode="numeric" class="price-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-form-price-3">Đơn giá 3</label>
+                            <input type="text" id="modal-form-price-3" value="0" inputmode="numeric" class="price-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-form-type">Loại món</label>
+                        <select id="modal-form-type" class="form-select">
+                            <option value="food">Đồ ăn</option>
+                            <option value="drink">Thức uống</option>
+                            <option value="topping">Topping</option>
+                            <option value="other">Loại khác</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-form-actions">
+                        <button type="submit" class="btn-submit-modal" id="modal-btn-submit-dish" style="background-color: #059669 !important; background: linear-gradient(135deg, #059669, #047857) !important; color: #ffffff !important; border: 1px solid #047857 !important;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span style="color: #ffffff !important; font-weight: 700;">Đồng ý</span>
+                        </button>
+                        <button type="button" class="btn-cancel-modal" id="modal-btn-cancel-dish">Hủy / Thêm mới</button>
+                    </div>
+
+                    <div class="form-auto-recipe-check">
+                        <label class="custom-checkbox-label">
+                            <input type="checkbox" id="modal-form-auto-recipe" checked>
+                            <span>Tự động tạo mặt hàng và định lượng</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sub-Modal: Nhập Excel từ Modal POS -->
+<div class="menu-modal-backdrop sub-modal" id="modal-pos-import-excel" hidden>
+    <div class="menu-modal-dialog">
+        <div class="menu-modal-header">
+            <div class="modal-title-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <h3>Nhập dữ liệu thực đơn từ Excel</h3>
+            </div>
+            <button type="button" class="modal-close" id="modal-pos-import-close">×</button>
+        </div>
+        <form id="form-pos-import-excel" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="menu-modal-body">
+                <p class="import-help-text">Chọn tệp tin .csv xuất từ Excel hoặc dán dữ liệu dạng bảng.</p>
+                <div class="import-file-zone">
+                    <label for="pos-import-file-input" class="file-drop-label">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Chọn file CSV</span>
+                    </label>
+                    <input type="file" id="pos-import-file-input" name="file" accept=".csv, .txt">
+                </div>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label for="pos-import-csv-text">Hoặc dán nội dung CSV:</label>
+                    <textarea id="pos-import-csv-text" name="csv_text" rows="4" placeholder="Hạng mục, Nhóm con, Mã món, Tên món..."></textarea>
+                </div>
+                <div class="form-auto-recipe-check">
+                    <label class="custom-checkbox-label">
+                        <input type="checkbox" name="auto_recipe" value="true" checked>
+                        <span>Tự động tạo mặt hàng và định lượng</span>
+                    </label>
+                </div>
+            </div>
+            <div class="menu-modal-footer">
+                <button type="button" class="secondary-button" id="modal-pos-import-cancel">Hủy</button>
+                <button type="submit" class="primary-button" id="btn-pos-submit-import">Nhập dữ liệu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Sub-Modal: Thêm/Sửa Danh mục từ Modal POS -->
+<div class="menu-modal-backdrop sub-modal" id="modal-pos-category" hidden>
+    <div class="menu-modal-dialog category-dialog">
+        <div class="menu-modal-header">
+            <h3 id="modal-pos-cat-title">Thêm danh mục mới</h3>
+            <button type="button" class="modal-close" id="modal-pos-cat-close">×</button>
+        </div>
+        <form id="form-pos-category">
+            {% csrf_token %}
+            <input type="hidden" id="modal-pos-cat-id" value="">
+            <div class="menu-modal-body">
+                <div class="form-group">
+                    <label for="modal-pos-cat-name">Tên danh mục <span class="required">*</span></label>
+                    <input type="text" id="modal-pos-cat-name" placeholder="Ví dụ: BÚN THÁI, ĐỒ UỐNG..." required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-pos-cat-color">Màu nhận diện</label>
+                    <div class="cat-color-picker-row">
+                        <input type="color" id="modal-pos-cat-color" value="#f59e0b">
+                        <div class="color-presets">
+                            <span class="preset-color" style="background:#f59e0b;" data-color="#f59e0b"></span>
+                            <span class="preset-color" style="background:#10b981;" data-color="#10b981"></span>
+                            <span class="preset-color" style="background:#3b82f6;" data-color="#3b82f6"></span>
+                            <span class="preset-color" style="background:#ef4444;" data-color="#ef4444"></span>
+                            <span class="preset-color" style="background:#8b5cf6;" data-color="#8b5cf6"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="modal-pos-cat-order">Thứ tự hiển thị</label>
+                    <input type="number" id="modal-pos-cat-order" value="0" min="0">
+                </div>
+            </div>
+            <div class="menu-modal-footer">
+                <button type="button" class="secondary-button" id="modal-pos-cat-cancel">Hủy</button>
+                <button type="submit" class="primary-button" id="btn-pos-submit-cat">Lưu danh mục</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/pos.js' %}?v={% now 'U' %}"></script>
+<script>
+    // Navbar dropdown 1-click open, 2-click close controller (guaranteed inline execution)
+    (function initNavDropdowns() {
+        document.querySelectorAll('.pos-menu-item').forEach((item) => {
+            const btn = item.querySelector('button.nav-menu-btn') || item.querySelector(':scope > button');
+            if (!btn) return;
+            btn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const wasOpen = item.classList.contains('open');
+                document.querySelectorAll('.pos-menu-item').forEach((other) => {
+                    other.classList.remove('open');
+                    const b = other.querySelector('button.nav-menu-btn') || other.querySelector(':scope > button');
+                    if (b) b.setAttribute('aria-expanded', 'false');
+                });
+                if (!wasOpen) {
+                    item.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            };
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.pos-menu-item')) {
+                document.querySelectorAll('.pos-menu-item').forEach((item) => {
+                    item.classList.remove('open');
+                    const b = item.querySelector('button.nav-menu-btn') || item.querySelector(':scope > button');
+                    if (b) b.setAttribute('aria-expanded', 'false');
+                });
+            }
+        });
+    })();
+    // Live clock update
+    (function updateClock() {
+        const el = document.getElementById('live-clock');
+        if (el) {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            el.textContent = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        }
+        setTimeout(updateClock, 1000);
+    })();
+
+    // Invoice Report Modal Controller
+    (function initInvoiceReport() {
+        const dialog = document.getElementById('invoice-report-dialog');
+        if (!dialog) return;
+
+        const closeBtn = document.getElementById('invoice-report-close');
+        const backdrop = document.getElementById('invoice-report-backdrop');
+        const filterBtn = document.getElementById('inv-filter-btn');
+        const exportBtn = document.getElementById('inv-btn-export-excel');
+        const tbody = document.getElementById('inv-report-rows');
+
+        const dateFrom = document.getElementById('inv-filter-from');
+        const dateTo = document.getElementById('inv-filter-to');
+        const cashierSelect = document.getElementById('inv-filter-cashier');
+        const paymentSelect = document.getElementById('inv-filter-payment');
+        const areaSelect = document.getElementById('inv-filter-area');
+        const tableSelect = document.getElementById('inv-filter-table');
+        const statusSelect = document.getElementById('inv-filter-status');
+        const noPaginateCheck = document.getElementById('inv-filter-no-paginate');
+        const showNamesCheck = document.getElementById('inv-filter-show-names');
+
+        const btnFirst = document.getElementById('inv-btn-first');
+        const btnPrev = document.getElementById('inv-btn-prev');
+        const btnNext = document.getElementById('inv-btn-next');
+        const btnLast = document.getElementById('inv-btn-last');
+        const pageStatus = document.getElementById('inv-page-status');
+
+        const sumLine1 = document.getElementById('inv-sum-line-1');
+        const sumLine2 = document.getElementById('inv-sum-line-2');
+
+        let currentPage = 1;
+        let totalPages = 1;
+
+        function buildQueryParams(page = 1, exportFormat = '') {
+            const params = new URLSearchParams();
+            if (exportFormat) params.append('export', exportFormat);
+            else params.append('format', 'json');
+
+            params.append('page', page);
+            if (dateFrom && dateFrom.value) params.append('date_from', dateFrom.value);
+            if (dateTo && dateTo.value) params.append('date_to', dateTo.value);
+            if (cashierSelect && cashierSelect.value !== 'all') params.append('cashier', cashierSelect.value);
+            if (paymentSelect && paymentSelect.value !== 'all') params.append('payment_method', paymentSelect.value);
+            if (areaSelect && areaSelect.value !== 'all') params.append('area', areaSelect.value);
+            if (tableSelect && tableSelect.value !== 'all') params.append('table', tableSelect.value);
+            if (statusSelect) params.append('status', statusSelect.value);
+            if (noPaginateCheck && noPaginateCheck.checked) params.append('no_paginate', '1');
+            if (showNamesCheck && showNamesCheck.checked) params.append('show_full_name', '1');
+            return params.toString();
+        }
+
+        async function fetchReport(page = 1) {
+            if (!dialog.dataset.url) return;
+            currentPage = page;
+            tbody.innerHTML = '<tr><td colspan="13" class="report-loading-cell"><div class="spinner-inline"></div> Đang tải dữ liệu báo cáo...</td></tr>';
+            
+            try {
+                const qs = buildQueryParams(page);
+                const res = await fetch(`${dialog.dataset.url}?${qs}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await res.json();
+                if (!data.ok) throw new Error('Không thể tải dữ liệu hóa đơn.');
+
+                renderRows(data.invoices, showNamesCheck ? showNamesCheck.checked : false);
+                updateSummary(data.summary);
+                updatePagination(data.pagination);
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="13" class="report-error-cell">⚠️ ${err.message || 'Lỗi kết nối khi tải báo cáo.'}</td></tr>`;
+            }
+        }
+
+        function renderRows(invoices, showFullNames) {
+            if (!invoices || !invoices.length) {
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-invoices-notice"><div class="empty-notice-box"><span>🧾</span><p>Không có hóa đơn nào thỏa mãn điều kiện lọc.</p></div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = invoices.map(inv => {
+                const itemsDisplay = showFullNames ? (inv.items_full || '-') : (inv.items_short || '-');
+                const rowClass = inv.status === 'cancelled' ? 'row-cancelled' : '';
+                return `
+                    <tr class="${rowClass}">
+                        <td><strong class="invoice-code-badge">#${inv.invoice_code}</strong></td>
+                        <td class="text-muted">${inv.time}</td>
+                        <td><span class="user-chip-cell">${inv.cashier}</span></td>
+                        <td class="text-right">${inv.subtotal_formatted}</td>
+                        <td class="text-right text-muted">0</td>
+                        <td class="text-right text-muted">${inv.surcharge || 0}</td>
+                        <td class="text-right text-discount">${inv.discount ? ('-' + inv.discount_formatted) : '0'}</td>
+                        <td class="text-right text-muted">${inv.tax || 0}</td>
+                        <td class="text-right"><strong class="total-highlight">${inv.total_amount_formatted}</strong></td>
+                        <td><span class="payment-method-badge">${inv.payment_method}</span></td>
+                        <td><span class="area-pill">${inv.area}</span></td>
+                        <td><span class="table-pill">${inv.table}</span></td>
+                        <td class="items-notes-cell" title="${inv.items_full || ''}">${itemsDisplay}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateSummary(sum) {
+            if (!sum) return;
+            sumLine1.innerHTML = `<strong>${sum.total_count}</strong> hóa đơn, doanh thu: <strong>${sum.total_revenue_formatted}</strong>`;
+            sumLine2.innerHTML = `<strong>${sum.discount_count}</strong> giảm giá (0 mã giảm, 0 thẻ vip, 0 tặng món) giảm <strong>${sum.discount_total_formatted}</strong>`;
+        }
+
+        function updatePagination(pag) {
+            if (!pag) return;
+            currentPage = pag.current_page;
+            totalPages = pag.total_pages || 1;
+            pageStatus.textContent = `Trang ${currentPage} / ${totalPages}`;
+
+            btnFirst.disabled = currentPage <= 1;
+            btnPrev.disabled = !pag.has_previous;
+            btnNext.disabled = !pag.has_next;
+            btnLast.disabled = currentPage >= totalPages;
+        }
+
+        function openDialog() {
+            dialog.hidden = false;
+            fetchReport(1);
+        }
+
+        function closeDialog() {
+            dialog.hidden = true;
+        }
+
+        // Attach open triggers
+        const menuLink = document.getElementById('open-invoice-report-menu');
+        if (menuLink) {
+            menuLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const parentMenu = menuLink.closest('.pos-menu-item');
+                if (parentMenu) parentMenu.classList.remove('open');
+                openDialog();
+            });
+        }
+
+        const detailMenuLink = document.getElementById('open-invoice-report-menu-detail');
+        if (detailMenuLink) {
+            detailMenuLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const parentMenu = detailMenuLink.closest('.pos-menu-item');
+                if (parentMenu) parentMenu.classList.remove('open');
+                openDialog();
+            });
+        }
+
+        const tabInvoices = document.querySelector('.record-tab');
+        if (tabInvoices) {
+            tabInvoices.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                openDialog();
+            });
+        }
+
+        // Controls
+        if (closeBtn) closeBtn.addEventListener('click', closeDialog);
+        if (backdrop) backdrop.addEventListener('click', closeDialog);
+        if (filterBtn) filterBtn.addEventListener('click', () => fetchReport(1));
+        if (showNamesCheck) {
+            showNamesCheck.addEventListener('change', () => fetchReport(currentPage));
+        }
+        if (noPaginateCheck) {
+            noPaginateCheck.addEventListener('change', () => fetchReport(1));
+        }
+
+        if (btnFirst) btnFirst.addEventListener('click', () => fetchReport(1));
+        if (btnPrev) btnPrev.addEventListener('click', () => { if (currentPage > 1) fetchReport(currentPage - 1); });
+        if (btnNext) btnNext.addEventListener('click', () => { if (currentPage < totalPages) fetchReport(currentPage + 1); });
+        if (btnLast) btnLast.addEventListener('click', () => fetchReport(totalPages));
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                const qs = buildQueryParams(currentPage, 'excel');
+                window.location.href = `${dialog.dataset.url}?${qs}`;
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !dialog.hidden) closeDialog();
+        });
+    })();
+
+    // Menu Admin Modal Controller
+    (function initMenuAdminModal() {
+        const dialog = document.getElementById('menu-admin-dialog');
+        if (!dialog) return;
+
+        const closeBtn = document.getElementById('menu-admin-close');
+        const backdrop = document.getElementById('menu-admin-backdrop');
+        const openLink = document.getElementById('open-menu-admin-menu');
+
+        let selectedCatId = 'all';
+        let selectedDishRow = null;
+        let selectedCatPill = null;
+
+        const tableTbody = document.getElementById('modal-dishes-tbody');
+        const searchInput = document.getElementById('modal-dish-search');
+        const catLabel = document.getElementById('modal-dish-cat-label');
+        const countBadge = document.getElementById('modal-dishes-count-badge');
+
+        const btnAddDish = document.getElementById('modal-btn-dish-add');
+        const btnEditDish = document.getElementById('modal-btn-dish-edit');
+        const btnDelDish = document.getElementById('modal-btn-dish-del');
+
+        const btnCatAdd = document.getElementById('modal-btn-cat-add');
+        const btnCatEdit = document.getElementById('modal-btn-cat-edit');
+        const btnCatDel = document.getElementById('modal-btn-cat-del');
+
+        const form = document.getElementById('modal-dish-form');
+        const formId = document.getElementById('modal-form-dish-id');
+        const formCat = document.getElementById('modal-form-cat');
+        const formSubgroup = document.getElementById('modal-form-subgroup');
+        const formCode = document.getElementById('modal-form-code');
+        const formName = document.getElementById('modal-form-name');
+        const formUnit = document.getElementById('modal-form-unit');
+        const formPrice = document.getElementById('modal-form-price');
+        const formPrice2 = document.getElementById('modal-form-price-2');
+        const formPrice3 = document.getElementById('modal-form-price-3');
+        const formType = document.getElementById('modal-form-type');
+        const formAutoRecipe = document.getElementById('modal-form-auto-recipe');
+        const formTitle = document.getElementById('modal-form-title');
+        const formMode = document.getElementById('modal-form-mode');
+        const btnCancelDish = document.getElementById('modal-btn-cancel-dish');
+
+        function openModal() {
+            dialog.hidden = false;
+            document.body.classList.add('modal-open');
+            resetDishForm();
+        }
+
+        function closeModal() {
+            dialog.hidden = true;
+            document.body.classList.remove('modal-open');
+        }
+
+        if (openLink) {
+            openLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                openModal();
+            });
+        }
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (backdrop) backdrop.addEventListener('click', closeModal);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !dialog.hidden) closeModal();
+        });
+
+        // Filter dishes
+        function filterDishes() {
+            const query = (searchInput.value || '').toLowerCase().trim();
+            const rows = tableTbody.querySelectorAll('.dish-row');
+            let count = 0;
+
+            rows.forEach(row => {
+                const catId = row.dataset.catId;
+                const code = (row.dataset.code || '').toLowerCase();
+                const name = (row.dataset.name || '').toLowerCase();
+                const sub = (row.dataset.subgroup || '').toLowerCase();
+
+                const matchCat = (selectedCatId === 'all' || catId === selectedCatId);
+                const matchQuery = (!query || code.includes(query) || name.includes(query) || sub.includes(query));
+
+                if (matchCat && matchQuery) {
+                    row.hidden = false;
+                    count++;
+                } else {
+                    row.hidden = true;
+                }
+            });
+            if (countBadge) countBadge.textContent = `${count} món`;
+        }
+
+        // Category pills
+        document.querySelectorAll('#modal-categories-pills .cat-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#modal-categories-pills .cat-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                selectedCatId = pill.dataset.catId;
+                selectedCatPill = pill;
+
+                if (selectedCatId === 'all') {
+                    if (catLabel) catLabel.textContent = '[Tất cả]';
+                    if (btnCatEdit) btnCatEdit.disabled = true;
+                    if (btnCatDel) btnCatDel.disabled = true;
+                } else {
+                    if (catLabel) catLabel.textContent = `[${pill.dataset.catName}]`;
+                    if (btnCatEdit) btnCatEdit.disabled = false;
+                    if (btnCatDel) btnCatDel.disabled = false;
+                    if (formCat) formCat.value = selectedCatId;
+                }
+                filterDishes();
+            });
+        });
+
+        if (searchInput) searchInput.addEventListener('input', filterDishes);
+
+        const btnSwitchAdd = document.getElementById('modal-btn-switch-add');
+        if (btnSwitchAdd) btnSwitchAdd.addEventListener('click', resetDishForm);
+
+        // Helper format VND (ví dụ 15.000, 100.000, 0)
+        function formatVND(value) {
+            if (value === null || value === undefined || value === '') return '0';
+            const num = Math.round(Number(String(value).replace(/\./g, '').replace(/,/g, '')) || 0);
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        // Setup live price inputs formatting
+        function setupPriceInput(input) {
+            if (!input) return;
+            input.addEventListener('input', () => {
+                const raw = input.value.replace(/\D/g, '');
+                if (!raw) {
+                    input.value = '0';
+                    return;
+                }
+                const num = parseInt(raw, 10);
+                input.value = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            });
+            input.addEventListener('focus', () => {
+                if (input.value === '0') input.select();
+            });
+        }
+        setupPriceInput(formPrice);
+        setupPriceInput(formPrice2);
+        setupPriceInput(formPrice3);
+
+        // Sort rows alphabetically by name (A -> B -> C ...)
+        function sortDishRows() {
+            const rows = Array.from(tableTbody.querySelectorAll('.dish-row'));
+            rows.sort((a, b) => {
+                const nameA = (a.dataset.name || '').trim();
+                const nameB = (b.dataset.name || '').trim();
+                return nameA.localeCompare(nameB, 'vi', { sensitivity: 'base' });
+            });
+            rows.forEach(r => tableTbody.appendChild(r));
+        }
+
+        // Sort POS column 3 dish grid by subgroup first then alphabetically
+        function sortDishGrid() {
+            const dishGrid = document.getElementById('dish-grid');
+            if (!dishGrid) return;
+            const buttons = Array.from(dishGrid.querySelectorAll('.dish'));
+            buttons.sort((a, b) => {
+                const subA = (a.dataset.subgroup || '').trim();
+                const subB = (b.dataset.subgroup || '').trim();
+                if (subA !== subB) {
+                    if (!subA) return -1;
+                    if (!subB) return 1;
+                    return subA.localeCompare(subB, 'vi', { sensitivity: 'base' });
+                }
+                const nameA = (a.dataset.dish || '').trim();
+                const nameB = (b.dataset.dish || '').trim();
+                return nameA.localeCompare(nameB, 'vi', { sensitivity: 'base' });
+            });
+            buttons.forEach(b => dishGrid.appendChild(b));
+        }
+
+        // Row events
+        function bindRow(row) {
+            row.addEventListener('click', () => {
+                if (selectedDishRow) selectedDishRow.classList.remove('selected');
+                selectedDishRow = row;
+                row.classList.add('selected');
+                if (btnEditDish) btnEditDish.disabled = false;
+                if (btnDelDish) btnDelDish.disabled = false;
+                loadDishIntoForm(row);
+            });
+            row.addEventListener('dblclick', () => {
+                loadDishIntoForm(row);
+                if (formName) formName.focus();
+            });
+        }
+        document.querySelectorAll('#modal-dishes-tbody .dish-row').forEach(bindRow);
+
+        function loadDishIntoForm(row) {
+            formId.value = row.dataset.id;
+            formCat.value = row.dataset.catId;
+            formSubgroup.value = row.dataset.subgroup || '';
+            formCode.value = row.dataset.code;
+            formName.value = row.dataset.name;
+            formUnit.value = row.dataset.unit || 'Phần';
+            formPrice.value = formatVND(row.dataset.p1 || 0);
+            formPrice2.value = formatVND(row.dataset.p2 || 0);
+            formPrice3.value = formatVND(row.dataset.p3 || 0);
+            formType.value = row.dataset.type || 'food';
+
+            if (formTitle) formTitle.textContent = `Sửa món: ${row.dataset.name}`;
+            if (formMode) {
+                formMode.textContent = 'Đang sửa';
+                formMode.className = 'badge-mode edit-mode';
+            }
+            if (btnSwitchAdd) btnSwitchAdd.style.display = 'inline-flex';
+        }
+
+        function resetDishForm() {
+            formId.value = '';
+            if (selectedCatId !== 'all') {
+                formCat.value = selectedCatId;
+            } else {
+                formCat.value = formCat.options.length > 1 ? formCat.options[1].value : '';
+            }
+            formSubgroup.value = '';
+            formCode.value = '';
+            formName.value = '';
+            formUnit.value = 'Phần';
+            formPrice.value = '0';
+            formPrice2.value = '0';
+            formPrice3.value = '0';
+            formType.value = 'food';
+
+            if (formTitle) formTitle.textContent = 'Thêm món mới';
+            if (formMode) {
+                formMode.textContent = 'Tạo mới';
+                formMode.className = 'badge-mode';
+            }
+            if (btnSwitchAdd) btnSwitchAdd.style.display = 'none';
+
+            if (selectedDishRow) {
+                selectedDishRow.classList.remove('selected');
+                selectedDishRow = null;
+            }
+            if (btnEditDish) btnEditDish.disabled = true;
+            if (btnDelDish) btnDelDish.disabled = true;
+        }
+
+        if (btnAddDish) btnAddDish.addEventListener('click', resetDishForm);
+        if (btnCancelDish) btnCancelDish.addEventListener('click', resetDishForm);
+        if (btnEditDish) btnEditDish.addEventListener('click', () => {
+            if (selectedDishRow) loadDishIntoForm(selectedDishRow);
+        });
+
+        // Notice helper
+        function showNotice(msg, isError = false) {
+            let notice = document.getElementById('modal-menu-notice');
+            if (!notice) {
+                notice = document.createElement('div');
+                notice.id = 'modal-menu-notice';
+                notice.style.position = 'absolute';
+                notice.style.top = '14px';
+                notice.style.left = '50%';
+                notice.style.transform = 'translateX(-50%)';
+                notice.style.zIndex = '10005';
+                notice.style.padding = '8px 20px';
+                notice.style.borderRadius = '30px';
+                notice.style.fontSize = '13px';
+                notice.style.fontWeight = '700';
+                notice.style.fontFamily = 'var(--font-heading)';
+                notice.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
+                notice.style.transition = 'all 0.25s ease';
+                notice.style.pointerEvents = 'none';
+                const container = dialog.querySelector('.menu-admin-modal-container') || dialog;
+                container.appendChild(notice);
+            }
+            notice.textContent = msg;
+            notice.style.background = isError ? '#ef4444' : '#059669';
+            notice.style.color = '#ffffff';
+            notice.style.display = 'block';
+            notice.style.opacity = '1';
+            clearTimeout(notice._timer);
+            notice._timer = setTimeout(() => {
+                notice.style.opacity = '0';
+                setTimeout(() => { notice.style.display = 'none'; }, 250);
+            }, 3000);
+        }
+
+        // Helper to update or insert dish row in table and POS dish-grid with alphabetical sorting
+        function updateOrInsertDish(dish, isEdit = false) {
+            let row = tableTbody.querySelector(`.dish-row[data-id="${dish.id}"]`);
+            const p1Formatted = formatVND(dish.price);
+            const p2Formatted = formatVND(dish.price_2);
+            const p3Formatted = formatVND(dish.price_3);
+
+            const rowHtml = `
+                <td class="col-cat"><span class="badge-cat">${dish.category_name}</span></td>
+                <td class="col-sub">${dish.subgroup || '-'}</td>
+                <td class="col-code"><code>${dish.code}</code></td>
+                <td class="col-name"><strong>${dish.name}</strong></td>
+                <td class="col-unit text-center">${dish.unit}</td>
+                <td class="col-price text-right">${p1Formatted} đ</td>
+                <td class="col-price-2 text-right">${p2Formatted} đ</td>
+                <td class="col-price-3 text-right">${p3Formatted} đ</td>
+                <td class="col-type text-center">
+                    <span class="badge-type type-${dish.product_type}">${dish.product_type_display}</span>
+                </td>
+            `;
+
+            if (row) {
+                row.dataset.catId = dish.category_id;
+                row.dataset.subgroup = dish.subgroup || '';
+                row.dataset.code = dish.code;
+                row.dataset.name = dish.name;
+                row.dataset.unit = dish.unit;
+                row.dataset.p1 = dish.price;
+                row.dataset.p2 = dish.price_2;
+                row.dataset.p3 = dish.price_3;
+                row.dataset.type = dish.product_type;
+                row.innerHTML = rowHtml;
+            } else {
+                const emptyRow = tableTbody.querySelector('tr td.text-center');
+                if (emptyRow) emptyRow.closest('tr')?.remove();
+
+                row = document.createElement('tr');
+                row.className = 'dish-row';
+                row.dataset.id = dish.id;
+                row.dataset.catId = dish.category_id;
+                row.dataset.subgroup = dish.subgroup || '';
+                row.dataset.code = dish.code;
+                row.dataset.name = dish.name;
+                row.dataset.unit = dish.unit;
+                row.dataset.p1 = dish.price;
+                row.dataset.p2 = dish.price_2;
+                row.dataset.p3 = dish.price_3;
+                row.dataset.type = dish.product_type;
+                row.innerHTML = rowHtml;
+                tableTbody.appendChild(row);
+                bindRow(row);
+            }
+
+            // Sync with POS Column 3 dish grid
+            const dishGrid = document.getElementById('dish-grid');
+            if (dishGrid) {
+                let gridBtn = dishGrid.querySelector(`.dish[data-product-id="${dish.id}"]`);
+                if (gridBtn) {
+                    gridBtn.dataset.categoryId = dish.category_id;
+                    gridBtn.dataset.code = (dish.code || '').toUpperCase();
+                    gridBtn.dataset.dish = dish.name;
+                    gridBtn.dataset.subgroup = dish.subgroup || '';
+                    gridBtn.dataset.unit = dish.unit;
+                    gridBtn.dataset.price = dish.price;
+                    const nameEl = gridBtn.querySelector('.dish-name');
+                    if (nameEl) nameEl.textContent = dish.name;
+                    let codeEl = gridBtn.querySelector('.dish-code-tag');
+                    if (dish.code) {
+                        if (!codeEl) {
+                            codeEl = document.createElement('span');
+                            codeEl.className = 'dish-code-tag';
+                            const titleRow = gridBtn.querySelector('.dish-name-row') || nameEl.parentElement;
+                            titleRow.appendChild(codeEl);
+                        }
+                        codeEl.textContent = dish.code;
+                    } else if (codeEl) {
+                        codeEl.remove();
+                    }
+                    const priceEl = gridBtn.querySelector('.dish-price');
+                    if (priceEl) priceEl.textContent = `${p1Formatted} đ`;
+                    const unitEl = gridBtn.querySelector('.dish-unit');
+                    if (unitEl) unitEl.textContent = `/ ${dish.unit}`;
+                } else {
+                    const newBtn = document.createElement('button');
+                    newBtn.className = 'dish';
+                    newBtn.dataset.productId = dish.id;
+                    newBtn.dataset.categoryId = dish.category_id;
+                    newBtn.dataset.code = (dish.code || '').toUpperCase();
+                    newBtn.dataset.dish = dish.name;
+                    newBtn.dataset.subgroup = dish.subgroup || '';
+                    newBtn.dataset.unit = dish.unit;
+                    newBtn.dataset.price = dish.price;
+                    newBtn.type = 'button';
+                    newBtn.innerHTML = `
+                        <div class="dish-info">
+                            <div class="dish-name-row">
+                                <b class="dish-name">${dish.name}</b>
+                                ${dish.code ? `<span class="dish-code-tag">${dish.code}</span>` : ''}
+                            </div>
+                            <div class="dish-meta">
+                                <span class="dish-price">${p1Formatted} đ</span>
+                                <span class="dish-unit">/ ${dish.unit}</span>
+                            </div>
+                        </div>
+                        <span class="dish-add-pill">+</span>
+                    `;
+                    dishGrid.appendChild(newBtn);
+                }
+                sortDishGrid();
+                if (typeof window.refreshPosMenuFilter === 'function') {
+                    window.refreshPosMenuFilter();
+                }
+            }
+
+            // NHẢY XẾP HÀNG THEO BẢNG CHỮ CÁI (A-B-C...)
+            sortDishRows();
+            filterDishes();
+
+            // Cuộn mượt tới món vừa lưu và tạo hiệu ứng nhấp nháy nhận biết
+            row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            row.classList.add('just-updated');
+            setTimeout(() => row.classList.remove('just-updated'), 2000);
+
+            if (isEdit) {
+                if (selectedDishRow) selectedDishRow.classList.remove('selected');
+                selectedDishRow = row;
+                row.classList.add('selected');
+                loadDishIntoForm(row);
+            } else {
+                // Thêm món mới xong -> Tự động reset form về Tạo mới để sẵn sàng thêm tiếp món khác, KHÔNG đè lên món vừa tạo
+                resetDishForm();
+                if (formCode) formCode.focus();
+            }
+        }
+
+        // Sắp xếp Alphabet ngay khi mở trang
+        sortDishRows();
+        sortDishGrid();
+
+        // Save dish without full page reload
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = document.getElementById('modal-btn-submit-dish');
+                const origHtml = submitBtn ? submitBtn.innerHTML : '';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span>Đang lưu...</span>';
+                }
+
+                const isEdit = Boolean(formId.value);
+                const payload = {
+                    dish_id: formId.value,
+                    category_id: formCat.value,
+                    subgroup: formSubgroup.value.trim(),
+                    code: formCode.value.trim().toUpperCase(),
+                    name: formName.value.trim(),
+                    unit: formUnit.value.trim() || 'Phần',
+                    price: formPrice.value.replace(/\./g, '').trim(),
+                    price_2: formPrice2.value.replace(/\./g, '').trim(),
+                    price_3: formPrice3.value.replace(/\./g, '').trim(),
+                    product_type: formType.value,
+                    auto_recipe: formAutoRecipe.checked,
+                };
+                const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+                try {
+                    const resp = await fetch('{% url "catalog:menu_save_dish" %}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify(payload)
+                    });
+                    const res = await resp.json();
+                    if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi lưu món.');
+                    showNotice(res.message);
+                    if (res.dish) {
+                        updateOrInsertDish(res.dish, isEdit);
+                    }
+                } catch (err) {
+                    showNotice(err.message, true);
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = origHtml;
+                    }
+                }
+            });
+        }
+
+        // Delete dish without full page reload
+        if (btnDelDish) {
+            btnDelDish.addEventListener('click', async () => {
+                if (!selectedDishRow) return;
+                const id = selectedDishRow.dataset.id;
+                const name = selectedDishRow.dataset.name;
+                if (!confirm(`Bạn có chắc chắn muốn xóa món "${name}"?`)) return;
+
+                const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+                try {
+                    const resp = await fetch(`/catalog/menu/api/delete-dish/${id}/`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken }
+                    });
+                    const res = await resp.json();
+                    if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi xóa món.');
+                    showNotice(res.message);
+
+                    selectedDishRow.remove();
+
+                    // Remove from POS dish-grid if exists
+                    const gridBtn = document.querySelector(`#dish-grid .dish[data-product-id="${id}"]`);
+                    if (gridBtn) gridBtn.remove();
+
+                    resetDishForm();
+                    filterDishes();
+                } catch (err) {
+                    showNotice(err.message, true);
+                }
+            });
+        }
+
+        // Sub-modal Import
+        const importModal = document.getElementById('modal-pos-import-excel');
+        const openImportBtn = document.getElementById('modal-btn-open-import');
+        const closeImportBtn = document.getElementById('modal-pos-import-close');
+        const cancelImportBtn = document.getElementById('modal-pos-import-cancel');
+        const formImport = document.getElementById('form-pos-import-excel');
+
+        if (openImportBtn) openImportBtn.addEventListener('click', () => { importModal.hidden = false; });
+        if (closeImportBtn) closeImportBtn.addEventListener('click', () => { importModal.hidden = true; });
+        if (cancelImportBtn) cancelImportBtn.addEventListener('click', () => { importModal.hidden = true; });
+
+        if (formImport) {
+            formImport.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(formImport);
+                const submitBtn = document.getElementById('btn-pos-submit-import');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Đang nhập...';
+
+                try {
+                    const resp = await fetch('{% url "catalog:menu_import_excel" %}', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const res = await resp.json();
+                    if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi nhập dữ liệu.');
+                    showNotice(res.message);
+                    importModal.hidden = true;
+
+                    // Reload dishes in-place without page reload
+                    const dishesResp = await fetch('{% url "catalog:menu_dishes_api" %}');
+                    if (dishesResp.ok) {
+                        const data = await dishesResp.json();
+                        if (data.dishes && data.dishes.length) {
+                            tableTbody.innerHTML = '';
+                            data.dishes.forEach(d => updateOrInsertDish(d));
+                            resetDishForm();
+                            filterDishes();
+                        }
+                    }
+                } catch (err) {
+                    showNotice(err.message, true);
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Nhập dữ liệu';
+                }
+            });
+        }
+
+        // Sub-modal Category
+        const catModal = document.getElementById('modal-pos-category');
+        const catTitle = document.getElementById('modal-pos-cat-title');
+        const catIdInput = document.getElementById('modal-pos-cat-id');
+        const catNameInput = document.getElementById('modal-pos-cat-name');
+        const catColorInput = document.getElementById('modal-pos-cat-color');
+        const catOrderInput = document.getElementById('modal-pos-cat-order');
+        const formCatSubmit = document.getElementById('form-pos-category');
+
+        if (btnCatAdd) {
+            btnCatAdd.addEventListener('click', () => {
+                catIdInput.value = '';
+                catNameInput.value = '';
+                catColorInput.value = '#f59e0b';
+                catOrderInput.value = 0;
+                catTitle.textContent = 'Thêm danh mục mới';
+                catModal.hidden = false;
+                catNameInput.focus();
+            });
+        }
+        if (btnCatEdit) {
+            btnCatEdit.addEventListener('click', () => {
+                if (!selectedCatPill || selectedCatId === 'all') return;
+                catIdInput.value = selectedCatId;
+                catNameInput.value = selectedCatPill.dataset.catName;
+                catColorInput.value = selectedCatPill.dataset.catColor || '#f59e0b';
+                catOrderInput.value = selectedCatPill.dataset.catOrder || 0;
+                catTitle.textContent = `Sửa danh mục: ${selectedCatPill.dataset.catName}`;
+                catModal.hidden = false;
+                catNameInput.focus();
+            });
+        }
+
+        document.getElementById('modal-pos-cat-close')?.addEventListener('click', () => { catModal.hidden = true; });
+        document.getElementById('modal-pos-cat-cancel')?.addEventListener('click', () => { catModal.hidden = true; });
+
+        document.querySelectorAll('#modal-pos-category .preset-color').forEach(dot => {
+            dot.addEventListener('click', () => {
+                catColorInput.value = dot.dataset.color;
+            });
+        });
+
+        if (formCatSubmit) {
+            formCatSubmit.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    category_id: catIdInput.value,
+                    name: catNameInput.value,
+                    color: catColorInput.value,
+                    display_order: catOrderInput.value,
+                };
+                const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+                try {
+                    const resp = await fetch('{% url "catalog:menu_save_category" %}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify(payload)
+                    });
+                    const res = await resp.json();
+                    if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi lưu danh mục.');
+                    showNotice(res.message);
+                    catModal.hidden = true;
+
+                    // Update UI in-place
+                    const cat = res.category;
+                    let pill = document.querySelector(`#modal-categories-pills .cat-pill[data-cat-id="${cat.id}"]`);
+                    if (pill) {
+                        pill.dataset.catName = cat.name;
+                        pill.dataset.catColor = cat.color;
+                        pill.dataset.catOrder = cat.display_order;
+                        const dot = pill.querySelector('.cat-pill-dot');
+                        if (dot) dot.style.backgroundColor = cat.color;
+                        const nameEl = pill.querySelector('.cat-pill-name');
+                        if (nameEl) nameEl.textContent = cat.name;
+                    } else {
+                        pill = document.createElement('button');
+                        pill.type = 'button';
+                        pill.className = 'cat-pill';
+                        pill.dataset.catId = cat.id;
+                        pill.dataset.catName = cat.name;
+                        pill.dataset.catColor = cat.color;
+                        pill.dataset.catOrder = cat.display_order;
+                        pill.innerHTML = `
+                            <span class="cat-pill-dot" style="background-color: ${cat.color};"></span>
+                            <span class="cat-pill-name">${cat.name}</span>
+                        `;
+                        pill.addEventListener('click', () => {
+                            document.querySelectorAll('#modal-categories-pills .cat-pill').forEach(p => p.classList.remove('active'));
+                            pill.classList.add('active');
+                            selectedCatId = String(cat.id);
+                            selectedCatPill = pill;
+                            if (catLabel) catLabel.textContent = `[${cat.name}]`;
+                            if (btnCatEdit) btnCatEdit.disabled = false;
+                            if (btnCatDel) btnCatDel.disabled = false;
+                            if (formCat) formCat.value = selectedCatId;
+                            filterDishes();
+                        });
+                        document.getElementById('modal-categories-pills').appendChild(pill);
+                    }
+
+                    // Update option in formCat select
+                    let opt = formCat.querySelector(`option[value="${cat.id}"]`);
+                    if (opt) {
+                        opt.textContent = cat.name;
+                    } else {
+                        opt = document.createElement('option');
+                        opt.value = cat.id;
+                        opt.textContent = cat.name;
+                        formCat.appendChild(opt);
+                    }
+                } catch (err) {
+                    showNotice(err.message, true);
+                }
+            });
+        }
+
+        if (btnCatDel) {
+            btnCatDel.addEventListener('click', async () => {
+                if (!selectedCatPill || selectedCatId === 'all') return;
+                const name = selectedCatPill.dataset.catName;
+                if (!confirm(`Bạn có chắc chắn muốn xóa danh mục "${name}"?`)) return;
+
+                const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+                try {
+                    const resp = await fetch(`/catalog/menu/api/delete-category/${selectedCatId}/`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken }
+                    });
+                    const res = await resp.json();
+                    if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi xóa danh mục.');
+                    showNotice(res.message);
+
+                    const catIdToRemove = selectedCatId;
+                    selectedCatPill.remove();
+                    const opt = formCat.querySelector(`option[value="${catIdToRemove}"]`);
+                    if (opt) opt.remove();
+
+                    // Switch back to "all"
+                    const allPill = document.querySelector('#modal-categories-pills .cat-pill[data-cat-id="all"]');
+                    if (allPill) allPill.click();
+                } catch (err) {
+                    showNotice(err.message, true);
+                }
+            });
+        }
+    })();
+</script>
 {% endblock %}

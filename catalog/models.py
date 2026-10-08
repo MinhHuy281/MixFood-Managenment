@@ -28,6 +28,7 @@ class Product(models.Model):
 		OTHER = 'other', 'Khác'
 
 	category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='products', verbose_name='Danh mục')
+	subgroup = models.CharField('Nhóm con', max_length=100, blank=True, default='')
 	code = models.CharField('Mã món', max_length=30, unique=True)
 	name = models.CharField('Tên món', max_length=150)
 	description = models.TextField('Mô tả', blank=True)
@@ -51,6 +52,18 @@ class Product(models.Model):
 
 	def __str__(self):
 		return f'{self.code} - {self.name}'
+
+	@property
+	def price_vnd(self):
+		return f'{self.price:,.0f}'.replace(',', '.')
+
+	@property
+	def price_2_vnd(self):
+		return f'{self.price_2:,.0f}'.replace(',', '.')
+
+	@property
+	def price_3_vnd(self):
+		return f'{self.price_3:,.0f}'.replace(',', '.')
 
 
 class Ingredient(models.Model):

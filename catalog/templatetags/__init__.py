@@ -1,0 +1,2 @@
+# catalog templatetags package
+

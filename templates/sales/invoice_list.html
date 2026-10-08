@@ -1,6 +1,224 @@
 {% extends 'base.html' %}
-{% block title %}Hóa đơn | MixFood Manager{% endblock %}
+{% load static %}
+{% load menu_tags %}
+{% block title %}Hóa đơn thanh toán | MixFood Manager{% endblock %}
+
 {% block content %}
-<section class="list-header"><div><p class="eyebrow">SALES / INVOICES</p><h1>Hóa đơn thanh toán</h1><p class="muted">Các hóa đơn được tạo từ luồng thanh toán POS.</p></div><a class="secondary-button" href="{% url 'dashboard:home' %}">Về POS</a></section>
-<div class="data-table"><table><thead><tr><th>Mã hóa đơn</th><th>Mã đơn</th><th>Bàn</th><th>Thời gian</th><th>Thu ngân</th><th>Thanh toán</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead><tbody>{% for invoice in invoices %}<tr><td><strong>{{ invoice.invoice_code }}</strong></td><td>{{ invoice.order.order_code }}</td><td>{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}Mang về{% endif %}</td><td>{{ invoice.paid_at|date:'d/m/Y H:i' }}</td><td>{{ invoice.cashier.username }}</td><td>{% for payment in invoice.payments.all %}{{ payment.get_method_display }}{% endfor %}</td><td>{{ invoice.total_amount|floatformat:0 }} đ</td><td><span class="status good">{{ invoice.get_status_display }}</span></td></tr>{% empty %}<tr><td colspan="8">Chưa có hóa đơn thanh toán.</td></tr>{% endfor %}</tbody></table></div>
+<div class="invoice-report-page-container">
+    <!-- Page Header -->
+    <div class="invoice-report-page-header">
+        <div class="header-left">
+            <p class="eyebrow">BÁO CÁO / DOANH THU BÁN HÀNG</p>
+            <h1>Hóa đơn thanh toán - {{ user.get_full_name|default:user.get_username }}</h1>
+            <p class="muted">Báo cáo chi tiết hóa đơn bán hàng theo thời gian, nhân viên, bàn và phương thức thanh toán.</p>
+        </div>
+        <div class="header-right">
+            <a class="secondary-button" href="{% url 'dashboard:home' %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Về màn hình POS
+            </a>
+            <a href="?{% for k, v in request.GET.items %}{% if k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}export=excel" class="primary-button btn-export-excel-page">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Xuất ra Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar Card -->
+    <div class="invoice-report-filters-card">
+        <form method="get" action="{% url 'sales:invoices' %}" id="page-invoice-filter-form" class="invoice-report-filters">
+            <div class="filter-group date-filter">
+                <label for="page-date-from">Từ</label>
+                <input type="date" id="page-date-from" name="date_from" class="filter-input-date" value="{{ filters.date_from }}">
+                <label for="page-date-to">Đến</label>
+                <input type="date" id="page-date-to" name="date_to" class="filter-input-date" value="{{ filters.date_to }}">
+            </div>
+
+            <div class="filter-group select-filter">
+                <select id="page-filter-customer" name="customer" class="filter-select" title="Khách hàng">
+                    <option value="all">&lt;Khách hàng&gt;</option>
+                </select>
+
+                <select id="page-filter-cashier" name="cashier" class="filter-select" title="Nhân viên">
+                    <option value="all">&lt;Nhân viên&gt;</option>
+                    {% for c in cashiers %}
+                    <option value="{{ c.pk }}" {% if filters.cashier == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.get_full_name|default:c.username }}</option>
+                    {% endfor %}
+                </select>
+
+                <select id="page-filter-payment" name="payment_method" class="filter-select" title="Kiểu thanh toán">
+                    <option value="all">&lt;Kiểu thanh toán&gt;</option>
+                    <option value="cash" {% if filters.payment_method == 'cash' %}selected{% endif %}>Tiền mặt</option>
+                    <option value="bank" {% if filters.payment_method == 'bank' %}selected{% endif %}>Thẻ ngân hàng / Chuyển khoản</option>
+                    <option value="card" {% if filters.payment_method == 'card' %}selected{% endif %}>Thẻ tín dụng</option>
+                    <option value="e_wallet" {% if filters.payment_method == 'e_wallet' %}selected{% endif %}>Ví điện tử</option>
+                    <option value="other" {% if filters.payment_method == 'other' %}selected{% endif %}>Khác</option>
+                </select>
+
+                <select id="page-filter-area" name="area" class="filter-select" title="Khu vực">
+                    <option value="all">&lt;Khu vực&gt;</option>
+                    {% for a in areas %}
+                    <option value="{{ a.pk }}" {% if filters.area == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                    {% endfor %}
+                    <option value="takeaway" {% if filters.area == 'takeaway' %}selected{% endif %}>Mang về</option>
+                </select>
+
+                <select id="page-filter-table" name="table" class="filter-select" title="Điểm bàn">
+                    <option value="all">&lt;Điểm bàn&gt;</option>
+                    {% for t in tables %}
+                    <option value="{{ t.pk }}" {% if filters.table == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }} ({{ t.area.name }})</option>
+                    {% endfor %}
+                </select>
+
+                <select id="page-filter-status" name="status" class="filter-select" title="Trạng thái">
+                    <option value="paid" {% if filters.status == 'paid' %}selected{% endif %}>Bình thường</option>
+                    <option value="cancelled" {% if filters.status == 'cancelled' %}selected{% endif %}>Đã hủy</option>
+                    <option value="all" {% if filters.status == 'all' %}selected{% endif %}>Tất cả</option>
+                </select>
+            </div>
+
+            <div class="filter-group toggles-filter">
+                <label class="filter-checkbox-label">
+                    <input type="checkbox" name="no_paginate" value="1" {% if filters.no_paginate %}checked{% endif %} id="page-filter-no-paginate">
+                    <span>Không phân trang</span>
+                </label>
+                <label class="filter-checkbox-label">
+                    <input type="checkbox" name="show_full_name" value="1" {% if filters.show_full_name %}checked{% endif %} id="page-filter-show-names">
+                    <span>Hiện tên món</span>
+                </label>
+                <button type="submit" class="btn-filter-run">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Báo cáo
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="invoice-report-card">
+        <div class="invoice-report-table-wrap">
+            <table class="invoice-report-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Số HĐ</th>
+                        <th style="width: 145px;">Thời gian</th>
+                        <th style="width: 110px;">Nhân viên</th>
+                        <th style="width: 95px;" class="text-right">Tiền món</th>
+                        <th style="width: 70px;" class="text-right">Tiền giờ</th>
+                        <th style="width: 70px;" class="text-right">Phụ thu</th>
+                        <th style="width: 85px;" class="text-right">Giảm giá</th>
+                        <th style="width: 60px;" class="text-right">VAT</th>
+                        <th style="width: 105px;" class="text-right">Thành tiền</th>
+                        <th style="width: 120px;">Kiểu thanh toán</th>
+                        <th style="width: 95px;">Khu vực</th>
+                        <th style="width: 80px;">Điểm bàn</th>
+                        <th>Các món / Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                    {% with order=invoice.order %}
+                    <tr class="{% if invoice.status == 'cancelled' %}row-cancelled{% endif %}">
+                        <td><strong class="invoice-code-badge">#{{ invoice.invoice_code }}</strong></td>
+                        <td class="text-muted">{{ invoice.paid_at|date:'d/m/Y h:i A' }}</td>
+                        <td><span class="user-chip-cell">{{ invoice.cashier.get_full_name|default:invoice.cashier.username }}</span></td>
+                        <td class="text-right">{{ invoice.subtotal|vnd }} đ</td>
+                        <td class="text-right text-muted">0</td>
+                        <td class="text-right text-muted">{{ invoice.surcharge_amount|vnd }}</td>
+                        <td class="text-right text-discount">{% if invoice.discount_amount %}-{{ invoice.discount_amount|vnd }} đ{% else %}0{% endif %}</td>
+                        <td class="text-right text-muted">{{ invoice.tax_amount|vnd }}</td>
+                        <td class="text-right"><strong class="total-highlight">{{ invoice.total_amount|vnd }} đ</strong></td>
+                        <td>
+                            {% for payment in invoice.payments.all %}
+                            <span class="payment-method-badge method-{{ payment.method }}">{{ payment.get_method_display }}</span>
+                            {% empty %}
+                            <span class="payment-method-badge">Tiền mặt</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <span class="area-pill">
+                                {% if order and order.table and order.table.area %}
+                                    {{ order.table.area.name }}
+                                {% elif order and order.order_type == 'takeaway' %}
+                                    Mang về
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="table-pill">
+                                {% if order and order.table %}
+                                    {{ order.table.name }}
+                                {% elif order and order.order_type == 'takeaway' %}
+                                    Mang về
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="items-notes-cell">
+                            {% for item in order.items.all %}
+                                {% if filters.show_full_name %}
+                                    {{ item.product_name }} ({{ item.quantity }}){% if not forloop.last %}, {% endif %}
+                                {% else %}
+                                    {{ item.product_name|slice:":1"|upper }}{{ item.product_name|slice:"1:2"|upper }} ({{ item.quantity }}){% if not forloop.last %}, {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if order.note %}
+                                <span class="order-note-text">- {{ order.note }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="13">
+                            <div class="empty-invoices-notice">
+                                <span>🧾</span>
+                                <p>Không tìm thấy hóa đơn nào phù hợp với bộ lọc đã chọn.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer / Pagination & Summary -->
+        <div class="invoice-report-footer">
+            <div class="footer-pagination">
+                {% if invoices.has_previous %}
+                <a href="?page=1{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="btn-page">Đầu</a>
+                <a href="?page={{ invoices.previous_page_number }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="btn-page">&lt; Trang trước</a>
+                {% else %}
+                <span class="btn-page disabled">Đầu</span>
+                <span class="btn-page disabled">&lt; Trang trước</span>
+                {% endif %}
+
+                <span class="page-indicator">Trang {{ invoices.number }} / {{ invoices.paginator.num_pages }}</span>
+
+                {% if invoices.has_next %}
+                <a href="?page={{ invoices.next_page_number }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="btn-page">Trang sau &gt;</a>
+                <a href="?page={{ invoices.paginator.num_pages }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="btn-page">Cuối</a>
+                {% else %}
+                <span class="btn-page disabled">Trang sau &gt;</span>
+                <span class="btn-page disabled">Cuối</span>
+                {% endif %}
+            </div>
+
+            <div class="footer-summary">
+                <div class="summary-line-1">{{ summary.total_count }} hóa đơn, doanh thu: <strong>{{ summary.total_revenue_formatted }}</strong></div>
+                <div class="summary-line-2">{{ summary.discount_count }} giảm giá (0 mã giảm, 0 thẻ vip, 0 tặng món) giảm <strong>{{ summary.discount_total_formatted }}</strong></div>
+            </div>
+
+            <div class="footer-actions">
+                <a href="?{% for k, v in request.GET.items %}{% if k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}export=excel" class="btn-export-excel">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    Xuất ra Excel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

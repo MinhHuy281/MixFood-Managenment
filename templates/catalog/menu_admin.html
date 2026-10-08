@@ -1,0 +1,809 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load menu_tags %}
+{% block title %}Thực đơn - Admin | MixFood Manager{% endblock %}
+
+{% block content %}
+<div class="menu-admin-page-container">
+    <!-- Page Header -->
+    <div class="menu-admin-page-header">
+        <div class="header-left">
+            <p class="eyebrow">CÀI ĐẶT / THỰC ĐƠN BÁN HÀNG</p>
+            <h1>Thực đơn - Admin</h1>
+            <p class="muted">Quản lý các hạng mục món, mã món, bảng giá 3 cấp và tự động đồng bộ định lượng nguyên liệu.</p>
+        </div>
+        <div class="header-right">
+            <a class="secondary-button" href="{% url 'dashboard:home' %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Về màn hình POS
+            </a>
+            <button type="button" class="btn-import-excel" id="page-btn-open-import">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Nhập dữ liệu từ Excel
+            </button>
+            <a href="{% url 'catalog:menu_export_excel' %}" class="primary-button btn-export-excel-page">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Xuất ra Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Notification Toast / Banner -->
+    <div id="menu-admin-alert" class="menu-alert-banner" hidden></div>
+
+    <!-- Section 1: Categories Bar (Các hạng mục - nhóm món) -->
+    <div class="menu-categories-card">
+        <div class="categories-card-header">
+            <div class="cat-title-wrap">
+                <span class="section-icon">📁</span>
+                <span class="section-title">Các hạng mục - nhóm món</span>
+            </div>
+            <div class="cat-header-actions">
+                <label class="custom-checkbox-label">
+                    <input type="checkbox" id="allow-custom-dish-checkbox">
+                    <span>Cho phép món ngoài thực đơn</span>
+                </label>
+                <div class="cat-btn-group">
+                    <button type="button" class="btn-cat-action btn-cat-add" id="btn-cat-add">+ Thêm</button>
+                    <button type="button" class="btn-cat-action btn-cat-edit" id="btn-cat-edit" disabled>Sửa</button>
+                    <button type="button" class="btn-cat-action btn-cat-del text-danger" id="btn-cat-del" disabled>Xóa</button>
+                    <button type="button" class="btn-cat-action btn-cat-save" id="btn-cat-save" disabled>Lưu sự thay đổi</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="categories-pill-grid" id="categories-pill-container">
+            <button type="button" class="cat-pill active" data-cat-id="all">
+                <span class="cat-pill-name">Tất cả</span>
+                <span class="cat-pill-count">{{ total_dishes_count }}</span>
+            </button>
+            {% for cat in category_list_data %}
+            <button type="button" class="cat-pill" data-cat-id="{{ cat.id }}" data-cat-name="{{ cat.name }}" data-cat-color="{{ cat.color }}" data-cat-order="{{ cat.display_order }}">
+                <span class="cat-pill-dot" style="background-color: {{ cat.color }};"></span>
+                <span class="cat-pill-name">{{ cat.name }}</span>
+                <span class="cat-pill-count">{{ cat.count }}</span>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Section 2: Main Workspace (Split Grid: Left Table, Right Form) -->
+    <div class="menu-workspace-grid">
+        <!-- Left: Dishes Table -->
+        <div class="dishes-table-card">
+            <div class="dishes-card-header">
+                <div class="dishes-header-left">
+                    <span class="section-title">Các món thực đơn <strong id="current-cat-display">[Tất cả]</strong></span>
+                    <span class="dishes-total-badge" id="dishes-count-badge">{{ total_dishes_count }} món</span>
+                </div>
+                <div class="dishes-header-right">
+                    <div class="menu-search-box">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="dish-search-input" placeholder="Tìm tên món, mã món...">
+                    </div>
+                    <div class="dish-btn-group">
+                        <button type="button" class="btn-dish-action btn-add-dish" id="btn-trigger-add-dish">+ Thêm</button>
+                        <button type="button" class="btn-dish-action btn-edit-dish" id="btn-trigger-edit-dish" disabled>Sửa</button>
+                        <button type="button" class="btn-dish-action btn-del-dish text-danger" id="btn-trigger-del-dish" disabled>Xóa</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="dishes-table-scroll">
+                <table class="menu-dishes-table" id="menu-dishes-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">Hạng mục</th>
+                            <th style="width: 110px;">Nhóm con</th>
+                            <th style="width: 85px;">Mã món</th>
+                            <th style="min-width: 180px;">Tên món</th>
+                            <th style="width: 65px;" class="text-center">ĐVT</th>
+                            <th style="width: 105px;" class="text-right">Đơn giá (đ)</th>
+                            <th style="width: 105px;" class="text-right">Đơn giá 2</th>
+                            <th style="width: 105px;" class="text-right">Đơn giá 3</th>
+                            <th style="width: 95px;" class="text-center">Loại</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dishes-table-tbody">
+                        {% for p in products %}
+                        <tr class="dish-row" data-id="{{ p.id }}" data-cat-id="{{ p.category_id }}" data-subgroup="{{ p.subgroup }}" data-code="{{ p.code }}" data-name="{{ p.name }}" data-unit="{{ p.unit }}" data-p1="{{ p.price|floatformat:0 }}" data-p2="{{ p.price_2|floatformat:0 }}" data-p3="{{ p.price_3|floatformat:0 }}" data-type="{{ p.product_type }}">
+                            <td class="col-cat"><span class="badge-cat">{{ p.category.name }}</span></td>
+                            <td class="col-sub">{{ p.subgroup|default:"-" }}</td>
+                            <td class="col-code"><code>{{ p.code }}</code></td>
+                            <td class="col-name"><strong>{{ p.name }}</strong></td>
+                            <td class="col-unit text-center">{{ p.unit }}</td>
+                            <td class="col-price text-right">{{ p.price|vnd }} đ</td>
+                            <td class="col-price-2 text-right">{{ p.price_2|vnd }} đ</td>
+                            <td class="col-price-3 text-right">{{ p.price_3|vnd }} đ</td>
+                            <td class="col-type text-center">
+                                {% if p.product_type == 'drink' %}
+                                <span class="badge-type type-drink">Thức uống</span>
+                                {% elif p.product_type == 'food' %}
+                                <span class="badge-type type-food">Đồ ăn</span>
+                                {% elif p.product_type == 'topping' %}
+                                <span class="badge-type type-topping">Topping</span>
+                                {% else %}
+                                <span class="badge-type type-other">Khác</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="empty-row"><td colspan="9" class="text-center">Chưa có món ăn nào trong thực đơn.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer -->
+            <div class="dishes-table-footer">
+                <div class="footer-note">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>Lưu ý: Các thay đổi về đơn giá sẽ không áp dụng cho các điểm bán cũng như các món đã gọi từ trước!</span>
+                </div>
+                <a href="{% url 'catalog:menu_export_excel' %}" class="btn-footer-excel">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    Xuất ra Excel
+                </a>
+            </div>
+        </div>
+
+        <!-- Right: Dish Form Card (Thêm món / Sửa món) -->
+        <div class="dish-form-card" id="dish-form-card">
+            <div class="dish-form-header">
+                <div class="form-title-wrap">
+                    <span class="form-icon">🍽️</span>
+                    <span class="form-title" id="dish-form-title">Thêm món</span>
+                </div>
+                <span class="form-mode-badge" id="dish-form-mode-badge">Tạo mới</span>
+                <button type="button" class="btn-switch-add" id="btn-switch-add" style="display:none;" title="Chuyển sang chế độ thêm món mới">+ Thêm món mới</button>
+            </div>
+
+            <form id="dish-editor-form" class="dish-editor-form" autocomplete="off">
+                {% csrf_token %}
+                <input type="hidden" id="form-dish-id" value="">
+
+                <div class="form-group">
+                    <label for="form-dish-category">Hạng mục <span class="required">*</span></label>
+                    <select id="form-dish-category" required class="form-select">
+                        <option value="">-- Chọn hạng mục --</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="form-dish-subgroup">(Nhóm con)</label>
+                    <input type="text" id="form-dish-subgroup" placeholder="Ví dụ: Lẩu, Hấp, Đặc biệt...">
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="form-dish-code">Mã món <span class="required">*</span></label>
+                        <input type="text" id="form-dish-code" placeholder="VD: BTB, 7UP" required class="code-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="form-dish-unit">Đơn vị tính</label>
+                        <input type="text" id="form-dish-unit" value="Phần" placeholder="Phần, Lon, Dĩa...">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="form-dish-name">Tên món <span class="required">*</span></label>
+                    <input type="text" id="form-dish-name" placeholder="Tên món đầy đủ..." required>
+                </div>
+
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label for="form-dish-price">Đơn giá (đ) <span class="required">*</span></label>
+                        <input type="text" id="form-dish-price" value="0" inputmode="numeric" class="price-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="form-dish-price-2">Đơn giá 2</label>
+                        <input type="text" id="form-dish-price-2" value="0" inputmode="numeric" class="price-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="form-dish-price-3">Đơn giá 3</label>
+                        <input type="text" id="form-dish-price-3" value="0" inputmode="numeric" class="price-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="form-dish-type">Loại món</label>
+                    <select id="form-dish-type" class="form-select">
+                        <option value="food">Đồ ăn</option>
+                        <option value="drink">Thức uống</option>
+                        <option value="topping">Topping</option>
+                        <option value="other">Loại khác</option>
+                    </select>
+                </div>
+
+                <div class="form-actions-row">
+                    <button type="submit" class="btn-submit-dish" id="btn-submit-dish" style="background-color: #059669 !important; background: linear-gradient(135deg, #059669, #047857) !important; color: #ffffff !important; border: 1px solid #047857 !important;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span style="color: #ffffff !important; font-weight: 700;">Đồng ý</span>
+                    </button>
+                    <button type="button" class="btn-cancel-dish" id="btn-cancel-dish">Hủy / Thêm mới</button>
+                </div>
+
+                <div class="form-auto-recipe-check">
+                    <label class="custom-checkbox-label">
+                        <input type="checkbox" id="form-auto-recipe" checked>
+                        <span>Tự động tạo mặt hàng và định lượng</span>
+                    </label>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nhập dữ liệu từ Excel -->
+<div class="menu-modal-backdrop" id="modal-import-excel" hidden>
+    <div class="menu-modal-dialog">
+        <div class="menu-modal-header">
+            <div class="modal-title-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                <h3>Nhập dữ liệu thực đơn từ Excel</h3>
+            </div>
+            <button type="button" class="modal-close" id="modal-import-close">×</button>
+        </div>
+        <form id="form-import-excel" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="menu-modal-body">
+                <p class="import-help-text">
+                    Chọn tệp tin <code>.csv</code> xuất từ Excel hoặc dán dữ liệu dạng bảng (các cột: Hạng mục, Nhóm con, Mã món, Tên món, ĐVT, Đơn giá, Đơn giá 2, Đơn giá 3, Loại).
+                </p>
+
+                <div class="import-file-zone">
+                    <label for="import-file-input" class="file-drop-label">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Kéo thả file CSV vào đây hoặc <strong>Bấm để chọn file</strong></span>
+                    </label>
+                    <input type="file" id="import-file-input" name="file" accept=".csv, .txt">
+                </div>
+
+                <div class="form-group" style="margin-top: 14px;">
+                    <label for="import-csv-text">Hoặc dán trực tiếp dữ liệu phân tách tab / phẩy:</label>
+                    <textarea id="import-csv-text" name="csv_text" rows="5" placeholder="BÚN THÁI	BTB	Bún Thái Bò	Phần	50000	60000	0	Đồ ăn..."></textarea>
+                </div>
+
+                <div class="form-auto-recipe-check">
+                    <label class="custom-checkbox-label">
+                        <input type="checkbox" name="auto_recipe" value="true" checked>
+                        <span>Tự động tạo mặt hàng và định lượng cho các món nhập mới</span>
+                    </label>
+                </div>
+            </div>
+            <div class="menu-modal-footer">
+                <button type="button" class="secondary-button" id="modal-import-cancel">Hủy</button>
+                <button type="submit" class="primary-button" id="btn-submit-import">Nhập dữ liệu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Thêm / Sửa Danh mục -->
+<div class="menu-modal-backdrop" id="modal-category" hidden>
+    <div class="menu-modal-dialog category-dialog">
+        <div class="menu-modal-header">
+            <h3 id="cat-modal-title">Thêm danh mục mới</h3>
+            <button type="button" class="modal-close" id="modal-cat-close">×</button>
+        </div>
+        <form id="form-category">
+            {% csrf_token %}
+            <input type="hidden" id="modal-cat-id" value="">
+            <div class="menu-modal-body">
+                <div class="form-group">
+                    <label for="modal-cat-name">Tên danh mục <span class="required">*</span></label>
+                    <input type="text" id="modal-cat-name" placeholder="Ví dụ: BÚN THÁI, ĐỒ UỐNG..." required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-cat-color">Màu nhận diện</label>
+                    <div class="cat-color-picker-row">
+                        <input type="color" id="modal-cat-color" value="#f59e0b">
+                        <div class="color-presets">
+                            <span class="preset-color" style="background:#f59e0b;" data-color="#f59e0b"></span>
+                            <span class="preset-color" style="background:#10b981;" data-color="#10b981"></span>
+                            <span class="preset-color" style="background:#3b82f6;" data-color="#3b82f6"></span>
+                            <span class="preset-color" style="background:#ef4444;" data-color="#ef4444"></span>
+                            <span class="preset-color" style="background:#8b5cf6;" data-color="#8b5cf6"></span>
+                            <span class="preset-color" style="background:#ec4899;" data-color="#ec4899"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="modal-cat-order">Thứ tự hiển thị</label>
+                    <input type="number" id="modal-cat-order" value="0" min="0">
+                </div>
+            </div>
+            <div class="menu-modal-footer">
+                <button type="button" class="secondary-button" id="modal-cat-cancel">Hủy</button>
+                <button type="submit" class="primary-button" id="btn-submit-cat">Lưu danh mục</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Core Menu Admin Client Script -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let selectedCatId = 'all';
+    let selectedDishRow = null;
+    let selectedCatPill = null;
+
+    const alertBanner = document.getElementById('menu-admin-alert');
+    const tableTbody = document.getElementById('dishes-table-tbody');
+    const dishesCountBadge = document.getElementById('dishes-count-badge');
+    const currentCatDisplay = document.getElementById('current-cat-display');
+    const searchInput = document.getElementById('dish-search-input');
+    const dishForm = document.getElementById('dish-editor-form');
+
+    const formDishId = document.getElementById('form-dish-id');
+    const formCategory = document.getElementById('form-dish-category');
+    const formSubgroup = document.getElementById('form-dish-subgroup');
+    const formCode = document.getElementById('form-dish-code');
+    const formUnit = document.getElementById('form-dish-unit');
+    const formName = document.getElementById('form-dish-name');
+    const formPrice = document.getElementById('form-dish-price');
+    const formPrice2 = document.getElementById('form-dish-price-2');
+    const formPrice3 = document.getElementById('form-dish-price-3');
+    const formType = document.getElementById('form-dish-type');
+    const formAutoRecipe = document.getElementById('form-auto-recipe');
+    const formTitle = document.getElementById('dish-form-title');
+    const formModeBadge = document.getElementById('dish-form-mode-badge');
+
+    const btnEditDish = document.getElementById('btn-trigger-edit-dish');
+    const btnDelDish = document.getElementById('btn-trigger-del-dish');
+    const btnAddDish = document.getElementById('btn-trigger-add-dish');
+    const btnCancelDish = document.getElementById('btn-cancel-dish');
+
+    const btnCatEdit = document.getElementById('btn-cat-edit');
+    const btnCatDel = document.getElementById('btn-cat-del');
+    const btnCatAdd = document.getElementById('btn-cat-add');
+
+    // Show notice helper
+    function showAlert(msg, isError = false) {
+        alertBanner.textContent = msg;
+        alertBanner.className = 'menu-alert-banner ' + (isError ? 'danger' : 'success');
+        alertBanner.hidden = false;
+        setTimeout(() => { alertBanner.hidden = true; }, 4000);
+    }
+
+    // Filter dishes by category and search
+    function filterDishes() {
+        const query = searchInput.value.toLowerCase().trim();
+        const rows = tableTbody.querySelectorAll('.dish-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const catId = row.dataset.catId;
+            const code = (row.dataset.code || '').toLowerCase();
+            const name = (row.dataset.name || '').toLowerCase();
+            const sub = (row.dataset.subgroup || '').toLowerCase();
+
+            const matchCat = (selectedCatId === 'all' || catId === selectedCatId);
+            const matchQuery = (!query || code.includes(query) || name.includes(query) || sub.includes(query));
+
+            if (matchCat && matchQuery) {
+                row.hidden = false;
+                visibleCount++;
+            } else {
+                row.hidden = true;
+            }
+        });
+
+        dishesCountBadge.textContent = `${visibleCount} món`;
+    }
+
+    // Category pill selection
+    document.querySelectorAll('.cat-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            selectedCatId = pill.dataset.catId;
+            selectedCatPill = pill;
+
+            if (selectedCatId === 'all') {
+                currentCatDisplay.textContent = '[Tất cả]';
+                btnCatEdit.disabled = true;
+                btnCatDel.disabled = true;
+            } else {
+                currentCatDisplay.textContent = `[${pill.dataset.catName}]`;
+                btnCatEdit.disabled = false;
+                btnCatDel.disabled = false;
+                // auto set form category
+                formCategory.value = selectedCatId;
+            }
+            filterDishes();
+        });
+    });
+
+    searchInput.addEventListener('input', filterDishes);
+
+    const btnSwitchAdd = document.getElementById('btn-switch-add');
+    if (btnSwitchAdd) btnSwitchAdd.addEventListener('click', resetDishForm);
+
+    // Format VND helper (ví dụ: 15.000, 100.000)
+    function formatVND(value) {
+        if (value === null || value === undefined || value === '') return '0';
+        const num = Math.round(Number(String(value).replace(/\./g, '').replace(/,/g, '')) || 0);
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    // Setup live price inputs formatting
+    function setupPriceInput(input) {
+        if (!input) return;
+        input.addEventListener('input', () => {
+            const raw = input.value.replace(/\D/g, '');
+            if (!raw) {
+                input.value = '0';
+                return;
+            }
+            const num = parseInt(raw, 10);
+            input.value = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        });
+        input.addEventListener('focus', () => {
+            if (input.value === '0') input.select();
+        });
+    }
+    setupPriceInput(formPrice);
+    setupPriceInput(formPrice2);
+    setupPriceInput(formPrice3);
+
+    // Sort rows alphabetically by name (A -> B -> C ...)
+    function sortDishRows() {
+        const rows = Array.from(tableTbody.querySelectorAll('.dish-row'));
+        rows.sort((a, b) => {
+            const nameA = (a.dataset.name || '').trim();
+            const nameB = (b.dataset.name || '').trim();
+            return nameA.localeCompare(nameB, 'vi', { sensitivity: 'base' });
+        });
+        rows.forEach(r => tableTbody.appendChild(r));
+    }
+
+    // Row selection
+    function bindRowEvents(row) {
+        row.addEventListener('click', () => {
+            if (selectedDishRow) selectedDishRow.classList.remove('selected');
+            selectedDishRow = row;
+            row.classList.add('selected');
+
+            btnEditDish.disabled = false;
+            btnDelDish.disabled = false;
+
+            // Load into form
+            loadDishIntoForm(row);
+        });
+
+        row.addEventListener('dblclick', () => {
+            loadDishIntoForm(row);
+            formName.focus();
+        });
+    }
+
+    document.querySelectorAll('.dish-row').forEach(bindRowEvents);
+
+    function loadDishIntoForm(row) {
+        formDishId.value = row.dataset.id;
+        formCategory.value = row.dataset.catId;
+        formSubgroup.value = row.dataset.subgroup || '';
+        formCode.value = row.dataset.code;
+        formName.value = row.dataset.name;
+        formUnit.value = row.dataset.unit || 'Phần';
+        formPrice.value = formatVND(row.dataset.p1 || 0);
+        formPrice2.value = formatVND(row.dataset.p2 || 0);
+        formPrice3.value = formatVND(row.dataset.p3 || 0);
+        formType.value = row.dataset.type || 'food';
+
+        formTitle.textContent = `Sửa món: ${row.dataset.name}`;
+        formModeBadge.textContent = 'Đang sửa';
+        formModeBadge.className = 'form-mode-badge edit-mode';
+        if (btnSwitchAdd) btnSwitchAdd.style.display = 'inline-flex';
+    }
+
+    function resetDishForm() {
+        formDishId.value = '';
+        if (selectedCatId !== 'all') {
+            formCategory.value = selectedCatId;
+        } else {
+            formCategory.value = formCategory.options.length > 1 ? formCategory.options[1].value : '';
+        }
+        formSubgroup.value = '';
+        formCode.value = '';
+        formName.value = '';
+        formUnit.value = 'Phần';
+        formPrice.value = '0';
+        formPrice2.value = '0';
+        formPrice3.value = '0';
+        formType.value = 'food';
+
+        formTitle.textContent = 'Thêm món mới';
+        formModeBadge.textContent = 'Tạo mới';
+        formModeBadge.className = 'form-mode-badge';
+        if (btnSwitchAdd) btnSwitchAdd.style.display = 'none';
+
+        if (selectedDishRow) {
+            selectedDishRow.classList.remove('selected');
+            selectedDishRow = null;
+        }
+        btnEditDish.disabled = true;
+        btnDelDish.disabled = true;
+    }
+
+    btnAddDish.addEventListener('click', resetDishForm);
+    btnCancelDish.addEventListener('click', resetDishForm);
+    btnEditDish.addEventListener('click', () => {
+        if (selectedDishRow) loadDishIntoForm(selectedDishRow);
+    });
+
+    // Helper to update or insert dish in table with alphabetical sorting
+    function updateOrInsertDish(dish, isEdit = false) {
+        let row = tableTbody.querySelector(`.dish-row[data-id="${dish.id}"]`);
+        const p1Formatted = formatVND(dish.price);
+        const p2Formatted = formatVND(dish.price_2);
+        const p3Formatted = formatVND(dish.price_3);
+
+        const rowHtml = `
+            <td class="col-cat"><span class="badge-cat">${dish.category_name}</span></td>
+            <td class="col-sub">${dish.subgroup || '-'}</td>
+            <td class="col-code"><code>${dish.code}</code></td>
+            <td class="col-name"><strong>${dish.name}</strong></td>
+            <td class="col-unit text-center">${dish.unit}</td>
+            <td class="col-price text-right">${p1Formatted} đ</td>
+            <td class="col-price-2 text-right">${p2Formatted} đ</td>
+            <td class="col-price-3 text-right">${p3Formatted} đ</td>
+            <td class="col-type text-center">
+                <span class="badge-type type-${dish.product_type}">${dish.product_type_display}</span>
+            </td>
+        `;
+
+        if (row) {
+            row.dataset.catId = dish.category_id;
+            row.dataset.subgroup = dish.subgroup || '';
+            row.dataset.code = dish.code;
+            row.dataset.name = dish.name;
+            row.dataset.unit = dish.unit;
+            row.dataset.p1 = dish.price;
+            row.dataset.p2 = dish.price_2;
+            row.dataset.p3 = dish.price_3;
+            row.dataset.type = dish.product_type;
+            row.innerHTML = rowHtml;
+        } else {
+            const emptyRow = tableTbody.querySelector('tr td.text-center');
+            if (emptyRow) emptyRow.closest('tr')?.remove();
+
+            row = document.createElement('tr');
+            row.className = 'dish-row';
+            row.dataset.id = dish.id;
+            row.dataset.catId = dish.category_id;
+            row.dataset.subgroup = dish.subgroup || '';
+            row.dataset.code = dish.code;
+            row.dataset.name = dish.name;
+            row.dataset.unit = dish.unit;
+            row.dataset.p1 = dish.price;
+            row.dataset.p2 = dish.price_2;
+            row.dataset.p3 = dish.price_3;
+            row.dataset.type = dish.product_type;
+            row.innerHTML = rowHtml;
+            tableTbody.appendChild(row);
+            bindRowEvents(row);
+        }
+
+        // NHẢY XẾP HÀNG THEO BẢNG CHỮ CÁI (A-B-C...)
+        sortDishRows();
+        filterDishes();
+
+        // Cuộn mượt tới món vừa lưu và tạo hiệu ứng nhấp nháy nhận biết
+        row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        row.classList.add('just-updated');
+        setTimeout(() => row.classList.remove('just-updated'), 2000);
+
+        if (isEdit) {
+            if (selectedDishRow) selectedDishRow.classList.remove('selected');
+            selectedDishRow = row;
+            row.classList.add('selected');
+            loadDishIntoForm(row);
+        } else {
+            // Thêm món mới xong -> Tự động reset form về Tạo mới để sẵn sàng thêm tiếp món khác, KHÔNG đè lên món vừa tạo
+            resetDishForm();
+            if (formCode) formCode.focus();
+        }
+    }
+
+    // Sắp xếp Alphabet ngay khi tải trang
+    sortDishRows();
+
+    // Save Dish via AJAX
+    dishForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('btn-submit-dish');
+        const origText = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>Đang lưu...</span>';
+        }
+
+        const isEdit = Boolean(formDishId.value);
+        const payload = {
+            dish_id: formDishId.value,
+            category_id: formCategory.value,
+            subgroup: formSubgroup.value.trim(),
+            code: formCode.value.trim().toUpperCase(),
+            name: formName.value.trim(),
+            unit: formUnit.value.trim() || 'Phần',
+            price: formPrice.value.replace(/\./g, '').trim(),
+            price_2: formPrice2.value.replace(/\./g, '').trim(),
+            price_3: formPrice3.value.replace(/\./g, '').trim(),
+            product_type: formType.value,
+            auto_recipe: formAutoRecipe.checked,
+        };
+
+        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+
+        try {
+            const resp = await fetch('{% url "catalog:menu_save_dish" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify(payload)
+            });
+            const res = await resp.json();
+            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi lưu món.');
+
+            showAlert(res.message);
+            if (res.dish) {
+                updateOrInsertDish(res.dish, isEdit);
+            }
+        } catch (err) {
+            showAlert(err.message, true);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origText;
+            }
+        }
+    });
+
+    // Delete Dish
+    btnDelDish.addEventListener('click', async () => {
+        if (!selectedDishRow) return;
+        const id = selectedDishRow.dataset.id;
+        const name = selectedDishRow.dataset.name;
+        if (!confirm(`Bạn có chắc chắn muốn xóa món "${name}" khỏi thực đơn?`)) return;
+
+        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+        try {
+            const resp = await fetch(`/catalog/menu/api/delete-dish/${id}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            const res = await resp.json();
+            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi xóa món.');
+            showAlert(res.message);
+            selectedDishRow.remove();
+            resetDishForm();
+            filterDishes();
+        } catch (err) {
+            showAlert(err.message, true);
+        }
+    });
+
+    // Category Add & Edit Modals
+    const catModal = document.getElementById('modal-category');
+    const catModalTitle = document.getElementById('cat-modal-title');
+    const modalCatId = document.getElementById('modal-cat-id');
+    const modalCatName = document.getElementById('modal-cat-name');
+    const modalCatColor = document.getElementById('modal-cat-color');
+    const modalCatOrder = document.getElementById('modal-cat-order');
+
+    btnCatAdd.addEventListener('click', () => {
+        modalCatId.value = '';
+        modalCatName.value = '';
+        modalCatColor.value = '#f59e0b';
+        modalCatOrder.value = 0;
+        catModalTitle.textContent = 'Thêm danh mục mới';
+        catModal.hidden = false;
+        modalCatName.focus();
+    });
+
+    btnCatEdit.addEventListener('click', () => {
+        if (!selectedCatPill || selectedCatId === 'all') return;
+        modalCatId.value = selectedCatId;
+        modalCatName.value = selectedCatPill.dataset.catName;
+        modalCatColor.value = selectedCatPill.dataset.catColor || '#f59e0b';
+        modalCatOrder.value = selectedCatPill.dataset.catOrder || 0;
+        catModalTitle.textContent = `Sửa danh mục: ${selectedCatPill.dataset.catName}`;
+        catModal.hidden = false;
+        modalCatName.focus();
+    });
+
+    document.querySelectorAll('.preset-color').forEach(dot => {
+        dot.addEventListener('click', () => {
+            modalCatColor.value = dot.dataset.color;
+        });
+    });
+
+    document.getElementById('modal-cat-close').addEventListener('click', () => { catModal.hidden = true; });
+    document.getElementById('modal-cat-cancel').addEventListener('click', () => { catModal.hidden = true; });
+
+    document.getElementById('form-category').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            category_id: modalCatId.value,
+            name: modalCatName.value,
+            color: modalCatColor.value,
+            display_order: modalCatOrder.value,
+        };
+        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+        try {
+            const resp = await fetch('{% url "catalog:menu_save_category" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(payload)
+            });
+            const res = await resp.json();
+            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi lưu danh mục.');
+            showAlert(res.message);
+            catModal.hidden = true;
+            window.location.reload();
+        } catch (err) {
+            alert(err.message);
+        }
+    });
+
+    // Delete Category
+    btnCatDel.addEventListener('click', async () => {
+        if (!selectedCatPill || selectedCatId === 'all') return;
+        const name = selectedCatPill.dataset.catName;
+        if (!confirm(`Bạn có chắc chắn muốn xóa danh mục "${name}"?`)) return;
+
+        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+        try {
+            const resp = await fetch(`/catalog/menu/api/delete-category/${selectedCatId}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            const res = await resp.json();
+            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi xóa danh mục.');
+            showAlert(res.message);
+            window.location.reload();
+        } catch (err) {
+            showAlert(err.message, true);
+        }
+    });
+
+    // Import Modal
+    const importModal = document.getElementById('modal-import-excel');
+    document.getElementById('page-btn-open-import').addEventListener('click', () => { importModal.hidden = false; });
+    document.getElementById('modal-import-close').addEventListener('click', () => { importModal.hidden = true; });
+    document.getElementById('modal-import-cancel').addEventListener('click', () => { importModal.hidden = true; });
+
+    document.getElementById('form-import-excel').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const submitBtn = document.getElementById('btn-submit-import');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang nhập dữ liệu...';
+
+        try {
+            const resp = await fetch('{% url "catalog:menu_import_excel" %}', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi nhập dữ liệu.');
+            alert(res.message);
+            importModal.hidden = true;
+            window.location.reload();
+        } catch (err) {
+            alert(err.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Nhập dữ liệu';
+        }
+    });
+});
+</script>
+{% endblock %}

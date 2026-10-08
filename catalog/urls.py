@@ -6,6 +6,14 @@ app_name = 'catalog'
 
 urlpatterns = [
     path('', views.catalog_home, name='home'),
+    path('menu/', views.menu_admin, name='menu_admin'),
+    path('menu/api/dishes/', views.menu_dishes_api, name='menu_dishes_api'),
+    path('menu/api/save-dish/', views.menu_save_dish, name='menu_save_dish'),
+    path('menu/api/delete-dish/<int:pk>/', views.menu_delete_dish, name='menu_delete_dish'),
+    path('menu/api/save-category/', views.menu_save_category, name='menu_save_category'),
+    path('menu/api/delete-category/<int:pk>/', views.menu_delete_category, name='menu_delete_category'),
+    path('menu/export/', views.menu_export_excel, name='menu_export_excel'),
+    path('menu/import/', views.menu_import_excel, name='menu_import_excel'),
     path('categories/', views.category_list, name='categories'),
     path('categories/add/', views.category_create, name='category_create'),
     path('categories/<int:pk>/edit/', views.category_update, name='category_update'),

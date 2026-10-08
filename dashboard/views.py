@@ -12,6 +12,9 @@ from dining.models import Area, DiningTable
 from sales.models import Invoice, OrderItem, Payment, Shift
 from accounts.decorators import role_required
 from audit.models import ActivityLog
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 @login_required
@@ -53,7 +56,9 @@ def home(request):
 	return render(request, 'dashboard/home.html', {
 		'areas': Area.objects.filter(is_active=True).prefetch_related(Prefetch('tables', queryset=DiningTable.objects.filter(is_active=True))),
 		'categories': Category.objects.filter(is_active=True),
-		'products': Product.objects.filter(is_active=True, is_available=True).select_related('category'),
+		'menu_categories': Category.objects.filter(is_active=True).order_by('display_order', 'name'),
+		'products': Product.objects.filter(is_active=True, is_available=True).select_related('category').order_by('category__display_order', 'category__name', 'subgroup', 'name'),
+		'all_menu_products': Product.objects.filter(is_active=True).select_related('category').order_by('category__display_order', 'name'),
 		'invoices': Invoice.objects.filter(paid_at__gte=day_started_at, paid_at__lt=day_started_at + timedelta(days=1)).select_related('order', 'cashier', 'order__table').prefetch_related('payments')[:30],
 		'shift_started_at': shift_started_at,
 		'shift_invoice_count': shift_invoices.count(),
@@ -62,6 +67,7 @@ def home(request):
 		'shift': shift,
 		'activity_logs': ActivityLog.objects.filter(created_at__gte=day_started_at).select_related('actor')[:12],
 		'current_time': now,
+		'cashiers': User.objects.filter(is_active=True).order_by('username'),
 	})
 
 

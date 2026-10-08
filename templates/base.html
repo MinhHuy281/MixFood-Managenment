@@ -3,29 +3,43 @@
 <html lang="vi">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}MixFood Manager{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>{% block title %}MixFood Manager - F&B POS Cloud{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}?v={% now 'U' %}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
     {% if user.is_authenticated %}
     {% block authenticated_header %}
     <header class="topbar">
-        <a class="brand" href="{% url 'dashboard:home' %}"><span class="legacy-close">×</span> DRS Manager <small>3.1.7</small></a>
-        <span class="legacy-store">MIX FOOD</span>
-        <span class="legacy-address">ẨM THỰC THÁI - K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng - Mã: 13255</span>
+        <div class="topbar-left">
+            <a class="brand" href="{% url 'dashboard:home' %}">
+                <span class="brand-logo-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                </span>
+                <strong>MIX FOOD</strong>
+                <span class="brand-badge">2026</span>
+            </a>
+            <span class="store-tag">Đà Nẵng • Ẩm Thực Thái</span>
+        </div>
         <nav class="topnav" aria-label="Điều hướng chính">
-            <a href="{% url 'dashboard:home' %}">HỆ THỐNG</a>
-            <a href="{% url 'inventory:home' %}">CÀI ĐẶT</a>
-            <a href="{% url 'dining:home' %}">QUẢN LÝ</a>
-               <a href="{% url 'dashboard:reports' %}">BÁO CÁO</a>
-            <a href="#">TRỢ GIÚP</a>
+            <a href="{% url 'dashboard:home' %}">BÁN HÀNG (POS)</a>
+            <a href="{% url 'dining:home' %}">KHU VỰC & BÀN</a>
+            <a href="{% url 'inventory:home' %}">KHO HÀNG</a>
+            <a href="{% url 'dashboard:reports' %}">BÁO CÁO</a>
         </nav>
         <div class="account-menu">
-            <span>{{ user.get_username }}</span>
+            <div class="user-chip">
+                <span class="avatar-dot">{{ user.get_username|slice:":1"|upper }}</span>
+                <span>{{ user.get_username }}</span>
+            </div>
             <form method="post" action="{% url 'accounts:logout' %}">
                 {% csrf_token %}
-                <button type="submit" class="link-button">Đăng xuất</button>
+                <button type="submit" class="logout-btn">Đăng xuất</button>
             </form>
         </div>
     </header>

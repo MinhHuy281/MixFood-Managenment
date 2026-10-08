@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cart = new Map();
     let selectedTableId = null;
     let dialogProduct = null;
+    let editingCartItemId = null;
     let menuUnlocked = false;
     let itemsSentToKitchen = false;
     let previewedTable = null;
@@ -126,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeDialog = () => {
         dialog.hidden = true;
         dialogProduct = null;
+        editingCartItemId = null;
     };
 
     const getCartTotal = () => Array.from(cart.values()).reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -177,20 +179,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.querySelectorAll('.pos-menu-item > button').forEach((menuButton) => {
-        menuButton.addEventListener('click', (event) => {
+    document.querySelectorAll('.pos-menu-item').forEach((menuItem) => {
+        const menuButton = menuItem.querySelector('button.nav-menu-btn') || menuItem.querySelector(':scope > button');
+        if (!menuButton) return;
+        menuButton.onclick = (event) => {
+            event.preventDefault();
             event.stopPropagation();
-            const currentMenu = menuButton.parentElement;
-            document.querySelectorAll('.pos-menu-item').forEach((menu) => menu.classList.remove('open'));
-            currentMenu.classList.toggle('open');
-            menuButton.setAttribute('aria-expanded', String(currentMenu.classList.contains('open')));
-        });
+            const wasOpen = menuItem.classList.contains('open');
+            document.querySelectorAll('.pos-menu-item').forEach((menu) => {
+                menu.classList.remove('open');
+                const btn = menu.querySelector('button.nav-menu-btn') || menu.querySelector(':scope > button');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            });
+            if (!wasOpen) {
+                menuItem.classList.add('open');
+                menuButton.setAttribute('aria-expanded', 'true');
+            }
+        };
     });
-    document.addEventListener('click', () => document.querySelectorAll('.pos-menu-item').forEach((menu) => {
-        menu.classList.remove('open');
-        const button = menu.querySelector(':scope > button');
-        if (button) button.setAttribute('aria-expanded', 'false');
-    }));
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.pos-menu-item')) {
+            document.querySelectorAll('.pos-menu-item').forEach((menu) => {
+                menu.classList.remove('open');
+                const button = menu.querySelector('button.nav-menu-btn') || menu.querySelector(':scope > button');
+                if (button) button.setAttribute('aria-expanded', 'false');
+            });
+        }
+    });
 
     const systemNotice = document.querySelector('#system-notice');
     const closingDialog = document.querySelector('#closing-dialog');
@@ -439,18 +454,119 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const formatMoney = (amount) => `${amount.toLocaleString('vi-VN')} đ`;
 
+    const openEditItemDialog = (productId, item) => {
+        if (!selectedTableId) return;
+        editingCartItemId = String(productId);
+        const matchingDish = Array.from(document.querySelectorAll('.dish')).find(
+            (d) => d.dataset.productId === String(productId)
+        );
+        dialogProduct = matchingDish || {
+            dataset: {
+                productId: String(productId),
+                dish: item.name,
+                unit: item.unit,
+                price: item.price
+            }
+        };
+        document.querySelector('#dialog-title').textContent = `Bàn ${selectedTable.textContent} - Chỉnh sửa món`;
+        document.querySelector('#dialog-product-name').textContent = item.name;
+        dialogQuantity.value = item.quantity;
+        dialogPrice.value = Number(item.price).toLocaleString('vi-VN');
+        document.querySelector('#dialog-note').value = item.note || '';
+        dialog.hidden = false;
+    };
+
     const renderCart = () => {
         orderItems.innerHTML = '';
         let subtotal = 0;
-        cart.forEach((item) => {
+        cart.forEach((item, productId) => {
             subtotal += item.price * item.quantity;
             const row = document.createElement('div');
             row.className = 'order-item new-item';
-            row.innerHTML = `<b>${item.name}</b><span><strong>${item.quantity}</strong> ${item.unit} <i>${formatMoney(item.price * item.quantity)}</i></span>`;
+            row.dataset.productId = productId;
+            row.innerHTML = `
+                <div class="order-item-header">
+                    <span class="order-item-title" title="${item.name}">${item.name}</span>
+                    <span class="order-item-price-total">${formatMoney(item.price * item.quantity)}</span>
+                </div>
+                <div class="order-item-meta-row">
+                    <span class="order-item-unit-price" title="Bấm để sửa món / ghi chú">${formatMoney(item.price)} / ${item.unit}</span>
+                    <div class="order-qty-pill">
+                        <button type="button" class="btn-qty-minus" data-id="${productId}" title="Giảm số lượng">-</button>
+                        <span class="order-qty-val">${item.quantity}</span>
+                        <button type="button" class="btn-qty-plus" data-id="${productId}" title="Tăng số lượng">+</button>
+                        <button type="button" class="btn-remove-item" data-id="${productId}" title="Bỏ món này">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                ${item.note ? `
+                    <div class="order-item-note" title="Bấm để sửa ghi chú">
+                        <span class="note-bullet">📝</span>
+                        <span class="note-content">${item.note}</span>
+                    </div>
+                ` : ''}
+            `;
             orderItems.appendChild(row);
+
+            // Row click to edit note/quantity
+            row.querySelector('.order-item-header').addEventListener('click', () => {
+                openEditItemDialog(productId, item);
+            });
+            row.querySelector('.order-item-unit-price').addEventListener('click', () => {
+                openEditItemDialog(productId, item);
+            });
+            const noteEl = row.querySelector('.order-item-note');
+            if (noteEl) {
+                noteEl.addEventListener('click', () => {
+                    openEditItemDialog(productId, item);
+                });
+            }
         });
+
+        // Event listeners for remove and qty change
+        orderItems.querySelectorAll('.btn-remove-item').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                cart.delete(id);
+                renderCart();
+            });
+        });
+
+        orderItems.querySelectorAll('.btn-qty-minus').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const item = cart.get(id);
+                if (item) {
+                    if (item.quantity > 1) {
+                        item.quantity -= 1;
+                    } else {
+                        cart.delete(id);
+                    }
+                    renderCart();
+                }
+            });
+        });
+
+        orderItems.querySelectorAll('.btn-qty-plus').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const item = cart.get(id);
+                if (item) {
+                    item.quantity += 1;
+                    renderCart();
+                }
+            });
+        });
+
         if (!cart.size) {
-            orderItems.innerHTML = selectedTableId ? '' : '<p class="empty-order">Chọn bàn để bắt đầu.</p>';
+            orderItems.innerHTML = selectedTableId ? '<p class="empty-order">Bàn chưa có món nào. Chọn món bên phải để gọi.</p>' : '<p class="empty-order">Chọn bàn để bắt đầu.</p>';
         }
         subtotalElement.textContent = formatMoney(subtotal);
         totalElement.textContent = formatMoney(subtotal);
@@ -509,28 +625,221 @@ document.addEventListener('DOMContentLoaded', () => {
         openPaymentDialog();
     });
 
+    // Helper to normalize Vietnamese text for search
+    const removeVietnameseTones = (str) => {
+        if (!str) return '';
+        return str
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'D')
+            .toLowerCase()
+            .trim();
+    };
+
+    const dishSearchInput = document.querySelector('#pos-dish-search');
+    const dishSearchClearBtn = document.querySelector('#pos-dish-clear-search');
+    const subgroupChipsBar = document.querySelector('#subgroup-chips-bar');
+    const subgroupChipsList = document.querySelector('#subgroup-chips-list');
+    const dishGrid = document.querySelector('#dish-grid');
+
+    // Generate / update subgroup divider banners in #dish-grid
+    const ensureSubgroupDividers = () => {
+        if (!dishGrid) return;
+        const dishes = Array.from(dishGrid.querySelectorAll('.dish'));
+        const existingDividers = new Map();
+        dishGrid.querySelectorAll('.subgroup-divider').forEach((div) => {
+            existingDividers.set(`${div.dataset.categoryId}__${div.dataset.subgroup}`, div);
+        });
+
+        // Group dishes by category and subgroup
+        const catSubMap = new Map();
+        dishes.forEach((dish) => {
+            const catId = dish.dataset.categoryId;
+            const sub = (dish.dataset.subgroup || '').trim();
+            if (!sub) return;
+            const key = `${catId}__${sub}`;
+            if (!catSubMap.has(key)) {
+                catSubMap.set(key, dish);
+            }
+        });
+
+        catSubMap.forEach((firstDish, key) => {
+            const [catId, sub] = key.split('__');
+            let divider = existingDividers.get(key);
+            if (!divider) {
+                divider = document.createElement('div');
+                divider.className = 'subgroup-divider';
+                divider.dataset.categoryId = catId;
+                divider.dataset.subgroup = sub;
+                divider.innerHTML = `
+                    <span class="subgroup-divider-title">${sub}</span>
+                    <span class="subgroup-divider-line"></span>
+                `;
+            }
+            if (divider.nextElementSibling !== firstDish) {
+                dishGrid.insertBefore(divider, firstDish);
+            }
+        });
+    };
+
+    // Update Subgroup filter chips based on current active category
+    const renderSubgroupChips = (activeCatId) => {
+        if (!subgroupChipsBar || !subgroupChipsList) return;
+        const dishes = Array.from(dishGrid.querySelectorAll(`.dish[data-category-id="${activeCatId}"]`));
+        const subgroups = new Set();
+        dishes.forEach((d) => {
+            const sub = (d.dataset.subgroup || '').trim();
+            if (sub) subgroups.add(sub);
+        });
+
+        if (subgroups.size === 0) {
+            subgroupChipsBar.hidden = true;
+            subgroupChipsList.innerHTML = '';
+            return;
+        }
+
+        subgroupChipsBar.hidden = false;
+        let html = `<button type="button" class="subgroup-chip active" data-subgroup="all">Tất cả</button>`;
+        subgroups.forEach((sub) => {
+            html += `<button type="button" class="subgroup-chip" data-subgroup="${sub}">${sub}</button>`;
+        });
+        subgroupChipsList.innerHTML = html;
+
+        subgroupChipsList.querySelectorAll('.subgroup-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                subgroupChipsList.querySelectorAll('.subgroup-chip').forEach((c) => c.classList.remove('active'));
+                chip.classList.add('active');
+                updateMenuFiltering();
+            });
+        });
+    };
+
+    // Main filtering function
+    const updateMenuFiltering = () => {
+        if (!dishGrid) return;
+        ensureSubgroupDividers();
+
+        const activeCategory = document.querySelector('.category.active');
+        const activeCatId = activeCategory ? activeCategory.dataset.categoryId : null;
+        const rawQuery = dishSearchInput ? dishSearchInput.value.trim() : '';
+        const searchNormalized = removeVietnameseTones(rawQuery);
+        const isSearching = searchNormalized.length > 0;
+
+        if (dishSearchClearBtn) dishSearchClearBtn.hidden = !isSearching;
+
+        const activeChip = subgroupChipsList ? subgroupChipsList.querySelector('.subgroup-chip.active') : null;
+        const selectedSubgroup = activeChip ? activeChip.dataset.subgroup : 'all';
+
+        const dishes = Array.from(dishGrid.querySelectorAll('.dish'));
+        let visibleCount = 0;
+        const visibleSubgroups = new Set();
+
+        dishes.forEach((dish) => {
+            const catId = dish.dataset.categoryId;
+            const dishName = dish.dataset.dish || '';
+            const dishCode = dish.dataset.code || '';
+            const dishSub = (dish.dataset.subgroup || '').trim();
+
+            let matchSearch = true;
+            if (isSearching) {
+                const nameNorm = removeVietnameseTones(dishName);
+                const codeNorm = removeVietnameseTones(dishCode);
+                matchSearch = nameNorm.includes(searchNormalized) || codeNorm.includes(searchNormalized);
+            }
+
+            let matchCat = true;
+            if (!isSearching) {
+                matchCat = catId === activeCatId;
+            }
+
+            let matchSub = true;
+            if (!isSearching && selectedSubgroup !== 'all') {
+                matchSub = dishSub === selectedSubgroup;
+            }
+
+            const visible = matchSearch && matchCat && matchSub;
+            dish.hidden = !visible;
+
+            if (visible) {
+                visibleCount++;
+                if (dishSub) visibleSubgroups.add(`${catId}__${dishSub}`);
+            }
+        });
+
+        // Toggle dividers
+        dishGrid.querySelectorAll('.subgroup-divider').forEach((div) => {
+            const key = `${div.dataset.categoryId}__${div.dataset.subgroup}`;
+            let showDivider = false;
+            if (isSearching) {
+                showDivider = visibleSubgroups.has(key);
+            } else {
+                showDivider = (div.dataset.categoryId === activeCatId) &&
+                              (selectedSubgroup === 'all' || selectedSubgroup === div.dataset.subgroup) &&
+                              visibleSubgroups.has(key);
+            }
+            div.hidden = !showDivider;
+        });
+
+        // Update menu title
+        if (menuTitle) {
+            if (isSearching) {
+                menuTitle.textContent = `TÌM KIẾM: "${rawQuery}" (${visibleCount})`;
+            } else if (activeCategory) {
+                menuTitle.textContent = activeCategory.dataset.category ? activeCategory.dataset.category.toUpperCase() : 'DANH MỤC MÓN';
+            }
+        }
+    };
+
+    window.refreshPosMenuFilter = () => {
+        const activeCategory = document.querySelector('.category.active');
+        if (activeCategory) {
+            renderSubgroupChips(activeCategory.dataset.categoryId);
+        }
+        updateMenuFiltering();
+    };
+
     document.querySelectorAll('.category').forEach((categoryButton) => {
         categoryButton.addEventListener('click', () => {
             document.querySelectorAll('.category').forEach((button) => button.classList.remove('active'));
             categoryButton.classList.add('active');
-            menuTitle.textContent = categoryButton.dataset.category;
-                document.querySelectorAll('.dish').forEach((dishButton) => {
-                    dishButton.hidden = dishButton.dataset.categoryId !== categoryButton.dataset.categoryId;
-                });
+            if (dishSearchInput) dishSearchInput.value = '';
+            renderSubgroupChips(categoryButton.dataset.categoryId);
+            updateMenuFiltering();
         });
     });
 
-        const firstCategory = document.querySelector('.category.active');
-        if (firstCategory) {
-            document.querySelectorAll('.dish').forEach((dishButton) => {
-                dishButton.hidden = dishButton.dataset.categoryId !== firstCategory.dataset.categoryId;
-            });
-        }
+    if (dishSearchInput) {
+        dishSearchInput.addEventListener('input', updateMenuFiltering);
+        dishSearchInput.addEventListener('keyup', updateMenuFiltering);
+        dishSearchInput.addEventListener('change', updateMenuFiltering);
+        dishSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                dishSearchInput.value = '';
+                updateMenuFiltering();
+            }
+        });
+    }
+
+    if (dishSearchClearBtn) {
+        dishSearchClearBtn.addEventListener('click', () => {
+            if (dishSearchInput) dishSearchInput.value = '';
+            dishSearchInput?.focus();
+            updateMenuFiltering();
+        });
+    }
+
+    const firstCategory = document.querySelector('.category.active');
+    if (firstCategory) {
+        renderSubgroupChips(firstCategory.dataset.categoryId);
+        updateMenuFiltering();
+    }
 
     document.querySelectorAll('.dish').forEach((dishButton) => {
         dishButton.addEventListener('click', () => {
             if (!menuUnlocked || !selectedTableId) return;
             dialogProduct = dishButton;
+            editingCartItemId = null;
             document.querySelector('#dialog-title').textContent = `Bàn ${selectedTable.textContent} - Yêu cầu món mới`;
             document.querySelector('#dialog-product-name').textContent = dishButton.dataset.dish;
             dialogQuantity.value = '1';
@@ -554,16 +863,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.querySelector('#dialog-confirm').addEventListener('click', () => {
         if (!dialogProduct) return;
-        const productId = dialogProduct.dataset.productId;
+        const productId = String(dialogProduct.dataset.productId);
         const existing = cart.get(productId);
         const quantity = Number(dialogQuantity.value) || 1;
-        cart.set(productId, {
-            product_id: Number(productId),
-            name: dialogProduct.dataset.dish,
-            unit: dialogProduct.dataset.unit,
-            price: Number(dialogProduct.dataset.price),
-            quantity: existing ? existing.quantity + quantity : quantity,
-        });
+        const note = (document.querySelector('#dialog-note').value || '').trim();
+
+        if (editingCartItemId === productId) {
+            cart.set(productId, {
+                product_id: Number(productId),
+                name: dialogProduct.dataset.dish,
+                unit: dialogProduct.dataset.unit,
+                price: Number(dialogProduct.dataset.price),
+                quantity: quantity,
+                note: note,
+            });
+        } else {
+            cart.set(productId, {
+                product_id: Number(productId),
+                name: dialogProduct.dataset.dish,
+                unit: dialogProduct.dataset.unit,
+                price: Number(dialogProduct.dataset.price),
+                quantity: existing ? existing.quantity + quantity : quantity,
+                note: note || (existing ? existing.note : ''),
+            });
+        }
+        editingCartItemId = null;
         itemsSentToKitchen = false;
         renderCart();
         closeDialog();
