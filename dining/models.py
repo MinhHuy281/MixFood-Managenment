@@ -3,6 +3,7 @@ from django.db import models
 
 class Area(models.Model):
 	name = models.CharField('Tên khu vực', max_length=100, unique=True)
+	area_type = models.CharField('Loại hình', max_length=100, default='Nhà hàng cafe', blank=True)
 	description = models.TextField('Mô tả', blank=True)
 	display_order = models.PositiveIntegerField('Thứ tự', default=0)
 	is_active = models.BooleanField('Đang sử dụng', default=True)

@@ -4316,3 +4316,477 @@ input, select, textarea {
     font-family: var(--font-heading), monospace;
 }
 
+/* ==========================================================================
+   DINING ADMIN: KHU VỰC - ĐIỂM BÁN (2026 NEXT-GEN CLOUD SAAS STYLE)
+   ========================================================================== */
+
+.dining-admin-page-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 32px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dining-admin-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 8px;
+}
+
+.dining-header-left h1 {
+    font-family: var(--font-heading);
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--slate-900);
+    margin: 2px 0 4px;
+    letter-spacing: -0.02em;
+}
+
+.dining-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Ruby button matching photo */
+.btn-import-excel-ruby {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+    color: #ffffff !important;
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 18px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 8px rgba(185, 28, 28, 0.35);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    border: none;
+}
+
+.btn-import-excel-ruby:hover {
+    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(185, 28, 28, 0.45);
+}
+
+.btn-export-excel-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    color: var(--slate-700);
+    border: 1px solid var(--border);
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+}
+
+.btn-export-excel-btn:hover {
+    background: var(--slate-50);
+    border-color: var(--slate-300);
+    color: var(--slate-900);
+}
+
+/* Two-column split layout */
+.dining-grid-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: stretch;
+}
+
+@media (max-width: 960px) {
+    .dining-grid-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dining-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 480px;
+}
+
+.dining-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+}
+
+.dining-card-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dining-card-title {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--slate-900);
+}
+
+.dining-card-count {
+    background: var(--slate-100);
+    color: var(--slate-600);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.dining-table-scroll {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 440px;
+    background: #ffffff;
+}
+
+.dining-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+.dining-data-table thead {
+    position: sticky;
+    top: 0;
+    background: var(--slate-50);
+    z-index: 2;
+    border-bottom: 1px solid var(--border);
+}
+
+.dining-data-table th {
+    padding: 10px 14px;
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--slate-600);
+    text-transform: none;
+    letter-spacing: normal;
+    border-right: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.dining-data-table th:last-child {
+    border-right: none;
+}
+
+.dining-data-table td {
+    padding: 10px 14px;
+    color: var(--slate-800);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    border-right: 1px solid rgba(226, 232, 240, 0.4);
+    transition: background 0.15s ease;
+}
+
+.dining-data-table td:last-child {
+    border-right: none;
+}
+
+.dining-data-table tbody tr {
+    cursor: pointer;
+    user-select: none;
+}
+
+.dining-data-table tbody tr:hover td {
+    background: #f8fafc;
+}
+
+.dining-data-table tbody tr.selected td {
+    background: #ecfdf5 !important;
+    color: #065f46;
+    font-weight: 600;
+}
+
+.dining-data-table tbody tr.selected {
+    box-shadow: inset 4px 0 0 #10b981;
+}
+
+.col-stt {
+    width: 50px;
+    text-align: center !important;
+    color: var(--slate-400);
+    font-variant-numeric: tabular-nums;
+}
+
+.dining-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: var(--slate-50);
+    border-top: 1px solid var(--border);
+}
+
+.btn-dining-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 16px;
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: var(--radius-md);
+    background: #ffffff;
+    color: var(--slate-700);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.btn-dining-action:hover:not(:disabled) {
+    background: var(--slate-100);
+    border-color: var(--slate-300);
+    color: var(--slate-900);
+    transform: translateY(-1px);
+}
+
+.btn-dining-action:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--slate-100);
+}
+
+.btn-dining-add {
+    background: var(--brand-primary);
+    color: #ffffff;
+    border-color: var(--brand-primary);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.btn-dining-add:hover:not(:disabled) {
+    background: var(--brand-primary-hover);
+    border-color: var(--brand-primary-hover);
+    color: #ffffff;
+}
+
+.btn-dining-del.text-danger:hover:not(:disabled) {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+/* Status badges */
+.table-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.table-status-pill.available {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.table-status-pill.occupied {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.table-status-pill.reserved {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.table-status-pill.maintenance {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* Modal Popup Window (When opened in POS screen) */
+.dining-admin-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.dining-admin-modal-overlay[hidden] {
+    display: none !important;
+}
+
+.dining-admin-modal-window {
+    background: #ffffff;
+    width: 1060px;
+    max-width: 96vw;
+    max-height: 90vh;
+    border-radius: 18px;
+    box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dining-modal-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+}
+
+.dining-modal-title {
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 800;
+    color: #854d0e; /* warm amber/brown title like screenshot */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dining-modal-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dining-modal-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--slate-400);
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dining-modal-close-btn:hover {
+    background: var(--slate-100);
+    color: var(--slate-800);
+}
+
+.dining-modal-body {
+    padding: 16px 20px 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Edit / Add Sheet Dialogs */
+.dining-submodal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.dining-submodal-overlay[hidden] {
+    display: none !important;
+}
+
+.dining-submodal-card {
+    background: #ffffff;
+    width: 480px;
+    max-width: 95vw;
+    border-radius: 16px;
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.dining-submodal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--slate-900);
+}
+
+.dining-submodal-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.dining-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dining-form-group label {
+    font-family: var(--font-heading);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--slate-700);
+}
+
+.dining-form-group input,
+.dining-form-group select,
+.dining-form-group textarea {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    color: var(--slate-800);
+    outline: none;
+    transition: border 0.15s ease;
+}
+
+.dining-form-group input:focus,
+.dining-form-group select:focus,
+.dining-form-group textarea:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.dining-submodal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--slate-50);
+    border-top: 1px solid var(--border);
+}
+
+

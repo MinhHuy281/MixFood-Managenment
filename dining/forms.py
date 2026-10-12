@@ -6,7 +6,7 @@ from .models import Area, DiningTable
 class AreaForm(forms.ModelForm):
     class Meta:
         model = Area
-        fields = ('name', 'description', 'display_order', 'is_active')
+        fields = ('name', 'area_type', 'description', 'display_order', 'is_active')
         widgets = {'description': forms.Textarea(attrs={'rows': 3})}
 
 

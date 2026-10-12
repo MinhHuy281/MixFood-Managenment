@@ -1,6 +1,689 @@
 {% extends 'base.html' %}
-{% block title %}Khu vực & bàn | MixFood Manager{% endblock %}
+{% load static %}
+{% block title %}Khu vực - Điểm bán - Admin | MixFood Manager{% endblock %}
+
 {% block content %}
-<section class="list-header"><div><p class="eyebrow">DINING / TABLES</p><h1>Khu vực & bàn</h1><p class="muted">Thiết lập sơ đồ bàn được sử dụng trong màn hình POS.</p></div><div class="header-actions"><a class="secondary-button" href="{% url 'dining:area_create' %}">+ Khu vực</a><a class="primary-button" href="{% url 'dining:table_create' %}">+ Thêm bàn</a></div></section>
-<section class="area-grid">{% for area in areas %}<article class="area-card"><header><div><h2>{{ area.name }}</h2><small>{{ area.tables.all|length }} bàn</small></div><div class="row-actions"><a href="{% url 'dining:area_update' area.pk %}">Sửa</a><form method="post" action="{% url 'dining:area_delete' area.pk %}">{% csrf_token %}<button type="submit">Tắt</button></form></div></header><div class="managed-tables">{% for table in area.tables.all %}<div class="managed-table"><span class="table-status {{ table.status }}"></span><strong>{{ table.name }}</strong><small>{{ table.code }} · {{ table.get_status_display }}</small><a href="{% url 'dining:table_update' table.pk %}">Sửa</a></div>{% empty %}<p class="muted">Chưa có bàn trong khu vực.</p>{% endfor %}</div></article>{% empty %}<div class="empty-state">Chưa có khu vực. Hãy thêm khu vực đầu tiên.</div>{% endfor %}</section>
+<div class="dining-admin-page-container">
+    <!-- Page Header -->
+    <div class="dining-admin-page-header">
+        <div class="dining-header-left">
+            <p class="eyebrow">CÀI ĐẶT / SƠ ĐỒ BÀN & ĐIỂM BÁN</p>
+            <h1>Khu vực - Điểm bán - Admin</h1>
+            <p class="muted">Quản lý sơ đồ khu vực, định vị điểm bán, phân bổ bàn phục vụ và đồng bộ tự động với màn hình POS.</p>
+        </div>
+        <div class="dining-header-right">
+            <a class="secondary-button" href="{% url 'dashboard:home' %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Về màn hình POS
+            </a>
+            <button type="button" class="btn-import-excel-ruby" id="btn-open-excel-import">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Nhập dữ liệu từ Excel
+            </button>
+            <a href="{% url 'dining:export_excel' %}" class="btn-export-excel-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Xuất ra Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Notification Toast / Banner -->
+    <div id="dining-alert-banner" class="menu-alert-banner" hidden></div>
+
+    <!-- Main Workspace (2-Column Split: Khu vực & Các điểm bán thuộc Khu vực) -->
+    <div class="dining-grid-layout">
+        <!-- Column 1: Khu vực -->
+        <div class="dining-card">
+            <div class="dining-card-header">
+                <div class="dining-card-title-wrap">
+                    <span class="dining-card-title">Khu vực</span>
+                    <span class="dining-card-count" id="areas-count-badge">{{ areas|length }} khu vực</span>
+                </div>
+            </div>
+
+            <div class="dining-table-scroll">
+                <table class="dining-data-table" id="areas-table">
+                    <thead>
+                        <tr>
+                            <th class="col-stt">STT</th>
+                            <th style="min-width: 160px;">Tên khu vực</th>
+                            <th style="min-width: 140px;">Loại hình</th>
+                        </tr>
+                    </thead>
+                    <tbody id="areas-table-body">
+                        {% for area in areas %}
+                        <tr class="area-row {% if forloop.first %}selected{% endif %}" data-area-id="{{ area.id }}" data-area-name="{{ area.name }}" data-area-type="{{ area.area_type|default:'Nhà hàng cafe' }}" data-display-order="{{ area.display_order }}" data-description="{{ area.description }}">
+                            <td class="col-stt">{{ forloop.counter }}</td>
+                            <td><strong>{{ area.name }}</strong></td>
+                            <td>{{ area.area_type|default:'Nhà hàng cafe' }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; padding: 32px; color: var(--slate-400);">Chưa có khu vực nào. Nhấn "+ Thêm" để bắt đầu.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="dining-card-footer">
+                <button type="button" class="btn-dining-action btn-dining-add" id="btn-add-area">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Thêm
+                </button>
+                <button type="button" class="btn-dining-action" id="btn-edit-area">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Sửa
+                </button>
+                <button type="button" class="btn-dining-action btn-dining-del text-danger" id="btn-del-area">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Xóa
+                </button>
+            </div>
+        </div>
+
+        <!-- Column 2: Các điểm bán thuộc Khu vực -->
+        <div class="dining-card">
+            <div class="dining-card-header">
+                <div class="dining-card-title-wrap">
+                    <span class="dining-card-title">Các điểm bán thuộc Khu vực</span>
+                    <span class="dining-card-count" id="current-area-target-label">
+                        {% if areas.0 %}{{ areas.0.name }} ({{ areas.0.tables.all|length }}){% else %}0 điểm bán{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div class="dining-table-scroll">
+                <table class="dining-data-table" id="tables-table">
+                    <thead>
+                        <tr>
+                            <th class="col-stt">STT</th>
+                            <th style="min-width: 140px;">Tên điểm bán</th>
+                            <th style="width: 100px;">Mã điểm bán</th>
+                            <th style="width: 75px; text-align: center;">Số chỗ</th>
+                            <th style="width: 110px;">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tables-table-body">
+                        <!-- Populated by JavaScript and server initial render -->
+                        {% for table in tables %}
+                        <tr class="table-row" data-table-id="{{ table.id }}" data-area-id="{{ table.area_id }}" data-table-name="{{ table.name }}" data-table-code="{{ table.code }}" data-capacity="{{ table.capacity }}" data-status="{{ table.status }}" data-display-order="{{ table.display_order }}" style="{% if areas.0 and table.area_id != areas.0.id %}display: none;{% endif %}">
+                            <td class="col-stt">{{ forloop.counter }}</td>
+                            <td><strong>{{ table.name }}</strong></td>
+                            <td><code>{{ table.code }}</code></td>
+                            <td style="text-align: center;">{{ table.capacity }}</td>
+                            <td>
+                                <span class="table-status-pill {{ table.status }}">{{ table.get_status_display }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr id="empty-table-row">
+                            <td colspan="5" style="text-align: center; padding: 32px; color: var(--slate-400);">Chưa có điểm bán nào trong khu vực này.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="dining-card-footer">
+                <button type="button" class="btn-dining-action btn-dining-add" id="btn-add-table">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Thêm
+                </button>
+                <button type="button" class="btn-dining-action" id="btn-edit-table">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Sửa
+                </button>
+                <button type="button" class="btn-dining-action btn-dining-del text-danger" id="btn-del-table">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Xóa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SUB-MODALS ==================== -->
+
+<!-- Modal: Thêm / Sửa Khu vực -->
+<div class="dining-submodal-overlay" id="modal-area-form" hidden>
+    <div class="dining-submodal-card">
+        <div class="dining-submodal-header">
+            <span id="modal-area-title">Thêm khu vực</span>
+            <button type="button" class="dining-modal-close-btn" id="modal-area-close">&times;</button>
+        </div>
+        <form id="form-area">
+            {% csrf_token %}
+            <input type="hidden" id="area-input-id">
+            <div class="dining-submodal-body">
+                <div class="dining-form-group">
+                    <label for="area-input-name">Tên khu vực <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="area-input-name" placeholder="Ví dụ: Trong nhà, Tầng 2, Sân vườn..." required>
+                </div>
+                <div class="dining-form-group">
+                    <label for="area-input-type">Loại hình</label>
+                    <input type="text" id="area-input-type" list="area-types-datalist" placeholder="Nhà hàng cafe" value="Nhà hàng cafe">
+                    <datalist id="area-types-datalist">
+                        <option value="Nhà hàng cafe">
+                        <option value="Phòng VIP">
+                        <option value="Ngoài trời / Sân vườn">
+                        <option value="Tầng 2 / Lầu">
+                        <option value="Mang về (Takeaway)">
+                        <option value="Quầy bar">
+                        <option value="Nhân viên">
+                    </datalist>
+                </div>
+                <div class="dining-form-group">
+                    <label for="area-input-order">Thứ tự hiển thị</label>
+                    <input type="number" id="area-input-order" value="1" min="0">
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-dining-action" id="modal-area-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-dining-action btn-dining-add">Đồng ý</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Thêm / Sửa Điểm bán -->
+<div class="dining-submodal-overlay" id="modal-table-form" hidden>
+    <div class="dining-submodal-card">
+        <div class="dining-submodal-header">
+            <span id="modal-table-title">Thêm điểm bán</span>
+            <button type="button" class="dining-modal-close-btn" id="modal-table-close">&times;</button>
+        </div>
+        <form id="form-table">
+            {% csrf_token %}
+            <input type="hidden" id="table-input-id">
+            <div class="dining-submodal-body">
+                <div class="dining-form-group">
+                    <label for="table-input-area">Khu vực trực thuộc <span style="color: #ef4444;">*</span></label>
+                    <select id="table-input-area" required>
+                        {% for area in areas %}
+                        <option value="{{ area.id }}">{{ area.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="dining-form-group">
+                    <label for="table-input-name">Tên điểm bán <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="table-input-name" placeholder="Ví dụ: Bàn 01, Mang về 1..." required>
+                </div>
+                <div class="dining-form-group">
+                    <label for="table-input-code">Mã điểm bán</label>
+                    <input type="text" id="table-input-code" placeholder="Để trống để tự tạo (ví dụ: 01-01)">
+                </div>
+                <div class="dining-form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label for="table-input-capacity">Số chỗ ngồi</label>
+                        <input type="number" id="table-input-capacity" value="4" min="1" max="99">
+                    </div>
+                    <div>
+                        <label for="table-input-order">Thứ tự hiển thị</label>
+                        <input type="number" id="table-input-order" value="1" min="0">
+                    </div>
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-dining-action" id="modal-table-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-dining-action btn-dining-add">Đồng ý</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Nhập dữ liệu từ Excel -->
+<div class="dining-submodal-overlay" id="modal-excel-import" hidden>
+    <div class="dining-submodal-card" style="width: 580px;">
+        <div class="dining-submodal-header">
+            <span>Nhập danh sách Khu vực & Điểm bán từ Excel</span>
+            <button type="button" class="dining-modal-close-btn" id="modal-excel-close">&times;</button>
+        </div>
+        <form id="form-excel-import">
+            {% csrf_token %}
+            <div class="dining-submodal-body">
+                <div style="background: var(--slate-50); border: 1px dashed var(--slate-300); border-radius: 8px; padding: 12px; font-size: 12.5px; color: var(--slate-600); line-height: 1.5;">
+                    💡 <strong>Định dạng cột Excel hỗ trợ:</strong><br>
+                    <code>STT | Tên khu vực | Loại hình | Tên điểm bán | Mã điểm bán | Số chỗ</code><br>
+                    <div style="margin-top: 8px;">
+                        <a href="{% url 'dining:export_excel' %}" style="color: var(--brand-primary); font-weight: 700; text-decoration: underline;">
+                            📥 Tải file mẫu CSV / Excel
+                        </a>
+                    </div>
+                </div>
+
+                <div class="dining-form-group">
+                    <label for="excel-file-input">Chọn file CSV / Excel</label>
+                    <input type="file" id="excel-file-input" accept=".csv, text/csv">
+                </div>
+
+                <div class="dining-form-group">
+                    <label for="excel-text-input">Hoặc sao chép & dán dữ liệu bảng từ Excel vào đây:</label>
+                    <textarea id="excel-text-input" rows="5" placeholder="Dán các cột được copy từ Excel tại đây (Tab-separated)..."></textarea>
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-dining-action" id="modal-excel-cancel">Hủy</button>
+                <button type="submit" class="btn-import-excel-ruby" id="btn-submit-excel">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Bắt đầu nhập dữ liệu
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- State Data from Server -->
+<script id="server-areas-json" type="application/json">{{ areas_json|safe }}</script>
+<script id="server-tables-json" type="application/json">{{ tables_json|safe }}</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let areasData = [];
+    let tablesData = [];
+
+    try {
+        areasData = JSON.parse(document.getElementById('server-areas-json').textContent || '[]');
+        tablesData = JSON.parse(document.getElementById('server-tables-json').textContent || '[]');
+    } catch (e) {
+        console.error('Error parsing dining server JSON:', e);
+    }
+
+    let selectedAreaId = areasData.length > 0 ? areasData[0].id : null;
+    let selectedTableId = null;
+
+    const alertBanner = document.getElementById('dining-alert-banner');
+    const showAlert = (message, type = 'success') => {
+        if (!alertBanner) return;
+        alertBanner.className = `menu-alert-banner ${type}`;
+        alertBanner.textContent = message;
+        alertBanner.hidden = false;
+        setTimeout(() => { alertBanner.hidden = true; }, 4000);
+    };
+
+    const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+
+    const areasTableBody = document.getElementById('areas-table-body');
+    const tablesTableBody = document.getElementById('tables-table-body');
+    const areasCountBadge = document.getElementById('areas-count-badge');
+    const currentAreaTargetLabel = document.getElementById('current-area-target-label');
+    const tableInputAreaSelect = document.getElementById('table-input-area');
+
+    // Render Areas Table
+    const renderAreasTable = () => {
+        areasCountBadge.textContent = `${areasData.length} khu vực`;
+        areasTableBody.innerHTML = '';
+
+        if (tableInputAreaSelect) {
+            tableInputAreaSelect.innerHTML = '';
+        }
+
+        if (areasData.length === 0) {
+            areasTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 32px; color: var(--slate-400);">Chưa có khu vực nào. Nhấn "+ Thêm" để bắt đầu.</td></tr>`;
+            selectedAreaId = null;
+            renderTablesTable();
+            return;
+        }
+
+        // If current selectedAreaId no longer exists, select first
+        if (!areasData.some(a => a.id === selectedAreaId)) {
+            selectedAreaId = areasData[0].id;
+        }
+
+        areasData.forEach((area, index) => {
+            const isSelected = area.id === selectedAreaId;
+            const tr = document.createElement('tr');
+            tr.className = `area-row ${isSelected ? 'selected' : ''}`;
+            tr.dataset.areaId = area.id;
+            tr.innerHTML = `
+                <td class="col-stt">${index + 1}</td>
+                <td><strong>${area.name}</strong></td>
+                <td>${area.area_type || 'Nhà hàng cafe'}</td>
+            `;
+            tr.addEventListener('click', () => {
+                selectedAreaId = area.id;
+                selectedTableId = null;
+                document.querySelectorAll('.area-row').forEach(r => r.classList.remove('selected'));
+                tr.classList.add('selected');
+                renderTablesTable();
+            });
+            tr.addEventListener('dblclick', () => {
+                openEditAreaModal(area);
+            });
+            areasTableBody.appendChild(tr);
+
+            if (tableInputAreaSelect) {
+                const opt = document.createElement('option');
+                opt.value = area.id;
+                opt.textContent = area.name;
+                if (area.id === selectedAreaId) opt.selected = true;
+                tableInputAreaSelect.appendChild(opt);
+            }
+        });
+
+        renderTablesTable();
+    };
+
+    // Render Tables Table for currently selected area
+    const renderTablesTable = () => {
+        tablesTableBody.innerHTML = '';
+        if (!selectedAreaId) {
+            currentAreaTargetLabel.textContent = '0 điểm bán';
+            tablesTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--slate-400);">Chọn một khu vực bên trái để xem điểm bán.</td></tr>`;
+            return;
+        }
+
+        const currentArea = areasData.find(a => a.id === selectedAreaId);
+        const filteredTables = tablesData.filter(t => t.area_id === selectedAreaId);
+
+        currentAreaTargetLabel.textContent = currentArea ? `${currentArea.name} (${filteredTables.length} điểm bán)` : `${filteredTables.length} điểm bán`;
+
+        if (filteredTables.length === 0) {
+            tablesTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--slate-400);">Chưa có điểm bán nào trong khu vực "${currentArea ? currentArea.name : ''}".</td></tr>`;
+            selectedTableId = null;
+            return;
+        }
+
+        if (!selectedTableId || !filteredTables.some(t => t.id === selectedTableId)) {
+            selectedTableId = filteredTables[0].id;
+        }
+
+        filteredTables.forEach((table, index) => {
+            const isSelected = table.id === selectedTableId;
+            const tr = document.createElement('tr');
+            tr.className = `table-row ${isSelected ? 'selected' : ''}`;
+            tr.dataset.tableId = table.id;
+            tr.innerHTML = `
+                <td class="col-stt">${index + 1}</td>
+                <td><strong>${table.name}</strong></td>
+                <td><code>${table.code}</code></td>
+                <td style="text-align: center;">${table.capacity || 4}</td>
+                <td><span class="table-status-pill ${table.status || 'available'}">${table.status_display || 'Trống'}</span></td>
+            `;
+            tr.addEventListener('click', () => {
+                selectedTableId = table.id;
+                document.querySelectorAll('.table-row').forEach(r => r.classList.remove('selected'));
+                tr.classList.add('selected');
+            });
+            tr.addEventListener('dblclick', () => {
+                openEditTableModal(table);
+            });
+            tablesTableBody.appendChild(tr);
+        });
+    };
+
+    // Modal Area Elements
+    const modalAreaForm = document.getElementById('modal-area-form');
+    const modalAreaTitle = document.getElementById('modal-area-title');
+    const areaInputId = document.getElementById('area-input-id');
+    const areaInputName = document.getElementById('area-input-name');
+    const areaInputType = document.getElementById('area-input-type');
+    const areaInputOrder = document.getElementById('area-input-order');
+
+    const openAddAreaModal = () => {
+        modalAreaTitle.textContent = 'Thêm khu vực';
+        areaInputId.value = '';
+        areaInputName.value = '';
+        areaInputType.value = 'Nhà hàng cafe';
+        areaInputOrder.value = (areasData.length + 1);
+        modalAreaForm.hidden = false;
+        areaInputName.focus();
+    };
+
+    const openEditAreaModal = (area) => {
+        if (!area) return;
+        modalAreaTitle.textContent = 'Chỉnh sửa khu vực';
+        areaInputId.value = area.id;
+        areaInputName.value = area.name;
+        areaInputType.value = area.area_type || 'Nhà hàng cafe';
+        areaInputOrder.value = area.display_order || 1;
+        modalAreaForm.hidden = false;
+        areaInputName.focus();
+    };
+
+    document.getElementById('btn-add-area').addEventListener('click', openAddAreaModal);
+    document.getElementById('btn-edit-area').addEventListener('click', () => {
+        const area = areasData.find(a => a.id === selectedAreaId);
+        if (!area) {
+            showAlert('Vui lòng chọn khu vực cần sửa.', 'error');
+            return;
+        }
+        openEditAreaModal(area);
+    });
+
+    document.getElementById('modal-area-close').addEventListener('click', () => { modalAreaForm.hidden = true; });
+    document.getElementById('modal-area-cancel').addEventListener('click', () => { modalAreaForm.hidden = true; });
+
+    document.getElementById('form-area').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            id: areaInputId.value || undefined,
+            name: areaInputName.value.trim(),
+            area_type: areaInputType.value.trim() || 'Nhà hàng cafe',
+            display_order: Number(areaInputOrder.value) || 0,
+        };
+
+        try {
+            const resp = await fetch('{% url "dining:save_area" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(payload),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Lỗi khi lưu khu vực.');
+
+            if (payload.id) {
+                const idx = areasData.findIndex(a => a.id === Number(payload.id));
+                if (idx !== -1) areasData[idx] = data.area;
+            } else {
+                areasData.push(data.area);
+                selectedAreaId = data.area.id;
+            }
+
+            modalAreaForm.hidden = true;
+            renderAreasTable();
+            showAlert(data.message || 'Lưu khu vực thành công!');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    });
+
+    document.getElementById('btn-del-area').addEventListener('click', async () => {
+        const area = areasData.find(a => a.id === selectedAreaId);
+        if (!area) {
+            showAlert('Vui lòng chọn khu vực cần xóa.', 'error');
+            return;
+        }
+        if (!confirm(`Bạn có chắc chắn muốn xóa/ngừng sử dụng khu vực "${area.name}" và các điểm bán trực thuộc?`)) return;
+
+        try {
+            const resp = await fetch(`/dining/api/delete-area/${area.id}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Lỗi khi xóa khu vực.');
+
+            areasData = areasData.filter(a => a.id !== area.id);
+            tablesData = tablesData.filter(t => t.area_id !== area.id);
+            selectedAreaId = areasData.length > 0 ? areasData[0].id : null;
+            selectedTableId = null;
+            renderAreasTable();
+            showAlert(data.message || 'Đã xóa khu vực.');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    });
+
+    // Modal Table Elements
+    const modalTableForm = document.getElementById('modal-table-form');
+    const modalTableTitle = document.getElementById('modal-table-title');
+    const tableInputId = document.getElementById('table-input-id');
+    const tableInputArea = document.getElementById('table-input-area');
+    const tableInputName = document.getElementById('table-input-name');
+    const tableInputCode = document.getElementById('table-input-code');
+    const tableInputCapacity = document.getElementById('table-input-capacity');
+    const tableInputOrder = document.getElementById('table-input-order');
+
+    const openAddTableModal = () => {
+        if (!selectedAreaId) {
+            showAlert('Vui lòng chọn hoặc thêm một khu vực trước.', 'error');
+            return;
+        }
+        modalTableTitle.textContent = 'Thêm điểm bán mới';
+        tableInputId.value = '';
+        tableInputArea.value = String(selectedAreaId);
+        tableInputName.value = '';
+        tableInputCode.value = '';
+        tableInputCapacity.value = '4';
+        tableInputOrder.value = (tablesData.filter(t => t.area_id === selectedAreaId).length + 1);
+        modalTableForm.hidden = false;
+        tableInputName.focus();
+    };
+
+    const openEditTableModal = (table) => {
+        if (!table) return;
+        modalTableTitle.textContent = 'Chỉnh sửa điểm bán';
+        tableInputId.value = table.id;
+        tableInputArea.value = String(table.area_id);
+        tableInputName.value = table.name;
+        tableInputCode.value = table.code;
+        tableInputCapacity.value = table.capacity || 4;
+        tableInputOrder.value = table.display_order || 1;
+        modalTableForm.hidden = false;
+        tableInputName.focus();
+    };
+
+    document.getElementById('btn-add-table').addEventListener('click', openAddTableModal);
+    document.getElementById('btn-edit-table').addEventListener('click', () => {
+        const table = tablesData.find(t => t.id === selectedTableId);
+        if (!table) {
+            showAlert('Vui lòng chọn điểm bán cần sửa.', 'error');
+            return;
+        }
+        openEditTableModal(table);
+    });
+
+    document.getElementById('modal-table-close').addEventListener('click', () => { modalTableForm.hidden = true; });
+    document.getElementById('modal-table-cancel').addEventListener('click', () => { modalTableForm.hidden = true; });
+
+    document.getElementById('form-table').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            id: tableInputId.value || undefined,
+            area_id: tableInputArea.value,
+            name: tableInputName.value.trim(),
+            code: tableInputCode.value.trim(),
+            capacity: Number(tableInputCapacity.value) || 4,
+            display_order: Number(tableInputOrder.value) || 0,
+        };
+
+        try {
+            const resp = await fetch('{% url "dining:save_table" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(payload),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Lỗi khi lưu điểm bán.');
+
+            if (payload.id) {
+                const idx = tablesData.findIndex(t => t.id === Number(payload.id));
+                if (idx !== -1) tablesData[idx] = data.table;
+                selectedTableId = data.table.id;
+            } else {
+                tablesData.push(data.table);
+                selectedTableId = data.table.id;
+            }
+
+            modalTableForm.hidden = true;
+            renderTablesTable();
+            showAlert(data.message || 'Lưu điểm bán thành công!');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    });
+
+    document.getElementById('btn-del-table').addEventListener('click', async () => {
+        const table = tablesData.find(t => t.id === selectedTableId);
+        if (!table) {
+            showAlert('Vui lòng chọn điểm bán cần xóa.', 'error');
+            return;
+        }
+        if (!confirm(`Bạn có chắc chắn muốn xóa điểm bán "${table.name}"?`)) return;
+
+        try {
+            const resp = await fetch(`/dining/api/delete-table/${table.id}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Lỗi khi xóa điểm bán.');
+
+            tablesData = tablesData.filter(t => t.id !== table.id);
+            selectedTableId = null;
+            renderTablesTable();
+            showAlert(data.message || 'Đã xóa điểm bán.');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    });
+
+    // Modal Excel Import
+    const modalExcelImport = document.getElementById('modal-excel-import');
+    document.getElementById('btn-open-excel-import').addEventListener('click', () => {
+        modalExcelImport.hidden = false;
+    });
+    document.getElementById('modal-excel-close').addEventListener('click', () => { modalExcelImport.hidden = true; });
+    document.getElementById('modal-excel-cancel').addEventListener('click', () => { modalExcelImport.hidden = true; });
+
+    document.getElementById('form-excel-import').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('excel-file-input');
+        const textInput = document.getElementById('excel-text-input');
+        const formData = new FormData();
+
+        if (fileInput.files.length > 0) {
+            formData.append('file', fileInput.files[0]);
+        } else if (textInput.value.trim()) {
+            formData.append('csv_text', textInput.value.trim());
+        } else {
+            showAlert('Vui lòng chọn file CSV hoặc dán nội dung Excel.', 'error');
+            return;
+        }
+
+        const btnSubmit = document.getElementById('btn-submit-excel');
+        btnSubmit.disabled = true;
+
+        try {
+            const resp = await fetch('{% url "dining:import_excel" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData,
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Lỗi khi nhập dữ liệu.');
+
+            showAlert(data.message || 'Nhập dữ liệu thành công!');
+            modalExcelImport.hidden = true;
+            fileInput.value = '';
+            textInput.value = '';
+
+            // Reload data from API to refresh table
+            const reloadResp = await fetch('{% url "dining:data_api" %}');
+            const freshData = await reloadResp.json();
+            areasData = freshData.areas;
+            tablesData = freshData.tables;
+            renderAreasTable();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btnSubmit.disabled = false;
+        }
+    });
+
+    // Initial render
+    renderAreasTable();
+});
+</script>
 {% endblock %}

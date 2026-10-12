@@ -1,0 +1,216 @@
+<!-- Dining Admin Modal (Khu vực - Điểm bán - Admin on POS Screen) -->
+<div class="dining-admin-modal-overlay" id="pos-dining-admin-modal" hidden>
+    <div class="dining-admin-modal-window">
+        <!-- Topbar -->
+        <div class="dining-modal-topbar">
+            <div class="dining-modal-title">
+                <span style="font-size: 18px;">🪑</span>
+                <span>Khu vực - Điểm bán - Admin</span>
+            </div>
+            <div class="dining-modal-top-actions">
+                <button type="button" class="btn-import-excel-ruby" id="modal-pos-btn-excel-import">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Nhập dữ liệu từ Excel
+                </button>
+                <a href="{% url 'dining:export_excel' %}" class="btn-export-excel-btn" style="padding: 7px 14px; font-size: 12px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    Xuất Excel
+                </a>
+                <button type="button" class="dining-modal-close-btn" id="pos-dining-modal-close" title="Đóng">&times;</button>
+            </div>
+        </div>
+
+        <!-- Banner Toast -->
+        <div id="modal-pos-dining-alert" class="menu-alert-banner" style="margin: 10px 20px 0;" hidden></div>
+
+        <!-- Body with 2-Column Split -->
+        <div class="dining-modal-body">
+            <div class="dining-grid-layout" style="gap: 16px;">
+                <!-- Column 1: Khu vực -->
+                <div class="dining-card" style="min-height: 420px;">
+                    <div class="dining-card-header" style="padding: 10px 16px;">
+                        <div class="dining-card-title-wrap">
+                            <span class="dining-card-title" style="font-size: 14px;">Khu vực</span>
+                            <span class="dining-card-count" id="modal-pos-areas-count">0 khu vực</span>
+                        </div>
+                    </div>
+
+                    <div class="dining-table-scroll" style="max-height: 340px;">
+                        <table class="dining-data-table" id="modal-pos-areas-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-stt">STT</th>
+                                    <th>Tên khu vực</th>
+                                    <th>Loại hình</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-pos-areas-tbody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="dining-card-footer" style="padding: 10px 14px;">
+                        <button type="button" class="btn-dining-action btn-dining-add" id="modal-pos-btn-add-area">Thêm</button>
+                        <button type="button" class="btn-dining-action" id="modal-pos-btn-edit-area">Sửa</button>
+                        <button type="button" class="btn-dining-action btn-dining-del text-danger" id="modal-pos-btn-del-area">Xóa</button>
+                    </div>
+                </div>
+
+                <!-- Column 2: Các điểm bán thuộc Khu vực -->
+                <div class="dining-card" style="min-height: 420px;">
+                    <div class="dining-card-header" style="padding: 10px 16px;">
+                        <div class="dining-card-title-wrap">
+                            <span class="dining-card-title" style="font-size: 14px;">Các điểm bán thuộc Khu vực</span>
+                            <span class="dining-card-count" id="modal-pos-tables-count">0 điểm bán</span>
+                        </div>
+                    </div>
+
+                    <div class="dining-table-scroll" style="max-height: 340px;">
+                        <table class="dining-data-table" id="modal-pos-tables-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-stt">STT</th>
+                                    <th>Tên điểm bán</th>
+                                    <th>Mã bàn</th>
+                                    <th style="width: 70px; text-align: center;">Số chỗ</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-pos-tables-tbody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="dining-card-footer" style="padding: 10px 14px;">
+                        <button type="button" class="btn-dining-action btn-dining-add" id="modal-pos-btn-add-table">Thêm</button>
+                        <button type="button" class="btn-dining-action" id="modal-pos-btn-edit-table">Sửa</button>
+                        <button type="button" class="btn-dining-action btn-dining-del text-danger" id="modal-pos-btn-del-table">Xóa</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submodal Area: Add / Edit -->
+<div class="dining-submodal-overlay" id="pos-submodal-area" hidden>
+    <div class="dining-submodal-card">
+        <div class="dining-submodal-header">
+            <span id="pos-submodal-area-title">Thêm khu vực</span>
+            <button type="button" class="dining-modal-close-btn" id="pos-submodal-area-close">&times;</button>
+        </div>
+        <form id="pos-form-area">
+            {% csrf_token %}
+            <input type="hidden" id="pos-area-id">
+            <div class="dining-submodal-body">
+                <div class="dining-form-group">
+                    <label for="pos-area-name">Tên khu vực <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="pos-area-name" placeholder="Ví dụ: Trong nhà, Tầng 2, Ngoài trời..." required>
+                </div>
+                <div class="dining-form-group">
+                    <label for="pos-area-type">Loại hình</label>
+                    <input type="text" id="pos-area-type" list="pos-area-types-list" placeholder="Nhà hàng cafe" value="Nhà hàng cafe">
+                    <datalist id="pos-area-types-list">
+                        <option value="Nhà hàng cafe">
+                        <option value="Phòng VIP">
+                        <option value="Ngoài trời / Sân vườn">
+                        <option value="Tầng 2 / Lầu">
+                        <option value="Mang về (Takeaway)">
+                        <option value="Quầy bar">
+                        <option value="Nhân viên">
+                    </datalist>
+                </div>
+                <div class="dining-form-group">
+                    <label for="pos-area-order">Thứ tự hiển thị</label>
+                    <input type="number" id="pos-area-order" value="1" min="0">
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-dining-action" id="pos-submodal-area-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-dining-action btn-dining-add">Đồng ý</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Submodal Table: Add / Edit -->
+<div class="dining-submodal-overlay" id="pos-submodal-table" hidden>
+    <div class="dining-submodal-card">
+        <div class="dining-submodal-header">
+            <span id="pos-submodal-table-title">Thêm điểm bán</span>
+            <button type="button" class="dining-modal-close-btn" id="pos-submodal-table-close">&times;</button>
+        </div>
+        <form id="pos-form-table">
+            {% csrf_token %}
+            <input type="hidden" id="pos-table-id">
+            <div class="dining-submodal-body">
+                <div class="dining-form-group">
+                    <label for="pos-table-area">Khu vực trực thuộc <span style="color: #ef4444;">*</span></label>
+                    <select id="pos-table-area" required></select>
+                </div>
+                <div class="dining-form-group">
+                    <label for="pos-table-name">Tên điểm bán <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="pos-table-name" placeholder="Ví dụ: Bàn 01, Bàn 02..." required>
+                </div>
+                <div class="dining-form-group">
+                    <label for="pos-table-code">Mã điểm bán</label>
+                    <input type="text" id="pos-table-code" placeholder="Để trống để tự tạo (ví dụ: 01-01)">
+                </div>
+                <div class="dining-form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label for="pos-table-capacity">Số chỗ ngồi</label>
+                        <input type="number" id="pos-table-capacity" value="4" min="1" max="99">
+                    </div>
+                    <div>
+                        <label for="pos-table-order">Thứ tự hiển thị</label>
+                        <input type="number" id="pos-table-order" value="1" min="0">
+                    </div>
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-dining-action" id="pos-submodal-table-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-dining-action btn-dining-add">Đồng ý</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Submodal Excel Import -->
+<div class="dining-submodal-overlay" id="pos-submodal-excel" hidden>
+    <div class="dining-submodal-card" style="width: 560px;">
+        <div class="dining-submodal-header">
+            <span>Nhập dữ liệu Khu vực & Điểm bán từ Excel</span>
+            <button type="button" class="dining-modal-close-btn" id="pos-submodal-excel-close">&times;</button>
+        </div>
+        <form id="pos-form-excel">
+            {% csrf_token %}
+            <div class="dining-submodal-body">
+                <div style="background: var(--slate-50); border: 1px dashed var(--slate-300); border-radius: 8px; padding: 12px; font-size: 12px; color: var(--slate-600); line-height: 1.5;">
+                    💡 <strong>Cột hỗ trợ:</strong> <code>STT | Tên khu vực | Loại hình | Tên điểm bán | Mã điểm bán | Số chỗ</code>
+                    <div style="margin-top: 6px;">
+                        <a href="{% url 'dining:export_excel' %}" style="color: var(--brand-primary); font-weight: 700;">
+                            📥 Tải file mẫu CSV / Excel
+                        </a>
+                    </div>
+                </div>
+                <div class="dining-form-group">
+                    <label for="pos-excel-file">Chọn file CSV / Excel</label>
+                    <input type="file" id="pos-excel-file" accept=".csv, text/csv">
+                </div>
+                <div class="dining-form-group">
+                    <label for="pos-excel-text">Hoặc dán trực tiếp dữ liệu từ Excel vào đây:</label>
+                    <textarea id="pos-excel-text" rows="5" placeholder="Dán các cột copy từ Excel (Tab-separated)..."></textarea>
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-dining-action" id="pos-submodal-excel-cancel">Hủy</button>
+                <button type="submit" class="btn-import-excel-ruby" id="pos-btn-submit-excel">
+                    Bắt đầu nhập dữ liệu
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
