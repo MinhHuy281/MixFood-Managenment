@@ -8,9 +8,11 @@ from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from audit.models import ActivityLog, log_activity
 from inventory.models import Recipe
 from .forms import CategoryForm, IngredientForm, ProductForm
 from .models import Category, Ingredient, Product
+
 
 
 @login_required
@@ -106,13 +108,309 @@ def product_delete(request, pk):
 	return redirect('catalog:products')
 
 
+def _generate_ingredient_code():
+	for i in range(1, 10000):
+		c = f'MH{i:03d}'
+		if not Ingredient.objects.filter(code=c).exists():
+			return c
+	return f'MH{Ingredient.objects.count() + 1}'
+
+
 @login_required
 def ingredient_list(request):
+	"""Trang Quản trị Mặt hàng - Admin (Nguyên liệu / Hàng hóa kho)."""
 	query = request.GET.get('q', '').strip()
-	ingredients = Ingredient.objects.all()
+	group_filter = request.GET.get('group', '').strip()
+
+	ingredients = Ingredient.objects.filter(is_active=True)
+	if group_filter:
+		ingredients = ingredients.filter(group=group_filter)
 	if query:
-		ingredients = ingredients.filter(Q(code__icontains=query) | Q(name__icontains=query) | Q(supplier__icontains=query))
-	return render(request, 'catalog/ingredient_list.html', {'ingredients': ingredients, 'query': query})
+		ingredients = ingredients.filter(Q(code__icontains=query) | Q(name__icontains=query) | Q(group__icontains=query) | Q(supplier__icontains=query))
+
+	ingredients = ingredients.order_by('group', 'name')
+	groups = list(Ingredient.objects.filter(is_active=True).exclude(group='').values_list('group', flat=True).distinct().order_by('group'))
+
+	return render(request, 'catalog/ingredient_list.html', {
+		'ingredients': ingredients,
+		'groups': groups,
+		'current_group': group_filter,
+		'query': query,
+		'total_count': ingredients.count(),
+	})
+
+
+@login_required
+def ingredient_data_api(request):
+	"""API trả về danh sách Mặt hàng cho Modal và AJAX list."""
+	query = request.GET.get('q', '').strip()
+	group_filter = request.GET.get('group', '').strip()
+
+	ingredients = Ingredient.objects.filter(is_active=True)
+	if group_filter:
+		ingredients = ingredients.filter(group=group_filter)
+	if query:
+		ingredients = ingredients.filter(Q(code__icontains=query) | Q(name__icontains=query) | Q(group__icontains=query))
+
+	ingredients = ingredients.order_by('group', 'name')
+
+	items = []
+	for ing in ingredients:
+		items.append({
+			'id': ing.id,
+			'group': ing.group or '',
+			'code': ing.code,
+			'name': ing.name,
+			'unit': ing.unit,
+			'average_cost': float(ing.average_cost),
+			'cost_formatted': f'{ing.average_cost:,.0f}'.replace(',', '.'),
+			'minimum_stock': float(ing.minimum_stock),
+			'minimum_stock_formatted': f'{ing.minimum_stock:.3f}',
+			'current_stock': float(ing.current_stock),
+			'current_stock_formatted': f'{ing.current_stock:.3f}',
+			'supplier': ing.supplier or '',
+		})
+
+	groups = list(Ingredient.objects.filter(is_active=True).exclude(group='').values_list('group', flat=True).distinct().order_by('group'))
+
+	return JsonResponse({
+		'ingredients': items,
+		'groups': groups,
+		'total_count': len(items),
+	})
+
+
+@login_required
+def ingredient_save_api(request):
+	"""Thêm mới hoặc cập nhật Mặt hàng qua AJAX API."""
+	if request.method != 'POST':
+		return JsonResponse({'error': 'Phương thức không hợp lệ.'}, status=405)
+
+	try:
+		data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+	except Exception:
+		data = request.POST
+
+	ing_id = data.get('id') or data.get('ingredient_id')
+	group = data.get('group', '').strip()
+	name = data.get('name', '').strip()
+	code = data.get('code', '').strip().upper()
+	unit = data.get('unit', '').strip() or 'Kg'
+
+	try:
+		cost_raw = str(data.get('average_cost', 0)).replace('.', '').replace(',', '')
+		average_cost = Decimal(cost_raw or 0)
+	except Exception:
+		average_cost = Decimal(0)
+
+	try:
+		min_stock_raw = str(data.get('minimum_stock', 0)).replace(',', '.')
+		minimum_stock = Decimal(min_stock_raw or 0)
+	except Exception:
+		minimum_stock = Decimal(0)
+
+	supplier = data.get('supplier', '').strip()
+
+	if not name:
+		return JsonResponse({'error': 'Vui lòng nhập tên mặt hàng.'}, status=400)
+
+	if not code:
+		if ing_id and str(ing_id).isdigit():
+			existing = Ingredient.objects.filter(pk=int(ing_id)).first()
+			code = existing.code if existing else _generate_ingredient_code()
+		else:
+			code = _generate_ingredient_code()
+
+	exist_q = Ingredient.objects.filter(code=code)
+	if ing_id and str(ing_id).isdigit():
+		exist_q = exist_q.exclude(pk=int(ing_id))
+	if exist_q.exists():
+		return JsonResponse({'error': f'Mã mặt hàng "{code}" đã được sử dụng.'}, status=400)
+
+	if ing_id and str(ing_id).isdigit():
+		ingredient = get_object_or_404(Ingredient, pk=int(ing_id))
+		ingredient.group = group
+		ingredient.code = code
+		ingredient.name = name
+		ingredient.unit = unit
+		ingredient.average_cost = average_cost
+		ingredient.minimum_stock = minimum_stock
+		ingredient.supplier = supplier
+		ingredient.is_active = True
+		ingredient.save()
+		message = f'Đã cập nhật mặt hàng "{ingredient.name}".'
+	else:
+		ingredient = Ingredient.objects.create(
+			group=group,
+			code=code,
+			name=name,
+			unit=unit,
+			average_cost=average_cost,
+			minimum_stock=minimum_stock,
+			supplier=supplier,
+			is_active=True,
+		)
+		message = f'Đã thêm mặt hàng "{ingredient.name}".'
+
+	return JsonResponse({
+		'success': True,
+		'message': message,
+		'ingredient': {
+			'id': ingredient.id,
+			'group': ingredient.group or '',
+			'code': ingredient.code,
+			'name': ingredient.name,
+			'unit': ingredient.unit,
+			'average_cost': float(ingredient.average_cost),
+			'cost_formatted': f'{ingredient.average_cost:,.0f}'.replace(',', '.'),
+			'minimum_stock': float(ingredient.minimum_stock),
+			'minimum_stock_formatted': f'{ingredient.minimum_stock:.3f}',
+			'current_stock': float(ingredient.current_stock),
+			'current_stock_formatted': f'{ingredient.current_stock:.3f}',
+			'supplier': ingredient.supplier or '',
+		}
+	})
+
+
+@login_required
+def ingredient_delete_api(request, pk):
+	"""Xóa mặt hàng (vô hiệu hóa)."""
+	if request.method != 'POST':
+		return JsonResponse({'error': 'Phương thức không hợp lệ.'}, status=405)
+	ingredient = get_object_or_404(Ingredient, pk=pk)
+	ingredient.is_active = False
+	ingredient.save(update_fields=('is_active', 'updated_at'))
+	return JsonResponse({
+		'success': True,
+		'message': f'Đã xóa mặt hàng "{ingredient.name}".'
+	})
+
+
+@login_required
+def ingredient_export_excel(request):
+	"""Xuất danh sách Mặt hàng ra file Excel CSV UTF-8 với BOM."""
+	response = HttpResponse(content_type='text/csv; charset=utf-8')
+	response['Content-Disposition'] = 'attachment; filename="mat_hang_mixfood.csv"'
+	response.write('\ufeff')
+
+	writer = csv.writer(response)
+	writer.writerow(['Nhóm', 'Mã mặt hàng', 'Tên mặt hàng', 'ĐVT', 'Giá nhập (đ)', 'Cảnh báo tồn'])
+
+	ingredients = Ingredient.objects.filter(is_active=True).order_by('group', 'name')
+	for ing in ingredients:
+		writer.writerow([
+			ing.group or '',
+			ing.code,
+			ing.name,
+			ing.unit,
+			int(ing.average_cost),
+			f'{ing.minimum_stock:.3f}',
+		])
+	return response
+
+
+@login_required
+def ingredient_import_excel(request):
+	"""Nhập dữ liệu Mặt hàng từ file Excel (CSV) hoặc nội dung dán."""
+	if request.method != 'POST':
+		return JsonResponse({'error': 'Phương thức không hợp lệ.'}, status=405)
+
+	csv_file = request.FILES.get('file')
+	csv_text = request.POST.get('csv_text', '').strip()
+
+	lines = []
+	if csv_file:
+		content = csv_file.read().decode('utf-8-sig', errors='ignore')
+		lines = content.splitlines()
+	elif csv_text:
+		lines = csv_text.splitlines()
+	else:
+		return JsonResponse({'error': 'Vui lòng tải lên file CSV hoặc dán dữ liệu mặt hàng.'}, status=400)
+
+	if not lines:
+		return JsonResponse({'error': 'Dữ liệu nhập rỗng.'}, status=400)
+
+	sample = lines[0]
+	delimiter = '\t' if '\t' in sample else (',' if ',' in sample else ';')
+	reader = csv.reader(lines, delimiter=delimiter)
+
+	imported_count = 0
+	header_skipped = False
+
+	for row in reader:
+		if not row or not any(row):
+			continue
+		row_str = ''.join(row)
+		if not header_skipped and ('Nhóm' in row_str or 'Tên mặt hàng' in row_str or 'Mã' in row_str or 'ĐVT' in row_str):
+			header_skipped = True
+			continue
+
+		# Phân tích định dạng các cột:
+		# Trường hợp 1: Nhóm | Mã | Tên | ĐVT | Giá nhập | Cảnh báo tồn (6 cột)
+		# Trường hợp 2: Nhóm | Tên | ĐVT | Giá nhập | Cảnh báo tồn (5 cột như ảnh chụp)
+		if len(row) >= 6:
+			group = row[0].strip()
+			code = row[1].strip().upper()
+			name = row[2].strip()
+			unit = row[3].strip() or 'Kg'
+			cost_raw = row[4].strip().replace('.', '').replace(',', '')
+			min_raw = row[5].strip().replace(',', '.')
+		elif len(row) == 5:
+			group = row[0].strip()
+			code = ''
+			name = row[1].strip()
+			unit = row[2].strip() or 'Kg'
+			cost_raw = row[3].strip().replace('.', '').replace(',', '')
+			min_raw = row[4].strip().replace(',', '.')
+		elif len(row) >= 3:
+			group = ''
+			code = ''
+			name = row[0].strip()
+			unit = row[1].strip() or 'Kg'
+			cost_raw = row[2].strip().replace('.', '').replace(',', '')
+			min_raw = row[3].strip().replace(',', '.') if len(row) > 3 else '0'
+		else:
+			continue
+
+		if not name:
+			continue
+
+		try:
+			cost_val = Decimal(cost_raw or 0)
+		except Exception:
+			cost_val = Decimal(0)
+
+		try:
+			min_val = Decimal(min_raw or 0)
+		except Exception:
+			min_val = Decimal(0)
+
+		if not code:
+			# Tìm theo tên nếu đã tồn tại thì cập nhật
+			exist_by_name = Ingredient.objects.filter(name__iexact=name).first()
+			if exist_by_name:
+				code = exist_by_name.code
+			else:
+				code = _generate_ingredient_code()
+
+		Ingredient.objects.update_or_create(
+			code=code,
+			defaults={
+				'group': group,
+				'name': name,
+				'unit': unit,
+				'average_cost': cost_val,
+				'minimum_stock': min_val,
+				'is_active': True,
+			}
+		)
+		imported_count += 1
+
+	return JsonResponse({
+		'success': True,
+		'imported_count': imported_count,
+		'message': f'Đã nhập thành công {imported_count} mặt hàng.'
+	})
 
 
 @login_required
@@ -251,6 +549,7 @@ def menu_save_dish(request):
 	code = data.get('code', '').strip().upper()
 	name = data.get('name', '').strip()
 	unit = data.get('unit', '').strip() or 'Phần'
+	reason = data.get('reason', '').strip()
 
 	try:
 		price = Decimal(str(data.get('price', 0)).replace('.', '').replace(',', '') or 0)
@@ -293,6 +592,8 @@ def menu_save_dish(request):
 
 	if dish_id and str(dish_id).isdigit():
 		product = get_object_or_404(Product, pk=int(dish_id))
+		old_price = product.price
+		old_name = product.name
 		product.category = category
 		product.subgroup = subgroup
 		product.code = code
@@ -304,6 +605,23 @@ def menu_save_dish(request):
 		product.product_type = product_type
 		product.is_active = True
 		product.save()
+
+		desc_parts = [f'Sửa món "{product.name}" ({product.code})']
+		if old_price != product.price:
+			desc_parts.append(f'đơn giá từ {old_price:,.0f} đ thành {product.price:,.0f} đ'.replace(',', '.'))
+		if old_name != product.name:
+			desc_parts.append(f'đổi tên từ "{old_name}"')
+		log_desc = ', '.join(desc_parts)
+
+		log_activity(
+			actor=request.user,
+			action=ActivityLog.Action.MENU_UPDATE,
+			description=log_desc,
+			reason=reason or 'Cập nhật thông tin món',
+			request=request,
+			object_type='Product',
+			object_id=product.id,
+		)
 		message = f'Đã cập nhật món "{product.name}" thành công.'
 	else:
 		product = Product.objects.create(
@@ -318,6 +636,17 @@ def menu_save_dish(request):
 			product_type=product_type,
 			is_available=True,
 			is_active=True,
+		)
+		p_price_vnd = f'{product.price:,.0f}'.replace(',', '.')
+		log_desc = f'Thêm món mới "{product.name}" ({product.code}) vào thực đơn {category.name}, giá {p_price_vnd} đ'
+		log_activity(
+			actor=request.user,
+			action=ActivityLog.Action.MENU_UPDATE,
+			description=log_desc,
+			reason=reason or 'Thêm món mới vào thực đơn',
+			request=request,
+			object_type='Product',
+			object_id=product.id,
 		)
 		message = f'Đã thêm món mới "{product.name}" thành công.'
 
@@ -356,14 +685,34 @@ def menu_delete_dish(request, pk):
 	"""Xóa / ngừng sử dụng món ăn."""
 	if request.method != 'POST':
 		return JsonResponse({'error': 'Phương thức không hợp lệ.'}, status=405)
+
+	try:
+		data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+	except Exception:
+		data = request.POST
+
+	reason = data.get('reason', '').strip() or request.POST.get('reason', '').strip()
+
 	product = get_object_or_404(Product, pk=pk)
 	product.is_active = False
 	product.is_available = False
 	product.save(update_fields=('is_active', 'is_available', 'updated_at'))
+
+	log_activity(
+		actor=request.user,
+		action=ActivityLog.Action.MENU_UPDATE,
+		description=f'Xóa món "{product.name}" ({product.code}) khỏi thực đơn',
+		reason=reason or 'Ngừng kinh doanh món',
+		request=request,
+		object_type='Product',
+		object_id=product.id,
+	)
+
 	return JsonResponse({
 		'success': True,
 		'message': f'Đã xóa món "{product.name}".'
 	})
+
 
 
 @login_required

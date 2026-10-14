@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const orderPrimaryAction = document.querySelector('#order-primary-action');
     const selectionPrimaryAction = document.querySelector('#cancel-selected-table');
     const secondaryActions = Array.from(document.querySelectorAll('.order-actions button'));
-    const cart = new Map();
+    const tableOrders = new Map();
+    let cart = new Map();
     let selectedTableId = null;
     let dialogProduct = null;
     let editingCartItemId = null;
@@ -39,15 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setMenuUnlocked = (unlocked) => {
         menuUnlocked = unlocked;
-        menuColumn.hidden = !unlocked;
-        posLayout.classList.toggle('menu-visible', unlocked);
-        menuColumn.classList.toggle('menu-locked', !unlocked);
-        selectionActions.hidden = !selectedTableId || unlocked;
-        orderOpenActions.hidden = !unlocked;
-        if (selectedTableId) orderMode.textContent = unlocked ? 'Đang gọi món' : 'Chưa gọi món';
+        if (menuColumn) menuColumn.hidden = !unlocked;
+        if (posLayout) posLayout.classList.toggle('menu-visible', unlocked);
+        if (menuColumn) menuColumn.classList.toggle('menu-locked', !unlocked);
+        if (selectionActions) selectionActions.hidden = !selectedTableId || unlocked;
+        if (orderOpenActions) orderOpenActions.hidden = !unlocked;
+        if (selectedTableId && orderMode) orderMode.textContent = unlocked ? 'Đang gọi món' : 'Chưa gọi món';
     };
 
     const renderOpenAction = () => {
+        if (!orderPrimaryAction) return;
         orderPrimaryAction.classList.remove('kitchen-action', 'payment-action');
         if (!cart.size) {
             orderPrimaryAction.textContent = 'Hủy bàn';
@@ -70,55 +72,103 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showTablePreview = (tableButton) => {
+        if (!tableButton) return;
         previewedTable = tableButton;
         document.querySelectorAll('.table').forEach((button) => button.classList.remove('selected', 'preview'));
         tableButton.classList.add('preview');
-        orderTitle.textContent = `Bàn ${tableButton.dataset.tableName} - ${tableButton.dataset.area}`;
-        selectedTable.textContent = tableButton.dataset.tableName;
-        orderTime.textContent = getArrivalTime();
-        orderStatus.textContent = 'Trống';
-        orderStatus.classList.remove('pending');
-        orderCustomer.textContent = '-';
-        orderRequestedBy.textContent = orderColumn.dataset.currentUser;
-        orderMode.textContent = '';
-        orderItems.innerHTML = '';
-        selectionPrimaryAction.textContent = 'Mở bàn';
-        selectionActions.hidden = false;
+        if (orderTitle) orderTitle.textContent = `Bàn ${tableButton.dataset.tableName} - ${tableButton.dataset.area}`;
+        if (selectedTable) selectedTable.textContent = tableButton.dataset.tableName;
+        if (orderTime) orderTime.textContent = getArrivalTime();
+        if (orderStatus) {
+            orderStatus.textContent = 'Trống';
+            orderStatus.classList.remove('pending');
+        }
+        if (orderCustomer) orderCustomer.textContent = '-';
+        if (orderRequestedBy && orderColumn) orderRequestedBy.textContent = orderColumn.dataset.currentUser;
+        if (orderMode) orderMode.textContent = '';
+        if (orderItems) orderItems.innerHTML = '';
+        if (selectionPrimaryAction) selectionPrimaryAction.textContent = 'Mở bàn';
+        if (selectionActions) selectionActions.hidden = false;
         setSecondaryActions(true);
     };
 
     const showSelectedTable = (tableButton) => {
+        if (!tableButton) return;
         const tableName = tableButton.dataset.tableName;
-        orderTitle.textContent = `Bàn ${tableName} - ${tableButton.dataset.area}`;
-        selectedTable.textContent = tableName;
-        orderTime.textContent = getArrivalTime();
-        orderStatus.textContent = 'Phục vụ món';
-        orderStatus.classList.add('pending');
-        orderCustomer.textContent = '-';
-        orderRequestedBy.textContent = orderColumn.dataset.currentUser;
+        if (orderTitle) orderTitle.textContent = `Bàn ${tableName} - ${tableButton.dataset.area}`;
+        if (selectedTable) selectedTable.textContent = tableName;
+        if (orderTime) orderTime.textContent = getArrivalTime();
+        if (orderStatus) {
+            if (itemsSentToKitchen) {
+                orderStatus.textContent = 'Đang phục vụ món';
+                orderStatus.classList.add('pending');
+            } else {
+                orderStatus.textContent = 'Đang gọi món';
+                orderStatus.classList.remove('pending');
+            }
+        }
+        if (orderCustomer) orderCustomer.textContent = '-';
+        if (orderRequestedBy && orderColumn) orderRequestedBy.textContent = orderColumn.dataset.currentUser;
     };
 
     const clearSelectedTable = () => {
         const activeTable = document.querySelector(`.table[data-table-id="${selectedTableId}"]`) || previewedTable;
+        if (selectedTableId) {
+            tableOrders.delete(selectedTableId);
+        }
+        if (activeTable) {
+            activeTable.classList.remove('selected', 'preview', 'table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied');
+        }
         selectedTableId = null;
-        document.querySelectorAll('.table').forEach((button) => button.classList.remove('selected'));
-        cart.clear();
+        cart = new Map();
         itemsSentToKitchen = false;
         setMenuUnlocked(false);
         renderCart();
-        if (activeTable) showTablePreview(activeTable);
+        if (orderTitle) orderTitle.textContent = 'Bàn -';
+        if (selectedTable) selectedTable.textContent = '-';
+        if (orderStatus) {
+            orderStatus.textContent = 'Trống';
+            orderStatus.classList.remove('pending');
+        }
+        if (orderMode) orderMode.textContent = '';
         tablePreviewArmed = false;
     };
 
     const openSelectedTable = (tableButton) => {
+        if (!tableButton) return;
         selectedTableId = tableButton.dataset.tableId;
         previewedTable = tableButton;
-        document.querySelectorAll('.table').forEach((button) => button.classList.remove('preview'));
+
+        document.querySelectorAll('.table').forEach((button) => button.classList.remove('selected', 'preview'));
         tableButton.classList.add('selected');
-        cart.clear();
-        itemsSentToKitchen = false;
+
+        let tableData = tableOrders.get(selectedTableId);
+        if (!tableData) {
+            tableData = {
+                cart: new Map(),
+                itemsSentToKitchen: false,
+                tableName: tableButton.dataset.tableName,
+                area: tableButton.dataset.area,
+            };
+            tableOrders.set(selectedTableId, tableData);
+        }
+
+        cart = tableData.cart;
+        itemsSentToKitchen = tableData.itemsSentToKitchen;
+
+        // Apply colors according to status:
+        // Lần 1 bấm mở bàn ra màu đỏ
+        // Khi thêm món xong hết (gửi bếp) mới ra màu xanh
+        if (itemsSentToKitchen) {
+            tableButton.classList.remove('table-opening', 'table-red');
+            tableButton.classList.add('kitchen-sent', 'table-green');
+        } else {
+            tableButton.classList.add('table-opening', 'table-red');
+            tableButton.classList.remove('kitchen-sent', 'table-green');
+        }
+
         showSelectedTable(tableButton);
-        selectionPrimaryAction.textContent = 'Hủy bàn';
+        if (selectionPrimaryAction) selectionPrimaryAction.textContent = 'Hủy bàn';
         setSecondaryActions(false);
         setMenuUnlocked(true);
         renderCart();
@@ -169,7 +219,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Không thể hoàn tất thanh toán.');
-            if (activeTable) activeTable.classList.remove('selected', 'kitchen-sent');
+            if (activeTable) {
+                activeTable.classList.remove('selected', 'preview', 'table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied');
+            }
+            if (selectedTableId) {
+                tableOrders.delete(selectedTableId);
+            }
             closePaymentDialog();
             window.location.reload();
         } catch (error) {
@@ -301,10 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const invoiceContextMenu = document.querySelector('#invoice-context-menu');
-    const invoiceEditDialog = document.querySelector('#invoice-edit-dialog');
     const invoiceDeleteDialog = document.querySelector('#invoice-delete-dialog');
-    const invoiceEditReasonEnabled = document.querySelector('#invoice-edit-reason-enabled');
-    const invoiceEditReason = document.querySelector('#invoice-edit-reason');
     const invoiceDeleteReasonEnabled = document.querySelector('#invoice-delete-reason-enabled');
     const invoiceDeleteReason = document.querySelector('#invoice-delete-reason');
     let selectedInvoiceRow = null;
@@ -315,94 +367,94 @@ document.addEventListener('DOMContentLoaded', () => {
         summary: 'Đã chọn tổng hợp hóa đơn.',
     };
     const closeInvoiceContextMenu = () => {
-        invoiceContextMenu.hidden = true;
+        if (invoiceContextMenu) invoiceContextMenu.hidden = true;
         if (selectedInvoiceRow) selectedInvoiceRow.classList.remove('invoice-selected');
     };
     const openInvoiceEditDialog = () => {
         if (!selectedInvoiceRow) return;
-        const cells = selectedInvoiceRow.querySelectorAll('td');
-        document.querySelector('#invoice-edit-title').textContent = `Sửa hóa đơn (Số ${cells[0].textContent.trim()}) - ${cells[3].textContent.trim()}`;
-        document.querySelector('#invoice-edit-table').textContent = cells[1].textContent.trim();
-        document.querySelector('#invoice-edit-cashier-option').textContent = cells[3].textContent.trim();
-        document.querySelector('#invoice-edit-item-name').textContent = selectedInvoiceRow.dataset.itemName || `Hóa đơn ${cells[0].textContent.trim()}`;
-        document.querySelector('#invoice-edit-item-price').textContent = selectedInvoiceRow.dataset.itemPrice || cells[6].textContent.trim();
-        document.querySelector('#invoice-edit-item-quantity').textContent = selectedInvoiceRow.dataset.itemQuantity || '1';
-        document.querySelector('#invoice-edit-subtotal').textContent = `${cells[4].textContent.trim()} đ`;
-        document.querySelector('#invoice-edit-total').textContent = `${cells[6].textContent.trim()} đ`;
-        invoiceEditReasonEnabled.checked = false;
-        invoiceEditReason.value = '';
-        invoiceEditReason.hidden = true;
+        const code = selectedInvoiceRow.dataset.invoiceCode ||
+                     selectedInvoiceRow.querySelector('td')?.textContent?.trim()?.replace(/^#/, '');
         closeInvoiceContextMenu();
-        invoiceEditDialog.hidden = false;
+        if (code && typeof window.openInvoiceEditor === 'function') {
+            window.openInvoiceEditor(code);
+        }
     };
-    const closeInvoiceEditDialog = () => { invoiceEditDialog.hidden = true; };
     const openInvoiceDeleteDialog = () => {
-        if (!selectedInvoiceRow) return;
-        const invoiceCode = selectedInvoiceRow.querySelector('td').textContent.trim();
-        document.querySelector('#invoice-delete-title').textContent = `Xóa hóa đơn số ${invoiceCode}`;
-        invoiceDeleteReasonEnabled.checked = false;
-        invoiceDeleteReason.value = '';
-        invoiceDeleteReason.hidden = true;
+        if (!selectedInvoiceRow || !invoiceDeleteDialog) return;
+        const invoiceCode = selectedInvoiceRow.querySelector('td')?.textContent?.trim()?.replace(/^#/, '');
+        const titleEl = document.querySelector('#invoice-delete-title');
+        if (titleEl) titleEl.textContent = `Xóa hóa đơn số ${invoiceCode}`;
+        if (invoiceDeleteReasonEnabled) invoiceDeleteReasonEnabled.checked = false;
+        if (invoiceDeleteReason) {
+            invoiceDeleteReason.value = '';
+            invoiceDeleteReason.hidden = true;
+        }
         closeInvoiceContextMenu();
         invoiceDeleteDialog.hidden = false;
     };
-    const closeInvoiceDeleteDialog = () => { invoiceDeleteDialog.hidden = true; };
-    invoiceEditReasonEnabled.addEventListener('change', () => { invoiceEditReason.hidden = !invoiceEditReasonEnabled.checked; if (!invoiceEditReason.hidden) invoiceEditReason.focus(); });
-    invoiceDeleteReasonEnabled.addEventListener('change', () => { invoiceDeleteReason.hidden = !invoiceDeleteReasonEnabled.checked; if (!invoiceDeleteReason.hidden) invoiceDeleteReason.focus(); });
+    const closeInvoiceDeleteDialog = () => {
+        if (invoiceDeleteDialog) invoiceDeleteDialog.hidden = true;
+    };
     const showInvoiceContextMenu = (event, row) => {
         event.preventDefault();
         if (selectedInvoiceRow) selectedInvoiceRow.classList.remove('invoice-selected');
         selectedInvoiceRow = row;
         selectedInvoiceRow.classList.add('invoice-selected');
+        if (!invoiceContextMenu) return;
         invoiceContextMenu.hidden = false;
-        const menuWidth = invoiceContextMenu.offsetWidth;
-        const menuHeight = invoiceContextMenu.offsetHeight;
+        const menuWidth = invoiceContextMenu.offsetWidth || 190;
+        const menuHeight = invoiceContextMenu.offsetHeight || 220;
         invoiceContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - menuWidth - 4)}px`;
         invoiceContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - menuHeight - 4)}px`;
     };
-    document.querySelectorAll('.invoice-table tbody tr[data-invoice-code]').forEach((row) => row.addEventListener('contextmenu', (event) => showInvoiceContextMenu(event, row)));
-    invoiceContextMenu.querySelectorAll('button[data-invoice-action]').forEach((actionButton) => {
-        actionButton.addEventListener('click', () => {
-            if (actionButton.dataset.invoiceAction === 'edit') {
-                openInvoiceEditDialog();
-            } else if (actionButton.dataset.invoiceAction === 'delete') {
-                openInvoiceDeleteDialog();
-            } else if (!actionButton.disabled) {
-                systemNotice.textContent = invoiceActionMessages[actionButton.dataset.invoiceAction];
-                systemNotice.hidden = false;
-                window.clearTimeout(systemNoticeTimeout);
-                systemNoticeTimeout = window.setTimeout(() => { systemNotice.hidden = true; }, 4200);
-                closeInvoiceContextMenu();
-            }
+    document.querySelectorAll('.invoice-table tbody tr[data-invoice-code]').forEach((row) => {
+        row.addEventListener('contextmenu', (event) => showInvoiceContextMenu(event, row));
+        row.addEventListener('dblclick', () => {
+            selectedInvoiceRow = row;
+            openInvoiceEditDialog();
         });
     });
-    document.querySelector('#invoice-edit-close').addEventListener('click', closeInvoiceEditDialog);
-    document.querySelector('#invoice-edit-cancel').addEventListener('click', closeInvoiceEditDialog);
-    document.querySelector('#invoice-edit-confirm').addEventListener('click', async () => {
-        if (!invoiceEditReasonEnabled.checked || !invoiceEditReason.value.trim()) {
-            systemNotice.textContent = 'Hãy bật và nhập lý do sửa hóa đơn.';
-            systemNotice.hidden = false;
-            return;
-        }
-        const invoiceCode = selectedInvoiceRow.querySelector('td').textContent.trim();
-        const response = await fetch(invoiceContextMenu.dataset.editUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value }, body: JSON.stringify({ invoice_code: invoiceCode, reason: invoiceEditReason.value.trim() }) });
-        const result = await response.json();
-        if (!response.ok) { systemNotice.textContent = result.error || 'Không thể ghi nhật ký sửa hóa đơn.'; systemNotice.hidden = false; return; }
-        closeInvoiceEditDialog();
-        window.location.reload();
-    });
-    document.querySelector('#invoice-delete-close').addEventListener('click', closeInvoiceDeleteDialog);
-    document.querySelector('#invoice-delete-cancel').addEventListener('click', closeInvoiceDeleteDialog);
-    document.querySelector('#invoice-delete-confirm').addEventListener('click', async () => {
-        if (!invoiceDeleteReasonEnabled.checked || !invoiceDeleteReason.value.trim()) {
+    if (invoiceContextMenu) {
+        invoiceContextMenu.querySelectorAll('button[data-invoice-action]').forEach((actionButton) => {
+            actionButton.addEventListener('click', () => {
+                if (actionButton.dataset.invoiceAction === 'edit') {
+                    openInvoiceEditDialog();
+                } else if (actionButton.dataset.invoiceAction === 'delete') {
+                    openInvoiceDeleteDialog();
+                } else if (!actionButton.disabled) {
+                    systemNotice.textContent = invoiceActionMessages[actionButton.dataset.invoiceAction];
+                    systemNotice.hidden = false;
+                    window.clearTimeout(systemNoticeTimeout);
+                    systemNoticeTimeout = window.setTimeout(() => { systemNotice.hidden = true; }, 4200);
+                    closeInvoiceContextMenu();
+                }
+            });
+        });
+    }
+    document.querySelector('#invoice-delete-close')?.addEventListener('click', closeInvoiceDeleteDialog);
+    document.querySelector('#invoice-delete-cancel')?.addEventListener('click', closeInvoiceDeleteDialog);
+    document.querySelector('#invoice-delete-confirm')?.addEventListener('click', async () => {
+        if (!invoiceDeleteReasonEnabled?.checked || !invoiceDeleteReason?.value.trim()) {
             systemNotice.textContent = 'Hãy bật và nhập lý do xóa hóa đơn.';
             systemNotice.hidden = false;
             return;
         }
-        const invoiceCode = selectedInvoiceRow.querySelector('td').textContent.trim();
-        const response = await fetch(invoiceContextMenu.dataset.deleteUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value }, body: JSON.stringify({ invoice_code: invoiceCode, reason: invoiceDeleteReason.value.trim() }) });
+        const invoiceCode = selectedInvoiceRow?.querySelector('td')?.textContent?.trim()?.replace(/^#/, '');
+        if (!invoiceCode || !invoiceContextMenu) return;
+        const response = await fetch(invoiceContextMenu.dataset.deleteUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '',
+            },
+            body: JSON.stringify({ invoice_code: invoiceCode, reason: invoiceDeleteReason.value.trim() }),
+        });
         const result = await response.json();
-        if (!response.ok) { systemNotice.textContent = result.error || 'Không thể xóa hóa đơn.'; systemNotice.hidden = false; return; }
+        if (!response.ok) {
+            systemNotice.textContent = result.error || 'Không thể xóa hóa đơn.';
+            systemNotice.hidden = false;
+            return;
+        }
         closeInvoiceDeleteDialog();
         window.location.reload();
     });
@@ -533,6 +585,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation();
                 const id = btn.dataset.id;
                 cart.delete(id);
+                const tableData = tableOrders.get(selectedTableId);
+                if (tableData) tableData.cart = cart;
                 renderCart();
             });
         });
@@ -548,6 +602,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         cart.delete(id);
                     }
+                    const tableData = tableOrders.get(selectedTableId);
+                    if (tableData) tableData.cart = cart;
                     renderCart();
                 }
             });
@@ -560,6 +616,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const item = cart.get(id);
                 if (item) {
                     item.quantity += 1;
+                    const tableData = tableOrders.get(selectedTableId);
+                    if (tableData) tableData.cart = cart;
                     renderCart();
                 }
             });
@@ -575,48 +633,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.table').forEach((tableButton) => {
         tableButton.addEventListener('click', () => {
-            if (selectedTableId === tableButton.dataset.tableId) {
-                setMenuUnlocked(true);
-                return;
-            }
-            if (!selectedTableId && previewedTable === tableButton && tablePreviewArmed) {
-                openSelectedTable(tableButton);
-                return;
-            }
-            document.querySelectorAll('.table').forEach((button) => button.classList.remove('selected'));
-            selectedTableId = null;
-            cart.clear();
-            itemsSentToKitchen = false;
-            setMenuUnlocked(false);
-            showTablePreview(tableButton);
-            tablePreviewArmed = true;
-            renderCart();
+            openSelectedTable(tableButton);
         });
     });
 
-    document.querySelector('#open-menu').addEventListener('click', () => {
+    document.querySelector('#open-menu')?.addEventListener('click', () => {
         if (!selectedTableId && previewedTable) {
-            previewedTable.click();
+            openSelectedTable(previewedTable);
         }
         if (selectedTableId) setMenuUnlocked(true);
     });
-    document.querySelector('#collapse-order-menu').addEventListener('click', () => setMenuUnlocked(false));
-    selectionPrimaryAction.addEventListener('click', () => {
+    document.querySelector('#collapse-order-menu')?.addEventListener('click', () => setMenuUnlocked(false));
+    selectionPrimaryAction?.addEventListener('click', () => {
         if (!selectedTableId && previewedTable) {
             openSelectedTable(previewedTable);
             return;
         }
         clearSelectedTable();
     });
-    orderPrimaryAction.addEventListener('click', () => {
+    orderPrimaryAction?.addEventListener('click', () => {
         if (!cart.size) {
             clearSelectedTable();
             return;
         }
         if (!itemsSentToKitchen) {
+            // Thêm món xong hết: Bàn chuyển sang MÀU XANH và nút chuyển thành Thanh toán
             itemsSentToKitchen = true;
+            const tableData = tableOrders.get(selectedTableId);
+            if (tableData) {
+                tableData.itemsSentToKitchen = true;
+            }
             const activeTable = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
-            if (activeTable) activeTable.classList.add('kitchen-sent');
+            if (activeTable) {
+                activeTable.classList.remove('table-opening', 'table-red');
+                activeTable.classList.add('kitchen-sent', 'table-green');
+            }
             orderStatus.textContent = 'Đang phục vụ món';
             orderStatus.classList.add('pending');
             renderOpenAction();
@@ -887,8 +938,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 note: note || (existing ? existing.note : ''),
             });
         }
+        const tableData = tableOrders.get(selectedTableId);
+        if (tableData) {
+            tableData.cart = cart;
+        }
         editingCartItemId = null;
-        itemsSentToKitchen = false;
         renderCart();
         closeDialog();
     });

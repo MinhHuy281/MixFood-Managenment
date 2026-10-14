@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from accounts.decorators import role_required
-from audit.models import ActivityLog
+from audit.models import ActivityLog, log_activity
 from catalog.models import Product
 from dining.models import DiningTable
 from inventory.services import deduct_for_sale
@@ -378,31 +378,233 @@ def invoice_list(request):
 
 @login_required
 @role_required('Owner', 'Manager', 'Sales')
+@require_GET
+def invoice_detail_api(request, invoice_code):
+	"""API lấy thông tin chi tiết một hóa đơn để phục vụ modal Sửa hóa đơn."""
+	from django.contrib.auth import get_user_model
+	User = get_user_model()
+
+	invoice = Invoice.objects.select_related(
+		'order', 'cashier', 'order__table', 'order__table__area'
+	).prefetch_related('order__items', 'payments').filter(invoice_code=invoice_code).first()
+
+	if not invoice:
+		return JsonResponse({'ok': False, 'error': 'Không tìm thấy hóa đơn.'}, status=404)
+
+	cashiers = [{'id': u.id, 'name': u.get_full_name() or u.username} for u in User.objects.filter(is_active=True).order_by('username')]
+	
+	first_payment = invoice.payments.first()
+	payment_method = first_payment.method if first_payment else Payment.Method.CASH
+
+	order = invoice.order
+	table_name = order.table.name if (order and order.table) else ('Mang về' if (order and order.order_type == Order.OrderType.TAKEAWAY) else '-')
+
+	items_data = []
+	if order:
+		for item in order.items.filter(status=OrderItem.Status.ACTIVE):
+			orig_total = item.unit_price * item.quantity
+			discount_pct = float(round((item.discount_amount / orig_total * 100), 1)) if orig_total > 0 else 0
+			items_data.append({
+				'id': item.id,
+				'product_id': item.product_id,
+				'product_name': item.product_name,
+				'unit': item.unit,
+				'unit_price': float(item.unit_price),
+				'quantity': item.quantity,
+				'discount_percent': discount_pct,
+				'discount_amount': float(item.discount_amount),
+				'total_amount': float(item.total_amount),
+				'note': item.note,
+			})
+
+	products = [
+		{'id': p.id, 'code': p.code, 'name': p.name, 'price': float(p.price), 'unit': p.unit}
+		for p in Product.objects.filter(is_active=True).order_by('name')
+	]
+
+	payment_methods = [{'code': code, 'name': label} for code, label in Payment.Method.choices]
+
+	return JsonResponse({
+		'ok': True,
+		'invoice': {
+			'invoice_code': invoice.invoice_code,
+			'table_name': table_name,
+			'cashier_id': invoice.cashier_id,
+			'cashier_name': invoice.cashier.get_full_name() or invoice.cashier.username,
+			'payment_method': payment_method,
+			'payment_method_display': first_payment.get_method_display() if first_payment else 'Tiền mặt',
+			'subtotal': float(invoice.subtotal),
+			'surcharge_amount': float(invoice.surcharge_amount),
+			'discount_amount': float(invoice.discount_amount),
+			'tax_amount': float(invoice.tax_amount),
+			'total_amount': float(invoice.total_amount),
+			'items': items_data,
+		},
+		'cashiers': cashiers,
+		'payment_methods': payment_methods,
+		'products': products,
+	})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales')
 @require_POST
 def edit_invoice(request):
+	"""Chức năng Sửa hóa đơn đầy đủ: chỉnh sửa món, số lượng, giảm giá %, nhân viên, phương thức thanh toán, phụ thu, VAT và ghi nhật ký hoạt động."""
+	from django.contrib.auth import get_user_model
 	try:
 		payload = json.loads(request.body or '{}')
 	except json.JSONDecodeError:
-		return JsonResponse({'error': 'Dữ liệu sửa hóa đơn không hợp lệ.'}, status=400)
-	reason = str(payload.get('reason', '')).strip()
+		return JsonResponse({'ok': False, 'error': 'Dữ liệu sửa hóa đơn không hợp lệ.'}, status=400)
+
 	invoice_code = str(payload.get('invoice_code', '')).strip()
+	reason = str(payload.get('reason', '')).strip()
+
+	if not invoice_code:
+		return JsonResponse({'ok': False, 'error': 'Thiếu mã hóa đơn cần sửa.'}, status=400)
+
 	if not reason:
-		return JsonResponse({'error': 'Vui lòng nhập lý do sửa hóa đơn.'}, status=400)
-	invoice = Invoice.objects.filter(invoice_code=invoice_code).first()
+		return JsonResponse({'ok': False, 'error': 'Vui lòng nhập lý do sửa hóa đơn.'}, status=400)
+
+	invoice = Invoice.objects.select_related('order', 'cashier').prefetch_related('order__items', 'payments').filter(invoice_code=invoice_code).first()
 	if invoice is None:
-		return JsonResponse({'error': 'Không tìm thấy hóa đơn.'}, status=404)
-	ActivityLog.objects.create(
-		actor=request.user,
-		action=ActivityLog.Action.UPDATE,
-		method=request.method,
-		path=request.path,
-		object_type='Invoice',
-		object_id=invoice.pk,
-		description=f'Sửa hóa đơn số {invoice.invoice_code} (lý do: {reason})',
-		status_code=200,
-		ip_address=request.META.get('REMOTE_ADDR'),
-	)
-	return JsonResponse({'ok': True})
+		return JsonResponse({'ok': False, 'error': 'Không tìm thấy hóa đơn.'}, status=404)
+
+	raw_items = payload.get('items', [])
+	if not isinstance(raw_items, list) or not raw_items:
+		return JsonResponse({'ok': False, 'error': 'Hóa đơn phải có ít nhất một món.'}, status=400)
+
+	cashier_id = payload.get('cashier_id')
+	payment_method = payload.get('payment_method', Payment.Method.CASH)
+	surcharge_val = _money(payload.get('surcharge_amount', 0))
+	discount_val = _money(payload.get('discount_amount', 0))
+	tax_val = _money(payload.get('tax_amount', 0))
+
+	with transaction.atomic():
+		old_total = invoice.total_amount
+		old_payment = invoice.payments.first()
+		old_method = old_payment.get_method_display() if old_payment else 'Tiền mặt'
+		old_cashier_name = invoice.cashier.get_full_name() or invoice.cashier.username
+
+		order = invoice.order
+		order.items.all().delete()
+
+		subtotal_calc = Decimal(0)
+		default_product = Product.objects.filter(is_active=True).first()
+
+		for it in raw_items:
+			p_id = it.get('product_id')
+			p_name = str(it.get('product_name', '')).strip()
+			p_unit = str(it.get('unit', '')).strip() or 'Phần'
+			p_price = _money(it.get('unit_price', 0))
+			p_qty = max(1, int(it.get('quantity', 1)))
+			p_disc_pct = Decimal(str(it.get('discount_percent', 0) or 0))
+
+			product = None
+			if p_id and str(p_id).isdigit():
+				product = Product.objects.filter(pk=int(p_id)).first()
+			if product:
+				p_name = p_name or product.name
+				p_unit = p_unit or product.unit
+
+			item_raw_total = p_price * p_qty
+			item_disc = (item_raw_total * p_disc_pct / Decimal(100)).quantize(Decimal('1'))
+			item_total = max(Decimal(0), item_raw_total - item_disc)
+
+			OrderItem.objects.create(
+				order=order,
+				product=product if product else default_product,
+				product_name=p_name or 'Món gọi',
+				unit=p_unit,
+				quantity=p_qty,
+				unit_price=p_price,
+				discount_amount=item_disc,
+				total_amount=item_total,
+				status=OrderItem.Status.ACTIVE,
+			)
+			subtotal_calc += item_total
+
+		# Check tax
+		if 0 < tax_val <= 100:
+			tax_amount = ((subtotal_calc + surcharge_val - discount_val) * tax_val / Decimal(100)).quantize(Decimal('1'))
+		else:
+			tax_amount = tax_val
+
+		total_calc = max(Decimal(0), subtotal_calc + surcharge_val - discount_val + tax_amount)
+
+		# Update Order
+		order.subtotal = subtotal_calc
+		order.surcharge_amount = surcharge_val
+		order.discount_amount = discount_val
+		order.tax_amount = tax_amount
+		order.total_amount = total_calc
+		order.save()
+
+		# Update Invoice
+		invoice.subtotal = subtotal_calc
+		invoice.surcharge_amount = surcharge_val
+		invoice.discount_amount = discount_val
+		invoice.tax_amount = tax_amount
+		invoice.total_amount = total_calc
+
+		if cashier_id:
+			User = get_user_model()
+			new_cashier = User.objects.filter(pk=cashier_id).first()
+			if new_cashier:
+				invoice.cashier = new_cashier
+
+		invoice.save()
+
+		# Update or create payment
+		if old_payment:
+			old_payment.method = payment_method
+			old_payment.amount = total_calc
+			old_payment.save()
+			new_payment_method_display = old_payment.get_method_display()
+		else:
+			new_pm = Payment.objects.create(
+				invoice=invoice,
+				method=payment_method,
+				amount=total_calc,
+				created_by=request.user
+			)
+			new_payment_method_display = new_pm.get_method_display()
+
+		# Build descriptive activity log matching the screenshot format
+		change_details = []
+		change_details.append('thay đổi thông tin các món')
+		if old_method != new_payment_method_display:
+			change_details.append(f'thay đổi kiểu thanh toán từ {old_method} thành {new_payment_method_display}')
+		if old_total != total_calc:
+			old_fmt = f'{old_total:,.0f}'.replace(',', '.')
+			new_fmt = f'{total_calc:,.0f}'.replace(',', '.')
+		if reason:
+			log_description = f'Sửa hóa đơn số {invoice.invoice_code} {"; ".join(change_details)} (lý do: {reason})'
+		else:
+			log_description = f'Sửa hóa đơn số {invoice.invoice_code} {"; ".join(change_details)}'
+
+		log_activity(
+			actor=request.user,
+			action=ActivityLog.Action.EDIT_INVOICE,
+			description=log_description,
+			reason=reason or 'Điều chỉnh hóa đơn theo yêu cầu',
+			request=request,
+			object_type='Invoice',
+			object_id=invoice.pk,
+		)
+
+	return JsonResponse({
+		'ok': True,
+		'message': f'Đã cập nhật hóa đơn số {invoice.invoice_code} thành công.',
+		'invoice': {
+			'invoice_code': invoice.invoice_code,
+			'total_amount': float(invoice.total_amount),
+			'total_amount_formatted': f'{invoice.total_amount:,.0f}'.replace(',', '.'),
+			'subtotal_formatted': f'{invoice.subtotal:,.0f}'.replace(',', '.'),
+			'cashier': invoice.cashier.get_full_name() or invoice.cashier.username,
+			'payment_method': new_payment_method_display,
+		}
+	})
 
 
 @login_required
@@ -426,15 +628,15 @@ def delete_invoice(request):
 	invoice.save(update_fields=('status', 'cancelled_at', 'cancel_reason'))
 	invoice.order.status = Order.Status.CANCELLED
 	invoice.order.save(update_fields=('status', 'updated_at'))
-	ActivityLog.objects.create(
+
+	log_activity(
 		actor=request.user,
-		action=ActivityLog.Action.DELETE,
-		method=request.method,
-		path=request.path,
+		action=ActivityLog.Action.DELETE_INVOICE,
+		description=f'Hủy hóa đơn số {invoice.invoice_code}',
+		reason=reason,
+		request=request,
 		object_type='Invoice',
 		object_id=invoice.pk,
-		description=f'Hủy hóa đơn số {invoice.invoice_code} (lý do: {reason})',
-		status_code=200,
-		ip_address=request.META.get('REMOTE_ADDR'),
 	)
-	return JsonResponse({'ok': True})
+	return JsonResponse({'ok': True, 'message': f'Đã hủy hóa đơn số {invoice.invoice_code}.'})
+

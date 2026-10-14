@@ -1,7 +1,397 @@
 {% extends 'base.html' %}
-{% block title %}Nguyên liệu | MixFood Manager{% endblock %}
+{% block title %}Mặt hàng - Admin | MixFood Manager{% endblock %}
+
 {% block content %}
-<section class="list-header"><div><p class="eyebrow">INVENTORY / INGREDIENTS</p><h1>Nguyên liệu</h1></div><a class="primary-button" href="{% url 'catalog:ingredient_create' %}">+ Thêm nguyên liệu</a></section>
-<form class="filter-bar" method="get"><input name="q" value="{{ query }}" placeholder="Tìm mã, tên hoặc nhà cung cấp..."><button class="primary-button" type="submit">Tìm kiếm</button></form>
-<div class="data-table"><table><thead><tr><th>Mã</th><th>Tên nguyên liệu</th><th>ĐVT</th><th>Tồn hiện tại</th><th>Tồn tối thiểu</th><th>Giá vốn</th><th>Nhà cung cấp</th><th></th></tr></thead><tbody>{% for ingredient in ingredients %}<tr class="{% if ingredient.is_low_stock %}low-stock{% endif %}"><td>{{ ingredient.code }}</td><td><strong>{{ ingredient.name }}</strong></td><td>{{ ingredient.unit }}</td><td>{{ ingredient.current_stock }}</td><td>{{ ingredient.minimum_stock }}</td><td>{{ ingredient.average_cost|floatformat:0 }} đ</td><td>{{ ingredient.supplier|default:'-' }}</td><td class="row-actions"><a href="{% url 'catalog:ingredient_update' ingredient.pk %}">Sửa</a><form method="post" action="{% url 'catalog:ingredient_delete' ingredient.pk %}">{% csrf_token %}<button type="submit">Tắt</button></form></td></tr>{% empty %}<tr><td colspan="8">Chưa có nguyên liệu nào.</td></tr>{% endfor %}</tbody></table></div>
+<div class="ingredient-admin-page-container">
+    <!-- Topbar Banner -->
+    <div class="ingredient-page-header">
+        <div class="ingredient-page-title-wrap">
+            <span class="ingredient-page-icon">📦</span>
+            <div>
+                <h1 class="ingredient-page-title">Mặt hàng - Admin</h1>
+                <p class="ingredient-page-subtitle">Quản lý nguyên liệu, hàng hóa kho & định giá nhập dùng cho công thức món</p>
+            </div>
+        </div>
+        <div class="ingredient-page-top-actions">
+            <button type="button" class="btn-import-excel-ruby" id="page-btn-excel-import">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Nhập dữ liệu từ Excel
+            </button>
+            <a href="{% url 'catalog:ingredient_export_excel' %}" class="btn-export-excel-classic">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Xuất ra Excel
+            </a>
+            <button type="button" class="btn-ing-action btn-ing-add" id="page-btn-add-ing">+ Thêm mặt hàng</button>
+        </div>
+    </div>
+
+    <!-- Alert Banner -->
+    <div id="page-ing-alert" class="menu-alert-banner" style="margin-bottom: 16px;" hidden></div>
+
+    <!-- Main Card -->
+    <div class="ingredient-page-card">
+        <!-- Filter Toolbar -->
+        <div class="ingredient-toolbar">
+            <div class="ingredient-search-wrap">
+                <input type="text" id="page-ing-search" class="ingredient-search-input" value="{{ query }}" placeholder="🔍 Tìm tên mặt hàng hoặc mã...">
+                <select id="page-ing-group-filter" class="ingredient-group-select">
+                    <option value="">-- Tất cả nhóm --</option>
+                    {% for g in groups %}
+                    <option value="{{ g }}" {% if g == current_group %}selected{% endif %}>{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ingredient-action-buttons">
+                <button type="button" class="btn-ing-action btn-ing-edit" id="page-btn-edit-ing">Sửa</button>
+                <button type="button" class="btn-ing-action btn-ing-del text-danger" id="page-btn-del-ing">Xóa</button>
+            </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="ingredient-table-container">
+            <table class="ingredient-data-table" id="page-ing-table">
+                <thead>
+                    <tr>
+                        <th style="width: 18%;">Nhóm</th>
+                        <th style="width: 42%;">Tên mặt hàng</th>
+                        <th style="width: 12%; text-align: center;">ĐVT</th>
+                        <th style="width: 14%; text-align: right;">Giá nhập (đ)</th>
+                        <th style="width: 14%; text-align: right;">Cảnh báo tồn</th>
+                    </tr>
+                </thead>
+                <tbody id="page-ing-tbody">
+                    {% for ing in ingredients %}
+                    <tr data-id="{{ ing.id }}" class="ingredient-row">
+                        <td>{{ ing.group|default:'-' }}</td>
+                        <td><strong>{{ ing.name }}</strong> <span class="text-muted" style="font-size: 11px; margin-left: 6px;">({{ ing.code }})</span></td>
+                        <td style="text-align: center;">{{ ing.unit }}</td>
+                        <td style="text-align: right; font-weight: 600;">{{ ing.cost_vnd }}</td>
+                        <td style="text-align: right; color: #64748b;">{{ ing.minimum_stock_formatted }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="empty-table-row">Chưa có mặt hàng nào. Nhấn "+ Thêm mặt hàng" hoặc "Nhập dữ liệu từ Excel".</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Card Footer -->
+        <div class="ingredient-modal-footer">
+            <div class="ingredient-footer-status">
+                <span id="page-ing-count">{{ total_count }} mặt hàng</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submodal Thêm/Sửa Mặt hàng -->
+<div class="dining-submodal-overlay" id="page-submodal-ingredient" hidden>
+    <div class="dining-submodal-card" style="max-width: 520px;">
+        <div class="dining-submodal-header">
+            <h4 id="page-submodal-ing-title">Thêm mặt hàng mới</h4>
+            <button type="button" class="btn-submodal-close" id="page-submodal-ing-close">&times;</button>
+        </div>
+        <form id="page-form-ingredient">
+            <input type="hidden" id="page-ing-id">
+            <div class="dining-submodal-body">
+                <div class="form-row">
+                    <label>Nhóm mặt hàng</label>
+                    <input type="text" id="page-ing-group" class="form-input" list="page-ing-group-datalist" placeholder="Ví dụ: Nông sản, Pha chế, Đồ khô...">
+                    <datalist id="page-ing-group-datalist">
+                        {% for g in groups %}<option value="{{ g }}">{% endfor %}
+                    </datalist>
+                </div>
+                <div class="form-row">
+                    <label>Tên mặt hàng <span class="text-danger">*</span></label>
+                    <input type="text" id="page-ing-name" class="form-input" required placeholder="Ví dụ: Chanh quả, Đường trắng...">
+                </div>
+                <div class="form-row-2col">
+                    <div class="form-col">
+                        <label>Mã mặt hàng (tùy chọn)</label>
+                        <input type="text" id="page-ing-code" class="form-input" placeholder="Tự sinh nếu trống (MH001...)">
+                    </div>
+                    <div class="form-col">
+                        <label>Đơn vị tính (ĐVT) <span class="text-danger">*</span></label>
+                        <input type="text" id="page-ing-unit" class="form-input" value="Kg" required placeholder="Kg, Gram, Lít, Gói...">
+                    </div>
+                </div>
+                <div class="form-row-2col">
+                    <div class="form-col">
+                        <label>Giá nhập (đ)</label>
+                        <input type="text" id="page-ing-cost" class="form-input" value="0" placeholder="0">
+                    </div>
+                    <div class="form-col">
+                        <label>Cảnh báo tồn tối thiểu</label>
+                        <input type="number" step="0.001" min="0" id="page-ing-min-stock" class="form-input" value="0.000">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Nhà cung cấp / Ghi chú</label>
+                    <input type="text" id="page-ing-supplier" class="form-input" placeholder="Tên nhà cung cấp (tùy chọn)">
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-modal-cancel" id="page-submodal-ing-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-modal-save" id="page-btn-save-ing">Đồng ý</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Submodal Nhập dữ liệu từ Excel -->
+<div class="dining-submodal-overlay" id="page-submodal-ing-excel" hidden>
+    <div class="dining-submodal-card" style="max-width: 600px;">
+        <div class="dining-submodal-header">
+            <h4>Nhập dữ liệu Mặt hàng từ Excel</h4>
+            <button type="button" class="btn-submodal-close" id="page-submodal-ing-excel-close">&times;</button>
+        </div>
+        <form id="page-form-ing-excel">
+            <div class="dining-submodal-body">
+                <p class="modal-help-text" style="margin-bottom: 12px; font-size: 13px; color: #64748b; line-height: 1.5;">
+                    Bạn có thể tải lên file <strong>.csv</strong> hoặc sao chép và dán trực tiếp dữ liệu từ Excel.<br>
+                    <strong>Cấu trúc cột:</strong> <code>Nhóm | Tên mặt hàng | ĐVT | Giá nhập | Cảnh báo tồn</code>
+                </p>
+                <div class="form-row">
+                    <label>Chọn file CSV/Excel</label>
+                    <input type="file" id="page-ing-excel-file" class="form-input" accept=".csv, text/csv">
+                </div>
+                <div class="form-row">
+                    <label>Hoặc dán trực tiếp dữ liệu vào đây</label>
+                    <textarea id="page-ing-excel-text" class="form-textarea" rows="6" placeholder="Pha chế&#9;Cà phê Trung Nguyên&#9;Kg&#9;120000&#9;0&#10;Gia vị&#9;Đường trắng&#9;Kg&#9;27000&#9;0"></textarea>
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-modal-cancel" id="page-submodal-ing-excel-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-modal-save btn-modal-save-ruby" id="page-btn-submit-ing-excel">Nhập dữ liệu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const csrfToken = () => {
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? match[1] : '';
+        };
+
+        let selectedId = null;
+        let ingredientsData = [];
+
+        const alertBanner = document.getElementById('page-ing-alert');
+        const searchInput = document.getElementById('page-ing-search');
+        const groupFilter = document.getElementById('page-ing-group-filter');
+        const tbody = document.getElementById('page-ing-tbody');
+        const countSpan = document.getElementById('page-ing-count');
+
+        const submodalIng = document.getElementById('page-submodal-ingredient');
+        const submodalExcel = document.getElementById('page-submodal-ing-excel');
+
+        function showAlert(msg, type = 'success') {
+            if (!alertBanner) return;
+            alertBanner.textContent = msg;
+            alertBanner.className = `menu-alert-banner alert-${type}`;
+            alertBanner.hidden = false;
+            setTimeout(() => { alertBanner.hidden = true; }, 4000);
+        }
+
+        async function loadData() {
+            const q = searchInput.value.trim();
+            const g = groupFilter.value;
+            const params = new URLSearchParams();
+            if (q) params.set('q', q);
+            if (g) params.set('group', g);
+
+            try {
+                const res = await fetch(`/catalog/ingredients/api/list/?${params.toString()}`);
+                const data = await res.json();
+                ingredientsData = data.ingredients || [];
+                renderTable();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderTable() {
+            countSpan.textContent = `${ingredientsData.length} mặt hàng`;
+            if (ingredientsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-table-row">Không tìm thấy mặt hàng nào phù hợp.</td></tr>';
+                selectedId = null;
+                return;
+            }
+
+            tbody.innerHTML = ingredientsData.map(ing => `
+                <tr data-id="${ing.id}" class="ingredient-row ${selectedId === ing.id ? 'selected' : ''}">
+                    <td>${ing.group || '-'}</td>
+                    <td><strong>${ing.name}</strong> <span class="text-muted" style="font-size: 11px; margin-left: 6px;">(${ing.code})</span></td>
+                    <td style="text-align: center;">${ing.unit}</td>
+                    <td style="text-align: right; font-weight: 600;">${ing.cost_formatted}</td>
+                    <td style="text-align: right; color: #64748b;">${ing.minimum_stock_formatted}</td>
+                </tr>
+            `).join('');
+
+            // Row click event
+            tbody.querySelectorAll('.ingredient-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    tbody.querySelectorAll('.ingredient-row').forEach(r => r.classList.remove('selected'));
+                    row.classList.add('selected');
+                    selectedId = Number(row.dataset.id);
+                });
+                row.addEventListener('dblclick', () => {
+                    selectedId = Number(row.dataset.id);
+                    openEditModal();
+                });
+            });
+        }
+
+        function openAddModal() {
+            document.getElementById('page-submodal-ing-title').textContent = 'Thêm mặt hàng mới';
+            document.getElementById('page-ing-id').value = '';
+            document.getElementById('page-ing-group').value = groupFilter.value || '';
+            document.getElementById('page-ing-name').value = '';
+            document.getElementById('page-ing-code').value = '';
+            document.getElementById('page-ing-unit').value = 'Kg';
+            document.getElementById('page-ing-cost').value = '0';
+            document.getElementById('page-ing-min-stock').value = '0.000';
+            document.getElementById('page-ing-supplier').value = '';
+            submodalIng.hidden = false;
+        }
+
+        function openEditModal() {
+            const ing = ingredientsData.find(i => i.id === selectedId);
+            if (!ing) {
+                showAlert('Vui lòng chọn mặt hàng cần sửa.', 'error');
+                return;
+            }
+            document.getElementById('page-submodal-ing-title').textContent = 'Sửa mặt hàng';
+            document.getElementById('page-ing-id').value = ing.id;
+            document.getElementById('page-ing-group').value = ing.group || '';
+            document.getElementById('page-ing-name').value = ing.name;
+            document.getElementById('page-ing-code').value = ing.code;
+            document.getElementById('page-ing-unit').value = ing.unit;
+            document.getElementById('page-ing-cost').value = ing.cost_formatted;
+            document.getElementById('page-ing-min-stock').value = ing.minimum_stock_formatted;
+            document.getElementById('page-ing-supplier').value = ing.supplier || '';
+            submodalIng.hidden = false;
+        }
+
+        // Event listeners
+        searchInput?.addEventListener('input', () => { loadData(); });
+        groupFilter?.addEventListener('change', () => { loadData(); });
+
+        document.getElementById('page-btn-add-ing')?.addEventListener('click', openAddModal);
+        document.getElementById('page-btn-edit-ing')?.addEventListener('click', openEditModal);
+
+        document.getElementById('page-submodal-ing-close')?.addEventListener('click', () => { submodalIng.hidden = true; });
+        document.getElementById('page-submodal-ing-cancel')?.addEventListener('click', () => { submodalIng.hidden = true; });
+
+        // Save form
+        document.getElementById('page-form-ingredient')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                id: document.getElementById('page-ing-id').value || undefined,
+                group: document.getElementById('page-ing-group').value.trim(),
+                name: document.getElementById('page-ing-name').value.trim(),
+                code: document.getElementById('page-ing-code').value.trim(),
+                unit: document.getElementById('page-ing-unit').value.trim(),
+                average_cost: document.getElementById('page-ing-cost').value.trim(),
+                minimum_stock: document.getElementById('page-ing-min-stock').value.trim(),
+                supplier: document.getElementById('page-ing-supplier').value.trim(),
+            };
+
+            try {
+                const resp = await fetch('/catalog/ingredients/api/save/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+                    body: JSON.stringify(payload),
+                });
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.error || 'Lỗi khi lưu mặt hàng.');
+
+                submodalIng.hidden = true;
+                selectedId = res.ingredient.id;
+                showAlert(res.message);
+                await loadData();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        });
+
+        // Delete
+        document.getElementById('page-btn-del-ing')?.addEventListener('click', async () => {
+            const ing = ingredientsData.find(i => i.id === selectedId);
+            if (!ing) {
+                showAlert('Vui lòng chọn mặt hàng cần xóa.', 'error');
+                return;
+            }
+            if (!confirm(`Bạn có chắc muốn xóa mặt hàng "${ing.name}"?`)) return;
+
+            try {
+                const resp = await fetch(`/catalog/ingredients/api/delete/${ing.id}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken() },
+                });
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.error || 'Lỗi khi xóa.');
+
+                selectedId = null;
+                showAlert(res.message);
+                await loadData();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        });
+
+        // Excel Import
+        document.getElementById('page-btn-excel-import')?.addEventListener('click', () => {
+            submodalExcel.hidden = false;
+        });
+        document.getElementById('page-submodal-ing-excel-close')?.addEventListener('click', () => { submodalExcel.hidden = true; });
+        document.getElementById('page-submodal-ing-excel-cancel')?.addEventListener('click', () => { submodalExcel.hidden = true; });
+
+        document.getElementById('page-form-ing-excel')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('page-ing-excel-file');
+            const textInput = document.getElementById('page-ing-excel-text');
+            const formData = new FormData();
+
+            if (fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            } else if (textInput.value.trim()) {
+                formData.append('csv_text', textInput.value.trim());
+            } else {
+                showAlert('Vui lòng chọn file hoặc dán dữ liệu mặt hàng.', 'error');
+                return;
+            }
+
+            const btnSubmit = document.getElementById('page-btn-submit-ing-excel');
+            if (btnSubmit) btnSubmit.disabled = true;
+
+            try {
+                const resp = await fetch('/catalog/ingredients/import/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken() },
+                    body: formData,
+                });
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.error || 'Lỗi khi nhập dữ liệu.');
+
+                showAlert(res.message);
+                submodalExcel.hidden = true;
+                fileInput.value = '';
+                textInput.value = '';
+                await loadData();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            } finally {
+                if (btnSubmit) btnSubmit.disabled = false;
+            }
+        });
+
+        // Initial load
+        loadData();
+    })();
+</script>
 {% endblock %}

@@ -113,12 +113,13 @@
                         <th style="width: 95px;">Khu vực</th>
                         <th style="width: 80px;">Điểm bàn</th>
                         <th>Các món / Ghi chú</th>
+                        <th style="width: 85px;" class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for invoice in invoices %}
                     {% with order=invoice.order %}
-                    <tr class="{% if invoice.status == 'cancelled' %}row-cancelled{% endif %}">
+                    <tr class="{% if invoice.status == 'cancelled' %}row-cancelled{% endif %} invoice-row-clickable" data-code="{{ invoice.invoice_code }}" title="Nhấp đúp hoặc bấm Sửa để chỉnh sửa hóa đơn #{{ invoice.invoice_code }}">
                         <td><strong class="invoice-code-badge">#{{ invoice.invoice_code }}</strong></td>
                         <td class="text-muted">{{ invoice.paid_at|date:'d/m/Y h:i A' }}</td>
                         <td><span class="user-chip-cell">{{ invoice.cashier.get_full_name|default:invoice.cashier.username }}</span></td>
@@ -138,7 +139,7 @@
                         <td>
                             <span class="area-pill">
                                 {% if order and order.table and order.table.area %}
-                                    {{ order.table.area.name }}
+                                     {{ order.table.area.name }}
                                 {% elif order and order.order_type == 'takeaway' %}
                                     Mang về
                                 {% else %}
@@ -169,11 +170,16 @@
                                 <span class="order-note-text">- {{ order.note }}</span>
                             {% endif %}
                         </td>
+                        <td class="text-center" style="width: 85px;">
+                            <button type="button" class="btn-inv-row-edit" data-code="{{ invoice.invoice_code }}" title="Sửa hóa đơn #{{ invoice.invoice_code }}">
+                                ✏️ Sửa
+                            </button>
+                        </td>
                     </tr>
                     {% endwith %}
                     {% empty %}
                     <tr>
-                        <td colspan="13">
+                        <td colspan="14">
                             <div class="empty-invoices-notice">
                                 <span>🧾</span>
                                 <p>Không tìm thấy hóa đơn nào phù hợp với bộ lọc đã chọn.</p>
@@ -221,4 +227,28 @@
         </div>
     </div>
 </div>
+
+{% include 'sales/invoice_edit_modal.html' %}
+<script src="{% static 'js/invoice_editor.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.invoice-row-clickable').forEach(tr => {
+        const code = tr.dataset.code;
+        tr.addEventListener('dblclick', () => {
+            if (window.openInvoiceEditor) window.openInvoiceEditor(code);
+        });
+        tr.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (window.openInvoiceEditor) window.openInvoiceEditor(code);
+        });
+    });
+    document.querySelectorAll('.btn-inv-row-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const code = btn.dataset.code;
+            if (window.openInvoiceEditor) window.openInvoiceEditor(code);
+        });
+    });
+});
+</script>
 {% endblock %}

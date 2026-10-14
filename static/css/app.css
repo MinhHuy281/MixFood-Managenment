@@ -579,45 +579,74 @@ input, select, textarea {
 }
 
 /* Table States */
-.table.occupied {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7);
-    border-color: #fde68a;
-    color: #92400e;
+
+/* 1. Mở bàn lần 1 (Đang mở / Đang gọi món): MÀU ĐỎ */
+.table.table-opening,
+.table.table-red,
+.table.selected:not(.kitchen-sent):not(.table-green) {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    border-color: #b91c1c !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.45) !important;
+    transform: translateY(-2px) scale(1.02);
 }
+.table.table-opening .table-card-status,
+.table.table-red .table-card-status,
+.table.selected:not(.kitchen-sent):not(.table-green) .table-card-status {
+    background: #ffffff !important;
+    box-shadow: 0 0 6px #ffffff !important;
+}
+.table.table-opening .table-card-name,
+.table.table-red .table-card-name,
+.table.selected:not(.kitchen-sent):not(.table-green) .table-card-name {
+    color: #ffffff !important;
+}
+.table.table-opening .table-card-sub,
+.table.table-red .table-card-sub,
+.table.selected:not(.kitchen-sent):not(.table-green) .table-card-sub {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* 2. Khi thêm món xong hết / gửi bếp / đang phục vụ món: MÀU XANH */
+.table.kitchen-sent,
+.table.table-green,
+.table.occupied {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    border-color: #047857 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45) !important;
+}
+.table.kitchen-sent .table-card-status,
+.table.table-green .table-card-status,
 .table.occupied .table-card-status {
-    background: #f59e0b;
-    box-shadow: 0 0 6px #f59e0b;
+    background: #ffffff !important;
+    box-shadow: 0 0 6px #ffffff !important;
+}
+.table.kitchen-sent .table-card-name,
+.table.table-green .table-card-name,
+.table.occupied .table-card-name {
+    color: #ffffff !important;
+}
+.table.kitchen-sent .table-card-sub,
+.table.table-green .table-card-sub,
+.table.occupied .table-card-sub {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Khi bàn xanh đang được click chọn */
+.table.selected.kitchen-sent,
+.table.selected.table-green,
+.table.selected.occupied {
+    transform: translateY(-2px) scale(1.03);
+    outline: 2px solid #34d399;
+    outline-offset: 1px;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.55) !important;
 }
 
 .table.preview {
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), var(--shadow-sm);
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), var(--shadow-sm);
     transform: translateY(-1px);
-}
-
-.table.selected {
-    background: linear-gradient(135deg, #10b981, #059669) !important;
-    border-color: #047857 !important;
-    color: var(--white) !important;
-    box-shadow: 0 8px 16px -2px rgba(16, 185, 129, 0.4) !important;
-    transform: translateY(-3px) scale(1.02);
-}
-.table.selected .table-card-status {
-    background: var(--white);
-    box-shadow: 0 0 8px var(--white);
-}
-.table.selected .table-card-sub {
-    color: rgba(255, 255, 255, 0.85);
-}
-
-.table.kitchen-sent {
-    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-    border-color: #6ee7b7;
-    color: #065f46;
-}
-.table.kitchen-sent .table-card-status {
-    background: #10b981;
-    box-shadow: 0 0 6px #10b981;
 }
 
 .table.reserved {
@@ -1687,68 +1716,91 @@ input, select, textarea {
 }
 
 .activity-heading {
-    height: 32px;
+    height: 34px;
     display: grid;
-    grid-template-columns: 80px 110px 1fr 110px;
+    grid-template-columns: 85px 125px 1fr 140px;
     align-items: center;
-    padding: 0 12px;
-    background: var(--slate-100);
-    color: var(--slate-500);
+    padding: 0 14px;
+    background: #f8fafc;
+    color: #475569;
     font-family: var(--font-heading);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     border-bottom: 1px solid var(--border-subtle);
 }
 
 .activity-scroll {
     flex: 1;
     overflow-y: auto;
+    background: #ffffff;
 }
 
 .activity-row {
     display: grid;
-    grid-template-columns: 80px 110px 1fr 110px;
+    grid-template-columns: 85px 125px 1fr 140px;
     align-items: center;
-    padding: 6px 12px;
-    font-size: 11px;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    padding: 8px 14px;
+    font-size: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
 }
 
 .activity-row:hover {
-    background: var(--white);
+    background: #f8fafc;
 }
 
 .activity-time {
-    color: var(--slate-400);
-    font-size: 10px;
+    color: #64748b;
+    font-size: 11px;
 }
 
-.activity-badge {
-    display: inline-block;
-    padding: 1px 7px;
-    border-radius: var(--radius-full);
-    font-size: 10px;
+.activity-event-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-size: 11.5px;
     font-weight: 600;
-    text-align: center;
+    line-height: 1.4;
     width: fit-content;
 }
 
-.badge-payment { background: var(--brand-primary-light); color: var(--brand-primary); }
-.badge-delete { background: var(--accent-rose-light); color: var(--accent-rose); }
-.badge-update { background: var(--accent-amber-light); color: var(--accent-amber); }
-
-.activity-desc {
-    color: var(--slate-700);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.activity-event-chip.event-payment {
+    background: #dcfce7;
+    color: #15803d;
 }
 
-.activity-actor {
-    color: var(--slate-600);
+.activity-event-chip.event-edit {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.activity-event-chip.event-delete {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.activity-event-chip.event-cancel {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.activity-event-chip.event-other {
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 700;
+}
+
+.activity-desc-text {
+    color: #1e293b;
+    font-size: 12.5px;
+}
+
+.activity-actor-text {
+    color: #334155;
     font-weight: 600;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 /* --------------------------------------------------------------------------
@@ -4788,5 +4840,1449 @@ input, select, textarea {
     background: var(--slate-50);
     border-top: 1px solid var(--border);
 }
+
+/* ==========================================================================
+   16. MẶT HÀNG - ADMIN & ĐỊNH LƯỢNG NGUYÊN LIỆU (SAAS POS 2026)
+   ========================================================================== */
+
+/* Overlays with explicit [hidden] handling */
+.ingredient-admin-modal-overlay,
+.recipe-admin-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(15, 23, 42, 0.68);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.ingredient-admin-modal-overlay[hidden],
+.recipe-admin-modal-overlay[hidden] {
+    display: none !important;
+}
+
+/* Window Containers */
+.ingredient-admin-modal-window {
+    width: 960px;
+    max-width: 96vw;
+    max-height: 90vh;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.recipe-admin-modal-window {
+    width: 1200px;
+    max-width: 96vw;
+    height: 88vh;
+    max-height: 840px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScaleUp {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Modal Topbars */
+.ingredient-modal-topbar,
+.recipe-modal-topbar {
+    height: 48px;
+    padding: 0 16px 0 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.ingredient-modal-title,
+.recipe-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    font-family: var(--font-heading);
+}
+
+.ingredient-title-text,
+.recipe-modal-title-text {
+    letter-spacing: -0.2px;
+}
+
+.ingredient-modal-top-actions,
+.recipe-modal-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Ruby Gradient Button for Excel Import */
+.btn-import-excel-ruby {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #881337 0%, #9f1239 100%);
+    border: 1px solid #701a2b;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(136, 19, 55, 0.25);
+    transition: all 0.15s ease;
+}
+
+.btn-import-excel-ruby:hover {
+    background: linear-gradient(135deg, #9f1239 0%, #be123c 100%);
+    box-shadow: 0 3px 8px rgba(159, 18, 57, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-modal-save-ruby {
+    background: linear-gradient(135deg, #881337 0%, #9f1239 100%) !important;
+    color: #fff !important;
+}
+
+/* Classic Gray Button for Export */
+.btn-export-excel-classic {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #334155;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-export-excel-classic:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.ingredient-modal-close-btn,
+.recipe-modal-close-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.ingredient-modal-close-btn:hover,
+.recipe-modal-close-btn:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Modal Body */
+.ingredient-modal-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Toolbar */
+.ingredient-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.ingredient-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 480px;
+}
+
+.ingredient-search-input {
+    flex: 1;
+    height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: none;
+    transition: border 0.15s ease;
+}
+
+.ingredient-search-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.ingredient-group-select {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: none;
+    background: #ffffff;
+    color: #334155;
+}
+
+.ingredient-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Action Buttons (Thêm, Sửa, Xóa) matching exact reference image */
+.btn-ing-action {
+    min-width: 68px;
+    height: 32px;
+    padding: 0 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #334155;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-ing-action:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.btn-ing-add {
+    background: #ffffff;
+}
+
+.btn-ing-del.text-danger:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+/* Data Table with Clean Grid */
+.ingredient-table-container {
+    flex: 1;
+    min-height: 280px;
+    max-height: 480px;
+    overflow-y: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+.ingredient-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+.ingredient-data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 700;
+    padding: 9px 12px;
+    border-bottom: 1px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.ingredient-data-table thead th:last-child {
+    border-right: none;
+}
+
+.ingredient-data-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    color: #1e293b;
+}
+
+.ingredient-data-table tbody td:last-child {
+    border-right: none;
+}
+
+.ingredient-data-table tbody tr {
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.ingredient-data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.ingredient-data-table tbody tr.selected {
+    background: #eff6ff !important;
+    border-left: 3px solid #2563eb;
+}
+
+.ingredient-data-table tbody tr.selected td {
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+.empty-table-row {
+    text-align: center;
+    padding: 40px 16px !important;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Footer */
+.ingredient-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    margin-top: 4px;
+    flex-shrink: 0;
+}
+
+.ingredient-footer-status {
+    font-size: 12.5px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   RECIPES SPLIT VIEW (2-COLUMN GRID)
+   ========================================================================== */
+.recipe-modal-body {
+    padding: 0;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.recipe-split-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
+/* Column Left: Dishes List */
+.recipe-col-dishes {
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.recipe-col-header {
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.recipe-col-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.recipe-col-subtitle {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.recipe-filter-wrap {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.recipe-search-input {
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12.5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: none;
+}
+
+.recipe-search-input:focus {
+    border-color: #2563eb;
+}
+
+.recipe-cat-select {
+    width: 100%;
+    height: 30px;
+    padding: 0 8px;
+    font-size: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    outline: none;
+}
+
+.recipe-dish-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.recipe-dish-item {
+    padding: 10px 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.recipe-dish-item:hover {
+    border-color: #93c5fd;
+    background: #f0fdf4;
+}
+
+.recipe-dish-item.active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+}
+
+.dish-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.dish-item-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.3;
+}
+
+.dish-item-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.badge-has-recipe {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.badge-no-recipe {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.dish-item-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+}
+
+.dish-item-code {
+    color: #64748b;
+}
+
+.dish-item-prices {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dish-price {
+    font-weight: 700;
+    color: #0284c7;
+}
+
+.dish-cost {
+    color: #d97706;
+    font-weight: 600;
+}
+
+/* Column Right: Recipe Details */
+.recipe-col-detail {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: #ffffff;
+    padding: 20px;
+}
+
+.recipe-detail-empty {
+    margin: auto;
+    text-align: center;
+    max-width: 360px;
+    color: #64748b;
+}
+
+.recipe-detail-empty .empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.recipe-detail-empty h3 {
+    font-size: 18px;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+
+/* Dish Overview Info Card */
+.recipe-dish-info-card {
+    padding: 16px 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.recipe-dish-info-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.badge-cat {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    background: #e2e8f0;
+    color: #475569;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.recipe-dish-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: var(--font-heading);
+}
+
+.recipe-dish-code {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.recipe-dish-kpi-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.recipe-kpi-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.kpi-label {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.kpi-val {
+    font-size: 15px;
+    font-weight: 800;
+    font-family: var(--font-heading);
+}
+
+.badge-margin {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 13px !important;
+}
+
+.margin-high { background: #dcfce7; color: #15803d; }
+.margin-med { background: #fef3c7; color: #b45309; }
+.margin-low { background: #fee2e2; color: #b91c1c; }
+
+/* Items Section Toolbar */
+.recipe-items-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.recipe-items-title-wrap h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 2px;
+}
+
+.recipe-items-title-wrap span {
+    font-size: 12px;
+}
+
+.recipe-items-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.recipe-table-scroll {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+}
+
+.recipe-items-table thead th {
+    background: #f8fafc;
+}
+
+.btn-del-item-icon {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.12s ease;
+}
+
+.btn-del-item-icon:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Cost Preview Box */
+.recipe-cost-preview-box {
+    padding: 12px 14px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    border: 1px dashed #cbd5e1;
+}
+
+.recipe-cost-preview-box .preview-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #475569;
+}
+
+/* Full Page Admin Containers */
+.ingredient-admin-page-container {
+    padding: 24px 32px;
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.ingredient-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.ingredient-page-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ingredient-page-icon {
+    font-size: 32px;
+}
+
+.ingredient-page-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: var(--font-heading);
+}
+
+.ingredient-page-subtitle {
+    font-size: 13.5px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.ingredient-page-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ingredient-page-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* --------------------------------------------------------------------------
+   14. ACTIVITY LOG / NHẬT KÝ HOẠT ĐỘNG (MODAL & FULL PAGE)
+   -------------------------------------------------------------------------- */
+.activity-admin-modal-container {
+    width: 95vw;
+    max-width: 1180px;
+    height: 88vh;
+    max-height: 840px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.35);
+}
+
+.activity-modal-header {
+    background: #0f172a;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #ffffff;
+    border-bottom: 1px solid #1e293b;
+}
+
+.activity-modal-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 12px;
+}
+
+.activity-date-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.pos-activity-date-input {
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #ffffff;
+    width: 115px;
+    text-align: center;
+    font-weight: 600;
+    color: #1e293b;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pos-activity-date-input:focus {
+    outline: none;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.activity-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.activity-select {
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #ffffff;
+    color: #1e293b;
+    font-weight: 500;
+    min-width: 155px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.activity-select:focus {
+    outline: none;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.btn-activity-filter {
+    padding: 6px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-activity-filter:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.btn-activity-filter.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+}
+
+.activity-search-input {
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 200px;
+    transition: border-color 0.15s;
+}
+
+.activity-search-input:focus {
+    outline: none;
+    border-color: #0284c7;
+}
+
+.activity-modal-table-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    background: #ffffff;
+}
+
+.activity-modal-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+.activity-modal-table th {
+    background: #f8fafc;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 10px 14px;
+    font-weight: 700;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+    border-right: 1px solid #f1f5f9;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.activity-modal-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #f8fafc;
+    vertical-align: middle;
+}
+
+.activity-modal-table tr:hover td {
+    background: #f8fafc;
+}
+
+.activity-action-tag {
+    font-weight: 700;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.activity-detail-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.activity-desc {
+    color: #1e293b;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.activity-reason-pill {
+    display: inline-block;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    width: fit-content;
+    margin-top: 2px;
+}
+
+.activity-actor-name {
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.activity-modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.activity-footer-summary {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.btn-activity-excel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    background: #107c41;
+    color: #ffffff;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
+    box-shadow: 0 2px 6px rgba(16, 124, 65, 0.25);
+}
+
+.btn-activity-excel:hover {
+    background: #0c5e31;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.btn-excel-green {
+    background: #107c41 !important;
+    color: #ffffff !important;
+    border: 1px solid #0c5e31 !important;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-excel-green:hover {
+    background: #0c5e31 !important;
+}
+
+.activity-empty-notice {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 13.5px;
+}
+
+/* Activity full page styling */
+.activity-page-container {
+    max-width: 1280px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+.activity-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.activity-page-header .header-titles h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: var(--font-heading);
+    margin: 0;
+}
+
+.activity-page-header .header-titles .muted {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.activity-page-header .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.activity-page-toolbar {
+    border-radius: 8px 8px 0 0;
+    border: 1px solid #e2e8f0;
+    border-bottom: none;
+}
+
+.activity-modal-table-container.page-table {
+    border: 1px solid #e2e8f0;
+    border-radius: 0 0 8px 8px;
+    min-height: 480px;
+    max-height: 68vh;
+}
+
+/* --------------------------------------------------------------------------
+   15. EDIT INVOICE / SỬA HÓA ĐƠN MODAL STYLES
+   -------------------------------------------------------------------------- */
+.invoice-editor-dialog {
+    width: 560px;
+    max-width: 95vw;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.4);
+}
+
+.invoice-editor-header {
+    background: #0f172a;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #ffffff;
+    border-bottom: 1px solid #1e293b;
+}
+
+.invoice-editor-header h3 {
+    font-size: 14.5px;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+}
+
+.invoice-editor-body {
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.inv-edit-meta-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.inv-edit-table-box {
+    font-size: 14px;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inv-edit-table-box .meta-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.inv-edit-table-box .meta-val {
+    color: #0284c7;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.inv-edit-meta-controls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.inv-edit-control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #475569;
+}
+
+.inv-edit-select {
+    padding: 5px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 13px;
+    background: #ffffff;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.inv-edit-select:focus {
+    outline: none;
+    border-color: #0284c7;
+}
+
+.inv-edit-table-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.inv-edit-table-scroll {
+    flex: 1;
+    max-height: 185px;
+    min-height: 130px;
+    overflow-y: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+}
+
+.inv-edit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.inv-edit-table th {
+    background: #f8fafc;
+    padding: 7px 10px;
+    font-weight: 700;
+    color: #475569;
+    border-bottom: 1px solid #cbd5e1;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.inv-edit-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.inv-edit-table tr.selected td {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+    font-weight: 600;
+}
+
+.inv-edit-table tr:hover td {
+    background: #f8fafc;
+}
+
+.inv-edit-side-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: flex-start;
+}
+
+.btn-inv-qty-side {
+    width: 34px;
+    height: 34px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 19px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #334155;
+    transition: all 0.15s ease;
+}
+
+.btn-inv-qty-side:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.btn-inv-qty-side:active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+
+.inv-edit-add-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.inv-edit-custom-row {
+    display: flex;
+    gap: 6px;
+}
+
+.inv-edit-input-custom {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 12.5px;
+}
+
+.inv-edit-input-custom-price {
+    width: 110px;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 12.5px;
+    text-align: right;
+}
+
+.btn-inv-find {
+    padding: 6px 12px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #334155;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.btn-inv-find:hover {
+    background: #e2e8f0;
+}
+
+.inv-edit-product-dropdown {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 12.5px;
+    background: #ffffff;
+    color: #1e293b;
+}
+
+.inv-edit-totals-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.inv-edit-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #334155;
+}
+
+.inv-edit-total-row .total-label {
+    font-weight: 500;
+}
+
+.inv-edit-total-row .total-val {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.inv-edit-calc-input {
+    width: 125px;
+    padding: 4px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.inv-edit-calc-input:focus {
+    outline: none;
+    border-color: #0284c7;
+}
+
+.final-total-row {
+    border-top: 1px dashed #cbd5e1;
+    padding-top: 8px;
+    margin-top: 2px;
+}
+
+.final-val {
+    font-size: 16px;
+    color: #0284c7 !important;
+    font-weight: 800;
+}
+
+.inv-edit-reason-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.inv-edit-reason-box label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.inv-edit-reason-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 12.5px;
+}
+
+.invoice-editor-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 8px;
+}
+
+.btn-confirm-edit {
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    padding: 8px 20px;
+    border-radius: 5px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    transition: opacity 0.15s;
+}
+
+.btn-confirm-edit:hover {
+    opacity: 0.92;
+}
+
+.btn-cancel-edit {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.btn-cancel-edit:hover {
+    background: #e2e8f0;
+}
+
+/* Invoice report rows & action button */
+.invoice-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.invoice-row-clickable:hover {
+    background-color: rgba(99, 102, 241, 0.08) !important;
+}
+.btn-inv-row-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #4f46e5;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-inv-row-edit:hover {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #4f46e5;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+}
+
+
+
+
 
 

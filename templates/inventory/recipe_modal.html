@@ -1,0 +1,205 @@
+<!-- Recipe Admin Modal (Định lượng nguyên liệu on POS Screen) -->
+<div class="recipe-admin-modal-overlay" id="pos-recipe-admin-modal" hidden>
+    <div class="recipe-admin-modal-window">
+        <!-- Topbar -->
+        <div class="recipe-modal-topbar">
+            <div class="recipe-modal-title">
+                <span class="recipe-modal-icon">⚖️</span>
+                <span class="recipe-modal-title-text">Định lượng nguyên liệu - Admin</span>
+            </div>
+            <div class="recipe-modal-top-actions">
+                <button type="button" class="btn-import-excel-ruby" id="modal-pos-btn-recipe-excel-import">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Nhập dữ liệu từ Excel
+                </button>
+                <a href="{% url 'inventory:recipe_export_excel' %}" class="btn-export-excel-classic" id="modal-pos-btn-recipe-export">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    Xuất ra Excel
+                </a>
+                <button type="button" class="recipe-modal-close-btn" id="pos-recipe-modal-close" title="Đóng">&times;</button>
+            </div>
+        </div>
+
+        <!-- Banner Toast -->
+        <div id="modal-pos-recipe-alert" class="menu-alert-banner" style="margin: 8px 18px 0;" hidden></div>
+
+        <!-- Body 2-Column Split -->
+        <div class="recipe-modal-body">
+            <div class="recipe-split-grid">
+                <!-- Left Column: Danh sách món ăn -->
+                <div class="recipe-col-dishes">
+                    <div class="recipe-col-header">
+                        <span class="recipe-col-title">Danh sách Món ăn</span>
+                        <span class="recipe-col-subtitle" id="modal-pos-recipe-dishes-count">0 món</span>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="recipe-filter-wrap">
+                        <input type="text" id="modal-pos-recipe-dish-search" class="recipe-search-input" placeholder="🔍 Tìm mã hoặc tên món...">
+                        <select id="modal-pos-recipe-cat-filter" class="recipe-cat-select">
+                            <option value="">-- Tất cả danh mục --</option>
+                        </select>
+                    </div>
+
+                    <!-- Dish List -->
+                    <div class="recipe-dish-list" id="modal-pos-recipe-dish-list">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Chi tiết công thức món đang chọn -->
+                <div class="recipe-col-detail">
+                    <!-- Placeholder khi chưa chọn món -->
+                    <div id="modal-pos-recipe-no-selection" class="recipe-detail-empty">
+                        <div class="empty-icon">🍳</div>
+                        <h3>Chưa chọn món ăn</h3>
+                        <p>Vui lòng chọn một món ăn từ danh sách bên trái để xem hoặc thiết lập định lượng nguyên liệu.</p>
+                    </div>
+
+                    <!-- Content khi đã chọn món -->
+                    <div id="modal-pos-recipe-selection-wrap" hidden>
+                        <!-- Dish Overview Header -->
+                        <div class="recipe-dish-info-card">
+                            <div class="recipe-dish-info-main">
+                                <span class="badge-cat" id="modal-pos-recipe-cat-badge">Khai vị</span>
+                                <h3 class="recipe-dish-name" id="modal-pos-recipe-dish-name">Tên món ăn</h3>
+                                <span class="recipe-dish-code" id="modal-pos-recipe-dish-code">KV01</span>
+                            </div>
+                            <div class="recipe-dish-kpi-group">
+                                <div class="recipe-kpi-item">
+                                    <span class="kpi-label">Đơn giá bán</span>
+                                    <span class="kpi-val text-primary" id="modal-pos-recipe-price">0 đ</span>
+                                </div>
+                                <div class="recipe-kpi-item">
+                                    <span class="kpi-label">Giá vốn định lượng</span>
+                                    <span class="kpi-val text-warning" id="modal-pos-recipe-cost">0 đ</span>
+                                </div>
+                                <div class="recipe-kpi-item">
+                                    <span class="kpi-label">Lợi nhuận gộp</span>
+                                    <span class="kpi-val text-success" id="modal-pos-recipe-profit">0 đ</span>
+                                </div>
+                                <div class="recipe-kpi-item">
+                                    <span class="kpi-label">Tỷ suất lãi</span>
+                                    <span class="kpi-val badge-margin" id="modal-pos-recipe-margin">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ingredients Section Header & Action -->
+                        <div class="recipe-items-toolbar">
+                            <div class="recipe-items-title-wrap">
+                                <h4>Nguyên liệu cấu thành (Định lượng cho 1 phần)</h4>
+                                <span class="text-muted" id="modal-pos-recipe-items-count">0 nguyên liệu</span>
+                            </div>
+                            <div class="recipe-items-actions">
+                                <button type="button" class="btn-ing-action btn-ing-add" id="modal-pos-btn-add-recipe-item">
+                                    + Thêm nguyên liệu
+                                </button>
+                                <button type="button" class="btn-ing-action btn-ing-del text-danger" id="modal-pos-btn-clear-recipe">
+                                    Xóa công thức
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Ingredients Table -->
+                        <div class="recipe-table-scroll">
+                            <table class="ingredient-data-table recipe-items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 5%; text-align: center;">#</th>
+                                        <th style="width: 20%;">Nhóm</th>
+                                        <th style="width: 32%;">Tên mặt hàng / Nguyên liệu</th>
+                                        <th style="width: 13%; text-align: right;">Định lượng</th>
+                                        <th style="width: 10%; text-align: center;">ĐVT</th>
+                                        <th style="width: 14%; text-align: right;">Thành tiền</th>
+                                        <th style="width: 6%; text-align: center;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modal-pos-recipe-items-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submodal: Thêm nguyên liệu vào công thức -->
+<div class="dining-submodal-overlay" id="pos-submodal-recipe-item" hidden>
+    <div class="dining-submodal-card" style="max-width: 500px;">
+        <div class="dining-submodal-header">
+            <h4>Thêm nguyên liệu vào món</h4>
+            <button type="button" class="btn-submodal-close" id="pos-submodal-recipe-item-close">&times;</button>
+        </div>
+        <form id="pos-form-recipe-item">
+            <div class="dining-submodal-body">
+                <div class="form-row">
+                    <label>Mặt hàng / Nguyên liệu <span class="text-danger">*</span></label>
+                    <select id="pos-recipe-item-ingredient" class="form-input" required>
+                        <option value="">-- Chọn mặt hàng từ kho --</option>
+                    </select>
+                </div>
+                <div class="form-row-2col">
+                    <div class="form-col">
+                        <label>Định lượng tiêu hao <span class="text-danger">*</span></label>
+                        <input type="number" step="0.001" min="0.001" id="pos-recipe-item-qty" class="form-input" required value="0.100">
+                    </div>
+                    <div class="form-col">
+                        <label>Đơn vị tính (ĐVT)</label>
+                        <input type="text" id="pos-recipe-item-unit" class="form-input" placeholder="Kg, Gram, Lít...">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="recipe-cost-preview-box">
+                        <div class="preview-line">
+                            <span>Đơn giá vốn nguyên liệu:</span>
+                            <strong id="pos-recipe-preview-unit-cost">0 đ</strong>
+                        </div>
+                        <div class="preview-line" style="margin-top: 4px;">
+                            <span>Chi phí vốn ước tính:</span>
+                            <strong class="text-primary" id="pos-recipe-preview-total-cost">0 đ</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-modal-cancel" id="pos-submodal-recipe-item-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-modal-save" id="pos-btn-save-recipe-item">Đồng ý</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Submodal: Nhập dữ liệu công thức từ Excel -->
+<div class="dining-submodal-overlay" id="pos-submodal-recipe-excel" hidden>
+    <div class="dining-submodal-card" style="max-width: 620px;">
+        <div class="dining-submodal-header">
+            <h4>Nhập dữ liệu Công thức định lượng từ Excel</h4>
+            <button type="button" class="btn-submodal-close" id="pos-submodal-recipe-excel-close">&times;</button>
+        </div>
+        <form id="pos-form-recipe-excel">
+            <div class="dining-submodal-body">
+                <p class="modal-help-text" style="margin-bottom: 12px; font-size: 13px; color: #64748b; line-height: 1.5;">
+                    Bạn có thể tải lên file <strong>.csv</strong> hoặc dán bảng tính Excel.<br>
+                    <strong>Cấu trúc cột:</strong> <code>Mã/Tên món | Mã/Tên nguyên liệu | Định lượng | ĐVT</code>
+                </p>
+                <div class="form-row">
+                    <label>Chọn file CSV/Excel</label>
+                    <input type="file" id="pos-recipe-excel-file" class="form-input" accept=".csv, text/csv">
+                </div>
+                <div class="form-row">
+                    <label>Hoặc dán trực tiếp dữ liệu</label>
+                    <textarea id="pos-recipe-excel-text" class="form-textarea" rows="6" placeholder="CF01&#9;Cà phê Trung Nguyên&#9;0.025&#9;Kg&#10;CF01&#9;Đường trắng&#9;0.015&#9;Kg"></textarea>
+                </div>
+            </div>
+            <div class="dining-submodal-footer">
+                <button type="button" class="btn-modal-cancel" id="pos-submodal-recipe-excel-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-modal-save btn-modal-save-ruby" id="pos-btn-submit-recipe-excel">Nhập dữ liệu</button>
+            </div>
+        </form>
+    </div>
+</div>
+

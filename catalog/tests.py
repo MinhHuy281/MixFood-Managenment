@@ -212,3 +212,112 @@ class MenuAdminTests(TestCase):
 		self.assertEqual(int(saved.price_2), 20000)
 		self.assertEqual(saved.price_vnd, '15.000')
 
+
+class IngredientAdminTests(TestCase):
+	def setUp(self):
+		self.user = get_user_model().objects.create_user(username='ingredient-admin-test', password='password123')
+		self.client.force_login(self.user)
+		self.ing1 = Ingredient.objects.create(
+			group='Pha chế',
+			code='MH001',
+			name='Chanh quả',
+			unit='Kg',
+			average_cost=35000,
+			minimum_stock=0,
+			is_active=True,
+		)
+		self.ing2 = Ingredient.objects.create(
+			group='Pha chế',
+			code='MH002',
+			name='Cà phê Trung Nguyên',
+			unit='Kg',
+			average_cost=120000,
+			minimum_stock=0,
+			is_active=True,
+		)
+
+	def test_ingredient_list_page_renders(self):
+		response = self.client.get(reverse('catalog:ingredients'))
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Mặt hàng - Admin')
+		self.assertContains(response, 'Chanh quả')
+		self.assertContains(response, 'Cà phê Trung Nguyên')
+
+	def test_ingredient_data_api(self):
+		response = self.client.get(reverse('catalog:ingredient_data_api'))
+		self.assertEqual(response.status_code, 200)
+		data = response.json()
+		self.assertEqual(data['total_count'], 2)
+		self.assertIn('groups', data)
+		self.assertIn('Pha chế', data['groups'])
+
+	def test_ingredient_save_api_create_and_update(self):
+		# Create
+		create_resp = self.client.post(
+			reverse('catalog:ingredient_save_api'),
+			data={
+				'group': 'Gia vị',
+				'name': 'Đường trắng',
+				'code': 'MH003',
+				'unit': 'Kg',
+				'average_cost': '27.000',
+				'minimum_stock': '0.000',
+			},
+			content_type='application/json',
+		)
+		self.assertEqual(create_resp.status_code, 200)
+		c_data = create_resp.json()
+		self.assertTrue(c_data['success'])
+		self.assertEqual(c_data['ingredient']['name'], 'Đường trắng')
+		self.assertEqual(c_data['ingredient']['cost_formatted'], '27.000')
+
+		ing3 = Ingredient.objects.get(code='MH003')
+		self.assertEqual(int(ing3.average_cost), 27000)
+
+		# Update
+		update_resp = self.client.post(
+			reverse('catalog:ingredient_save_api'),
+			data={
+				'id': ing3.id,
+				'group': 'Gia vị',
+				'name': 'Đường trắng Biên Hòa',
+				'code': 'MH003',
+				'unit': 'Kg',
+				'average_cost': '28.000',
+				'minimum_stock': '1.000',
+			},
+			content_type='application/json',
+		)
+		self.assertEqual(update_resp.status_code, 200)
+		ing3.refresh_from_db()
+		self.assertEqual(ing3.name, 'Đường trắng Biên Hòa')
+		self.assertEqual(int(ing3.average_cost), 28000)
+
+	def test_ingredient_delete_api(self):
+		response = self.client.post(reverse('catalog:ingredient_delete_api', args=[self.ing1.id]))
+		self.assertEqual(response.status_code, 200)
+		self.ing1.refresh_from_db()
+		self.assertFalse(self.ing1.is_active)
+
+	def test_ingredient_export_excel(self):
+		response = self.client.get(reverse('catalog:ingredient_export_excel'))
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8')
+		content = response.content.decode('utf-8-sig')
+		self.assertIn('Chanh quả', content)
+		self.assertIn('Cà phê Trung Nguyên', content)
+
+	def test_ingredient_import_excel(self):
+		csv_data = "Nông sản\t\tSả cây\tKg\t15000\t0\nGia vị\t\tTiêu đen\tKg\t180000\t0\n"
+		response = self.client.post(
+			reverse('catalog:ingredient_import_excel'),
+			data={'csv_text': csv_data},
+		)
+		self.assertEqual(response.status_code, 200)
+		data = response.json()
+		self.assertTrue(data['success'])
+		self.assertEqual(data['imported_count'], 2)
+		self.assertTrue(Ingredient.objects.filter(name='Sả cây').exists())
+		self.assertTrue(Ingredient.objects.filter(name='Tiêu đen').exists())
+
+

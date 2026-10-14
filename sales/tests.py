@@ -168,3 +168,161 @@ class InvoiceListTests(TestCase):
 		self.assertIn('00255', content)
 		self.assertIn('Tầng 2,14,TÝĐB (2)', content)
 
+
+class InvoiceEditTests(TestCase):
+	def setUp(self):
+		self.user = get_user_model().objects.create_user('cashier-editor', password='test-password')
+		self.sales_group = Group.objects.create(name='Sales')
+		self.user.groups.add(self.sales_group)
+		self.category = Category.objects.create(name='Đồ uống')
+		self.product1 = Product.objects.create(category=self.category, code='TYDB', name='Trà Ý Đặc Biệt', unit='Ly', price=35000)
+		self.product2 = Product.objects.create(category=self.category, code='CFD', name='Cà phê đen', unit='Ly', price=25000)
+		self.area = Area.objects.create(name='Tầng 1')
+		self.table = DiningTable.objects.create(area=self.area, name='1', code='T1-01')
+		self.client.force_login(self.user)
+
+		self.order = Order.objects.create(
+			order_code='ORD-EDIT-001',
+			table=self.table,
+			order_type=Order.OrderType.DINE_IN,
+			status=Order.Status.PAID,
+			subtotal=70000,
+			discount_amount=0,
+			total_amount=70000,
+			created_by=self.user,
+		)
+		self.item1 = OrderItem.objects.create(
+			order=self.order,
+			product=self.product1,
+			product_name=self.product1.name,
+			unit='Ly',
+			quantity=2,
+			unit_price=35000,
+			total_amount=70000,
+		)
+		self.invoice = Invoice.objects.create(
+			invoice_code='00064',
+			order=self.order,
+			cashier=self.user,
+			subtotal=70000,
+			total_amount=70000,
+			status=Invoice.Status.PAID,
+		)
+		self.payment = Payment.objects.create(
+			invoice=self.invoice,
+			method=Payment.Method.CASH,
+			amount=70000,
+			created_by=self.user,
+		)
+
+	def test_invoice_detail_api_success(self):
+		url = reverse('sales:invoice_detail_api', kwargs={'invoice_code': '00064'})
+		response = self.client.get(url)
+		self.assertEqual(response.status_code, 200)
+		data = response.json()
+		self.assertTrue(data['ok'])
+		self.assertEqual(data['invoice']['invoice_code'], '00064')
+		self.assertEqual(data['invoice']['table_name'], '1')
+		self.assertEqual(len(data['invoice']['items']), 1)
+		self.assertEqual(data['invoice']['items'][0]['product_name'], 'Trà Ý Đặc Biệt')
+		self.assertGreaterEqual(len(data['products']), 2)
+		self.assertGreaterEqual(len(data['cashiers']), 1)
+		self.assertGreaterEqual(len(data['payment_methods']), 4)
+
+	def test_invoice_detail_api_not_found(self):
+		url = reverse('sales:invoice_detail_api', kwargs={'invoice_code': '999999'})
+		response = self.client.get(url)
+		self.assertEqual(response.status_code, 404)
+		data = response.json()
+		self.assertFalse(data['ok'])
+
+	def test_edit_invoice_success_and_logs_activity(self):
+		from audit.models import ActivityLog
+
+		url = reverse('sales:edit_invoice')
+		payload = {
+			'invoice_code': '00064',
+			'cashier_id': self.user.pk,
+			'payment_method': Payment.Method.BANK,
+			'items': [
+				{
+					'product_id': self.product1.pk,
+					'product_name': self.product1.name,
+					'unit': 'Ly',
+					'unit_price': 35000,
+					'quantity': 1,
+					'discount_percent': 0,
+				},
+				{
+					'product_id': self.product2.pk,
+					'product_name': self.product2.name,
+					'unit': 'Ly',
+					'unit_price': 25000,
+					'quantity': 2,
+					'discount_percent': 0,
+				},
+			],
+			'surcharge_amount': 5000,
+			'discount_amount': 10000,
+			'tax_amount': 0,
+			'reason': 'Khách đổi món và yêu cầu thanh toán chuyển khoản',
+		}
+		response = self.client.post(url, data=json.dumps(payload), content_type='application/json')
+		self.assertEqual(response.status_code, 200)
+		data = response.json()
+		self.assertTrue(data['ok'])
+
+		# Verification in database
+		# Items: 35.000*1 + 25.000*2 = 85.000. Surcharge: 5.000. Discount: 10.000. Total = 80.000
+		self.invoice.refresh_from_db()
+		self.order.refresh_from_db()
+		self.payment.refresh_from_db()
+
+		self.assertEqual(self.order.subtotal, 85000)
+		self.assertEqual(self.order.surcharge_amount, 5000)
+		self.assertEqual(self.order.discount_amount, 10000)
+		self.assertEqual(self.order.total_amount, 80000)
+
+		self.assertEqual(self.invoice.subtotal, 85000)
+		self.assertEqual(self.invoice.surcharge_amount, 5000)
+		self.assertEqual(self.invoice.discount_amount, 10000)
+		self.assertEqual(self.invoice.total_amount, 80000)
+
+		self.assertEqual(self.payment.amount, 80000)
+		self.assertEqual(self.payment.method, Payment.Method.BANK)
+
+		# Check order items
+		self.assertEqual(self.order.items.count(), 2)
+
+		# Check audit log
+		log = ActivityLog.objects.filter(action=ActivityLog.Action.EDIT_INVOICE).latest('created_at')
+		self.assertIn('00064', log.description)
+		self.assertIn('Khách đổi món', log.description)
+		self.assertEqual(log.actor, self.user)
+
+	def test_edit_invoice_requires_reason(self):
+		url = reverse('sales:edit_invoice')
+		payload = {
+			'invoice_code': '00064',
+			'items': [{'product_id': self.product1.pk, 'product_name': self.product1.name, 'unit_price': 35000, 'quantity': 1}],
+			'reason': '',
+		}
+		response = self.client.post(url, data=json.dumps(payload), content_type='application/json')
+		self.assertEqual(response.status_code, 400)
+		data = response.json()
+		self.assertFalse(data['ok'])
+		self.assertIn('lý do', data['error'].lower())
+
+	def test_edit_invoice_requires_items(self):
+		url = reverse('sales:edit_invoice')
+		payload = {
+			'invoice_code': '00064',
+			'items': [],
+			'reason': 'Thử xóa hết món',
+		}
+		response = self.client.post(url, data=json.dumps(payload), content_type='application/json')
+		self.assertEqual(response.status_code, 400)
+		data = response.json()
+		self.assertFalse(data['ok'])
+
+

@@ -219,6 +219,11 @@
                     </select>
                 </div>
 
+                <div class="form-group">
+                    <label for="form-dish-reason">Lý do thay đổi <span class="text-muted">(lưu vào nhật ký)</span></label>
+                    <input type="text" id="form-dish-reason" placeholder="Nhập lý do thêm hoặc sửa món...">
+                </div>
+
                 <div class="form-actions-row">
                     <button type="submit" class="btn-submit-dish" id="btn-submit-dish" style="background-color: #059669 !important; background: linear-gradient(135deg, #059669, #047857) !important; color: #ffffff !important; border: 1px solid #047857 !important;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg>
@@ -235,6 +240,31 @@
                 </div>
             </form>
         </div>
+    <!-- Modal: Xác nhận xóa món ăn kèm Lý do -->
+<div class="menu-modal-backdrop" id="modal-delete-dish-confirm" hidden>
+    <div class="menu-modal-dialog" style="max-width: 460px;">
+        <div class="menu-modal-header" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff;">
+            <div class="modal-title-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <h3 style="color: #fff;">Xác nhận xóa món ăn</h3>
+            </div>
+            <button type="button" class="modal-close" id="modal-delete-dish-close" style="color: #fff;">×</button>
+        </div>
+        <form id="form-delete-dish-confirm">
+            <div class="menu-modal-body" style="padding: 20px;">
+                <p style="margin-bottom: 12px; font-size: 14px; color: var(--slate-700);">
+                    Bạn có chắc chắn muốn xóa món <strong id="modal-delete-target-dish-name" style="color: #dc2626;"></strong>?
+                </p>
+                <div class="form-group">
+                    <label for="modal-delete-target-reason" style="font-weight: 600; font-size: 13px;">Lý do xóa món <span class="required">*</span></label>
+                    <input type="text" id="modal-delete-target-reason" placeholder="Ví dụ: Ngừng kinh doanh, hết nguyên liệu dài hạn..." required style="width: 100%; padding: 8px 12px; border: 1px solid var(--slate-300); border-radius: 6px; font-size: 13px;">
+                </div>
+            </div>
+            <div class="menu-modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--slate-200); display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="secondary-button" id="modal-delete-dish-cancel">Bỏ qua</button>
+                <button type="submit" class="primary-button" id="btn-confirm-delete-dish" style="background: #dc2626; border-color: #b91c1c;">Xác nhận xóa</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -349,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formPrice2 = document.getElementById('form-dish-price-2');
     const formPrice3 = document.getElementById('form-dish-price-3');
     const formType = document.getElementById('form-dish-type');
+    const formReason = document.getElementById('form-dish-reason');
     const formAutoRecipe = document.getElementById('form-auto-recipe');
     const formTitle = document.getElementById('dish-form-title');
     const formModeBadge = document.getElementById('dish-form-mode-badge');
@@ -495,6 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formPrice2.value = formatVND(row.dataset.p2 || 0);
         formPrice3.value = formatVND(row.dataset.p3 || 0);
         formType.value = row.dataset.type || 'food';
+        if (formReason) formReason.value = '';
 
         formTitle.textContent = `Sửa món: ${row.dataset.name}`;
         formModeBadge.textContent = 'Đang sửa';
@@ -517,6 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formPrice2.value = '0';
         formPrice3.value = '0';
         formType.value = 'food';
+        if (formReason) formReason.value = '';
 
         formTitle.textContent = 'Thêm món mới';
         formModeBadge.textContent = 'Tạo mới';
@@ -636,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
             price_2: formPrice2.value.replace(/\./g, '').trim(),
             price_3: formPrice3.value.replace(/\./g, '').trim(),
             product_type: formType.value,
+            reason: formReason ? formReason.value.trim() : '',
             auto_recipe: formAutoRecipe.checked,
         };
 
@@ -667,29 +701,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Delete Dish
-    btnDelDish.addEventListener('click', async () => {
-        if (!selectedDishRow) return;
-        const id = selectedDishRow.dataset.id;
-        const name = selectedDishRow.dataset.name;
-        if (!confirm(`Bạn có chắc chắn muốn xóa món "${name}" khỏi thực đơn?`)) return;
+    // Delete Dish with Reason Confirmation Modal
+    const deleteDishModal = document.getElementById('modal-delete-dish-confirm');
+    const deleteDishCloseBtn = document.getElementById('modal-delete-dish-close');
+    const deleteDishCancelBtn = document.getElementById('modal-delete-dish-cancel');
+    const deleteDishForm = document.getElementById('form-delete-dish-confirm');
+    const deleteDishTargetName = document.getElementById('modal-delete-target-dish-name');
+    const deleteDishTargetReason = document.getElementById('modal-delete-target-reason');
 
-        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-        try {
-            const resp = await fetch(`/catalog/menu/api/delete-dish/${id}/`, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': csrfToken }
-            });
-            const res = await resp.json();
-            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi xóa món.');
-            showAlert(res.message);
-            selectedDishRow.remove();
-            resetDishForm();
-            filterDishes();
-        } catch (err) {
-            showAlert(err.message, true);
+    if (deleteDishCloseBtn) deleteDishCloseBtn.addEventListener('click', () => { if (deleteDishModal) deleteDishModal.hidden = true; });
+    if (deleteDishCancelBtn) deleteDishCancelBtn.addEventListener('click', () => { if (deleteDishModal) deleteDishModal.hidden = true; });
+
+    btnDelDish.addEventListener('click', () => {
+        if (!selectedDishRow) return;
+        const name = selectedDishRow.dataset.name;
+        const code = selectedDishRow.dataset.code;
+        if (deleteDishTargetName) deleteDishTargetName.textContent = `"${name}" (${code})`;
+        if (deleteDishTargetReason) {
+            deleteDishTargetReason.value = '';
+            setTimeout(() => deleteDishTargetReason.focus(), 100);
         }
+        if (deleteDishModal) deleteDishModal.hidden = false;
     });
+
+    if (deleteDishForm) {
+        deleteDishForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!selectedDishRow) return;
+            const id = selectedDishRow.dataset.id;
+            const reason = deleteDishTargetReason ? deleteDishTargetReason.value.trim() : '';
+
+            const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+            try {
+                const resp = await fetch(`/catalog/menu/api/delete-dish/${id}/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ reason: reason })
+                });
+                const res = await resp.json();
+                if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi xóa món.');
+                if (deleteDishModal) deleteDishModal.hidden = true;
+                showAlert(res.message);
+                selectedDishRow.remove();
+                resetDishForm();
+                filterDishes();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
+        });
+    }
 
     // Category Add & Edit Modals
     const catModal = document.getElementById('modal-category');

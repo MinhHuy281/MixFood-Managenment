@@ -1,7 +1,110 @@
 {% extends 'base.html' %}
-{% block title %}Lịch sử hoạt động | MixFood Manager{% endblock %}
+{% block title %}Nhật ký hoạt động - Admin | MixFood POS{% endblock %}
+
 {% block content %}
-<section class="list-header"><div><h1>Lịch sử hoạt động</h1><p class="muted">Theo dõi thao tác trên POS, kho và hệ thống.</p></div><a class="secondary-button" href="{% url 'dashboard:home' %}">Về POS</a></section>
-<form class="filter-bar" method="get"><input name="q" value="{{ query }}" placeholder="Tìm người dùng hoặc chi tiết..."><select name="action"><option value="">Tất cả thao tác</option>{% for value, label in actions %}<option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="primary-button" type="submit">Lọc</button></form>
-<div class="data-table"><table><thead><tr><th>Thời điểm</th><th>Người thực hiện</th><th>Hoạt động</th><th>Chi tiết</th><th>Đường dẫn</th><th>Trạng thái</th></tr></thead><tbody>{% for log in logs %}<tr><td>{{ log.created_at|date:'d/m/Y H:i:s' }}</td><td>{{ log.actor.username|default:'Hệ thống' }}</td><td>{{ log.get_action_display }}</td><td>{{ log.description }}</td><td>{{ log.path }}</td><td>{{ log.status_code }}</td></tr>{% empty %}<tr><td colspan="6">Chưa có lịch sử hoạt động.</td></tr>{% endfor %}</tbody></table></div>
+<div class="activity-page-container">
+    <div class="list-header activity-page-header">
+        <div class="header-titles">
+            <h1>Nhật ký hoạt động - {{ request.user.get_username|default:"Admin" }}</h1>
+            <p class="muted">Theo dõi toàn bộ lịch sử thao tác bán hàng, thực đơn, kho và hệ thống POS.</p>
+        </div>
+        <div class="header-actions">
+            <a class="secondary-button" href="{% url 'dashboard:home' %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Về màn hình POS
+            </a>
+            <a href="{% url 'audit:activity_export_excel' %}?from_date={{ from_date }}&to_date={{ to_date }}&action={{ selected_action }}&actor_id={{ selected_actor }}&q={{ search_query }}{% if is_order_log %}&order_log=1{% endif %}" class="primary-button btn-excel-green">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Xuất ra Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form class="activity-modal-toolbar activity-page-toolbar" method="get">
+        <div class="activity-date-range">
+            <label for="page-date-from">Từ</label>
+            <div class="date-input-wrap">
+                <input type="text" id="page-date-from" name="from_date" value="{{ from_date }}" class="pos-activity-date-input" placeholder="dd/mm/yyyy">
+            </div>
+            <label for="page-date-to">Đến</label>
+            <div class="date-input-wrap">
+                <input type="text" id="page-date-to" name="to_date" value="{{ to_date }}" class="pos-activity-date-input" placeholder="dd/mm/yyyy">
+            </div>
+        </div>
+
+        <div class="activity-filters">
+            <select name="action" class="activity-select" onchange="this.form.submit()">
+                <option value="">&lt;Loại hoạt động&gt;</option>
+                {% for value, label in actions %}
+                <option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="actor_id" class="activity-select" onchange="this.form.submit()">
+                <option value="">&lt;Nhân viên&gt;</option>
+                {% for u in staff_users %}
+                <option value="{{ u.id }}" {% if selected_actor == u.id|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                {% endfor %}
+            </select>
+
+            <a href="?order_log={% if is_order_log %}0{% else %}1{% endif %}&from_date={{ from_date }}&to_date={{ to_date }}" class="btn-activity-filter {% if is_order_log %}active{% endif %}">
+                Nhật ký gọi món
+            </a>
+
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Tìm kiếm chi tiết, lý do..." class="activity-search-input">
+            <button class="primary-button" type="submit">Lọc</button>
+            {% if selected_action or selected_actor or search_query or is_order_log %}
+            <a href="{% url 'audit:activity' %}" class="secondary-button" style="text-decoration:none;">Xóa lọc</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <!-- Table -->
+    <div class="activity-modal-table-container page-table">
+        <table class="activity-modal-table">
+            <thead>
+                <tr>
+                    <th style="width: 175px;">Thời điểm</th>
+                    <th style="width: 175px;">Hoạt động</th>
+                    <th>Chi tiết</th>
+                    <th style="width: 160px;">Thực hiện</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="text-muted" style="white-space: nowrap;">{{ log.formatted_time }}</td>
+                    <td>
+                        <span class="activity-action-tag" style="color: {{ log.action_color }};">
+                            ● {{ log.get_action_display }}
+                        </span>
+                    </td>
+                    <td class="activity-detail-cell">
+                        <span class="activity-desc">{{ log.description }}</span>
+                        {% if log.reason %}
+                        <span class="activity-reason-pill">Lý do: {{ log.reason }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong class="activity-actor-name">{{ log.display_actor }}</strong>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="activity-empty-notice">Không có hoạt động nào trong khoảng thời gian đã chọn.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="activity-modal-footer">
+        <span class="activity-footer-summary">Hiển thị <strong>{{ logs|length }}</strong> / <strong>{{ total_count }}</strong> bản ghi</span>
+        <a href="{% url 'audit:activity_export_excel' %}?from_date={{ from_date }}&to_date={{ to_date }}&action={{ selected_action }}&actor_id={{ selected_actor }}&q={{ search_query }}{% if is_order_log %}&order_log=1{% endif %}" class="btn-activity-excel">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            Xuất ra Excel
+        </a>
+    </div>
+</div>
 {% endblock %}

@@ -67,6 +67,7 @@ class Product(models.Model):
 
 
 class Ingredient(models.Model):
+	group = models.CharField('Nhóm mặt hàng', max_length=100, blank=True, default='')
 	code = models.CharField('Mã nguyên liệu', max_length=30, unique=True)
 	name = models.CharField('Tên nguyên liệu', max_length=150)
 	unit = models.CharField('Đơn vị tính', max_length=30, default='Kg')
@@ -79,8 +80,12 @@ class Ingredient(models.Model):
 	updated_at = models.DateTimeField(auto_now=True)
 
 	class Meta:
-		ordering = ('name',)
-		indexes = [models.Index(fields=('name', 'is_active')), models.Index(fields=('current_stock', 'minimum_stock'))]
+		ordering = ('group', 'name')
+		indexes = [
+			models.Index(fields=('name', 'is_active')),
+			models.Index(fields=('group', 'is_active')),
+			models.Index(fields=('current_stock', 'minimum_stock')),
+		]
 		verbose_name = 'Nguyên liệu'
 		verbose_name_plural = 'Nguyên liệu'
 
@@ -88,5 +93,18 @@ class Ingredient(models.Model):
 	def is_low_stock(self):
 		return self.current_stock <= self.minimum_stock
 
+	@property
+	def cost_vnd(self):
+		return f'{self.average_cost:,.0f}'.replace(',', '.')
+
+	@property
+	def minimum_stock_formatted(self):
+		return f'{self.minimum_stock:.3f}'
+
+	@property
+	def current_stock_formatted(self):
+		return f'{self.current_stock:.3f}'
+
 	def __str__(self):
 		return f'{self.code} - {self.name}'
+
