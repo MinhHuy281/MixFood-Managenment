@@ -7,18 +7,18 @@ class ActivityLogMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        manual_audit_paths = ('/invoices/edit/', '/invoices/delete/')
-        if request.method == 'POST' and not request.path.endswith(manual_audit_paths) and getattr(request, 'user', None) and request.user.is_authenticated:
-            action = ActivityLog.Action.PAYMENT if request.path.endswith('/checkout/') else ActivityLog.Action.OTHER
-            description = f'{request.method} {request.path}'
-            if action == ActivityLog.Action.PAYMENT:
-                description = 'Thực hiện thanh toán tại POS'
+        if (
+            request.method == 'POST'
+            and request.path.startswith('/catalog/categories/')
+            and getattr(request, 'user', None)
+            and request.user.is_authenticated
+        ):
             ActivityLog.objects.create(
                 actor=request.user,
-                action=action,
+                action=ActivityLog.Action.MENU_UPDATE,
                 method=request.method,
                 path=request.path[:255],
-                description=description,
+                description='Cập nhật danh mục thực đơn',
                 status_code=response.status_code,
                 ip_address=self._get_ip(request),
             )

@@ -25,11 +25,11 @@
         <div class="activity-date-range">
             <label for="page-date-from">Từ</label>
             <div class="date-input-wrap">
-                <input type="text" id="page-date-from" name="from_date" value="{{ from_date }}" class="pos-activity-date-input" placeholder="dd/mm/yyyy">
+                <input type="date" id="page-date-from" name="from_date" value="{{ from_date }}" class="pos-activity-date-input filter-input-date" onchange="this.form.submit()">
             </div>
             <label for="page-date-to">Đến</label>
             <div class="date-input-wrap">
-                <input type="text" id="page-date-to" name="to_date" value="{{ to_date }}" class="pos-activity-date-input" placeholder="dd/mm/yyyy">
+                <input type="date" id="page-date-to" name="to_date" value="{{ to_date }}" class="pos-activity-date-input filter-input-date" onchange="this.form.submit()">
             </div>
         </div>
 
@@ -81,13 +81,13 @@
                         </span>
                     </td>
                     <td class="activity-detail-cell">
-                        <span class="activity-desc">{{ log.description }}</span>
-                        {% if log.reason %}
+                        <span class="activity-desc" style="color: {{ log.action_color }}; font-weight: 500;">{{ log.description }}</span>
+                        {% if log.reason and log.action != 'edit_invoice' and log.action != 'delete_invoice' %}
                         <span class="activity-reason-pill">Lý do: {{ log.reason }}</span>
                         {% endif %}
                     </td>
                     <td>
-                        <strong class="activity-actor-name">{{ log.display_actor }}</strong>
+                        <strong class="activity-actor-name" style="color: {{ log.action_color }};">{{ log.display_actor }}</strong>
                     </td>
                 </tr>
                 {% empty %}

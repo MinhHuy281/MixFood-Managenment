@@ -97,6 +97,15 @@ class Invoice(models.Model):
 	def __str__(self):
 		return self.invoice_code
 
+	@classmethod
+	def next_invoice_code(cls):
+		existing_codes = set(cls.objects.values_list('invoice_code', flat=True))
+		numeric_vals = [int(c) for c in existing_codes if c and str(c).isdigit()]
+		next_num = (max(numeric_vals) if numeric_vals else cls.objects.count()) + 1
+		while f'{next_num:04d}' in existing_codes:
+			next_num += 1
+		return f'{next_num:04d}'
+
 
 class Shift(models.Model):
 	class Status(models.TextChoices):

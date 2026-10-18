@@ -160,7 +160,7 @@
                     <button type="button" class="dropdown-action report-action" data-report="customer-revenue">
                         <span class="dropdown-icon">👑</span> Doanh thu theo khách
                     </button>
-                    <a href="{% url 'dashboard:reports' %}" role="menuitem">
+                    <a href="#" role="menuitem" id="open-sales-stats-menu" class="dropdown-action">
                         <span class="dropdown-icon">📊</span> Thống kê bán hàng
                     </a>
                     <a href="{% url 'sales:invoices' %}" role="menuitem" id="open-invoice-report-menu-detail" class="dropdown-action">
@@ -251,7 +251,7 @@
         </aside>
 
         <!-- COLUMN 2: CURRENT ORDER TICKET / CART -->
-        <section class="order-column" id="order-column" data-current-user="{{ user.get_username }}">
+        <section class="order-column" id="order-column" data-current-user="{{ user.get_full_name|default:user.get_username }}" data-table-action-url="{% url 'sales:table_action_api' %}">
             <!-- Ticket Header -->
             <div class="order-heading">
                 <div class="order-heading-main">
@@ -283,7 +283,7 @@
                     </div>
                     <div class="meta-chip">
                         <span class="meta-label">Thu ngân:</span>
-                        <b id="order-requested-by" class="meta-value">{{ user.get_username }}</b>
+                        <b id="order-requested-by" class="meta-value">{{ user.get_full_name|default:user.get_username }}</b>
                     </div>
                 </div>
             </div>
@@ -339,12 +339,26 @@
                 </button>
             </div>
 
-            <!-- Secondary Actions Toolbar -->
-            <div class="order-actions">
-                <button type="button" class="btn-tool"><span class="btn-tool-icon">🔄</span> Chuyển</button>
-                <button type="button" class="btn-tool"><span class="btn-tool-icon">📥</span> Nhập</button>
-                <button type="button" class="btn-tool"><span class="btn-tool-icon">🔗</span> Ghép</button>
-                <button type="button" class="btn-tool"><span class="btn-tool-icon">✂️</span> Tách</button>
+            <!-- Active Table Tool Mode Hint -->
+            <div class="table-tool-hint" id="table-tool-hint" hidden>
+                <span id="table-tool-hint-text">Chọn bàn đích trên sơ đồ bàn...</span>
+                <button type="button" id="table-tool-hint-cancel" class="btn-tool-hint-cancel">Hủy</button>
+            </div>
+
+            <!-- Secondary Actions When Previewing Empty/Reserved Table: Đặt chỗ / Hủy đặt -->
+            <div class="order-actions table-reserve-actions" id="table-reserve-actions" hidden>
+                <button type="button" class="btn-tool btn-tool-reserve" id="btn-table-reserve">
+                    <span class="btn-tool-icon">📌</span>
+                    <span id="btn-table-reserve-label">Đặt chỗ</span>
+                </button>
+            </div>
+
+            <!-- Secondary Actions Toolbar (When Table is Open/Serving) -->
+            <div class="order-actions" id="table-open-tools">
+                <button type="button" class="btn-tool" data-table-tool="transfer" id="btn-table-transfer"><span class="btn-tool-icon">🔄</span> Chuyển</button>
+                <button type="button" class="btn-tool" data-table-tool="import" id="btn-table-import"><span class="btn-tool-icon">📥</span> Nhập</button>
+                <button type="button" class="btn-tool" data-table-tool="combine" id="btn-table-combine"><span class="btn-tool-icon">🔗</span> Ghép</button>
+                <button type="button" class="btn-tool" data-table-tool="split" id="btn-table-split"><span class="btn-tool-icon">✂️</span> Tách</button>
             </div>
         </section>
 
@@ -447,14 +461,14 @@
                     <tbody>
                         {% for invoice in invoices %}
                         {% with first_item=invoice.order.items.all|first %}
-                        <tr data-invoice-code="{{ invoice.invoice_code }}" data-item-name="{{ first_item.product_name|default:'Chi tiết hóa đơn' }}" data-item-price="{{ first_item.unit_price|default:invoice.subtotal }}" data-item-quantity="{{ first_item.quantity|default:1 }}" title="Nhấn chuột phải hoặc nhấp đúp để sửa hóa đơn #{{ invoice.invoice_code }}">
+                        <tr data-invoice-code="{{ invoice.invoice_code }}" data-total-amount="{{ invoice.total_amount }}" data-item-name="{{ first_item.product_name|default:'Chi tiết hóa đơn' }}" data-item-price="{{ first_item.unit_price|default:invoice.subtotal }}" data-item-quantity="{{ first_item.quantity|default:1 }}" title="Nhấn chuột phải hoặc nhấp đúp để sửa hóa đơn #{{ invoice.invoice_code }}">
                             <td><strong class="invoice-badge-code">#{{ invoice.invoice_code }}</strong></td>
                             <td><span class="table-pill">{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}Mang về{% endif %}</span></td>
                             <td class="text-muted">{{ invoice.paid_at|date:'H:i' }}</td>
                             <td><span class="user-pill">{{ invoice.cashier.username }}</span></td>
                             <td class="text-right">{{ invoice.subtotal|vnd }} đ</td>
                             <td class="text-right text-discount">{% if invoice.discount_amount %}-{{ invoice.discount_amount|vnd }} đ{% else %}0 đ{% endif %}</td>
-                            <td class="text-right"><strong class="total-highlight">{{ invoice.total_amount|vnd }} đ</strong></td>
+                            <td class="text-right td-amount"><strong class="total-highlight">{{ invoice.total_amount|vnd }} đ</strong></td>
                             <td>
                                 {% for payment in invoice.payments.all %}
                                 <span class="payment-method-badge method-{{ payment.method }}">{{ payment.get_method_display }}</span>
@@ -483,35 +497,37 @@
             <div class="activity-panel">
                 <div class="activity-heading">
                     <span style="font-weight: 700; color: #475569; letter-spacing: 0.04em;">THỜI ĐIỂM</span>
-                    <span style="font-weight: 700; color: #475569; letter-spacing: 0.04em;">LOẠI SỰ KIỆN</span>
-                    <span style="font-weight: 700; color: #475569; letter-spacing: 0.04em;">CHI TIẾT HOẠT ĐỘNG</span>
-                    <span style="font-weight: 700; color: #475569; letter-spacing: 0.04em; text-align: right; padding-right: 12px;">NGƯỜI THỰC HIỆN</span>
+                    <span style="font-weight: 700; color: #475569; letter-spacing: 0.04em;">HOẠT ĐỘNG</span>
+                    <span style="font-weight: 700; color: #475569; letter-spacing: 0.04em;">CHI TIẾT</span>
+                    <span style="font-weight: 700; color: #475569; letter-spacing: 0.04em; text-align: right; padding-right: 12px;">THỰC HIỆN</span>
                 </div>
-                <div class="activity-scroll">
+                <div class="activity-scroll" id="pos-live-activity-scroll">
                     {% for log in activity_logs %}
-                    <div class="activity-row">
-                        <time class="activity-time" style="font-weight: 500; color: #64748b; font-size: 11.5px;">{{ log.created_at|date:'H:i:s' }}</time>
+                    <div class="activity-row" title="{{ log.full_detail }}">
+                        <time class="activity-time" style="font-weight: 600; color: {{ log.action_color|default:'#64748b' }}; font-size: 11.5px;">{{ log.created_at|date:'h:i A' }}</time>
                         <div>
-                            {% if log.action == 'payment' %}
-                            <span class="activity-event-chip event-payment">Thanh toán</span>
+                            {% if log.action == 'shift_close' or log.action == 'login' %}
+                            <span class="activity-event-chip event-payment">{{ log.get_action_display }}</span>
                             {% elif log.action == 'edit_invoice' or log.action == 'update' %}
                             <span class="activity-event-chip event-edit">Sửa hóa đơn</span>
                             {% elif log.action == 'delete_invoice' or log.action == 'delete' %}
                             <span class="activity-event-chip event-delete">Xóa hóa đơn</span>
-                            {% elif log.action == 'cancel_item' or log.action == 'return_item' %}
-                            <span class="activity-event-chip event-cancel">Hủy/Trả món</span>
+                            {% elif log.action == 'cancel_item' or log.action == 'delete_order' %}
+                            <span class="activity-event-chip event-delete">{{ log.get_action_display }}</span>
+                            {% elif log.action == 'return_item' or log.action == 'edit_price' %}
+                            <span class="activity-event-chip event-cancel">{{ log.get_action_display }}</span>
                             {% else %}
-                            <span class="activity-event-chip event-other">{{ log.get_action_display|default:'Khác' }}</span>
+                            <span class="activity-event-chip event-other" style="color: {{ log.action_color|default:'#1e293b' }}; font-weight: 700;">{{ log.get_action_display|default:'Hệ thống' }}</span>
                             {% endif %}
                         </div>
                         <div class="activity-detail-wrap" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            <span class="activity-desc-text" style="color: #1e293b; font-size: 12px;">{{ log.description }}</span>
-                            {% if log.reason %}
+                            <span class="activity-desc-text" style="color: {{ log.action_color|default:'#1e293b' }}; font-size: 12px; font-weight: 500;">{{ log.description }}</span>
+                            {% if log.reason and log.action != 'edit_invoice' and log.action != 'delete_invoice' %}
                             <span class="activity-reason-tag" style="display: inline-block; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 4px; padding: 0 6px; font-size: 11px; margin-left: 6px;">Lý do: {{ log.reason }}</span>
                             {% endif %}
                         </div>
                         <div style="text-align: right; padding-right: 12px;">
-                            <strong class="activity-actor-text" style="color: #475569; font-size: 12px; font-weight: 600;">{{ log.actor.username|default:log.actor_name|default:'admin' }}</strong>
+                            <strong class="activity-actor-text" style="color: {{ log.action_color|default:'#475569' }}; font-size: 12px; font-weight: 600;">{{ log.display_actor }}</strong>
                         </div>
                     </div>
                     {% empty %}
@@ -548,7 +564,7 @@
 <!-- CONTEXT MENU FOR INVOICE TABLE -->
 <div class="invoice-context-menu" id="invoice-context-menu" data-edit-url="{% url 'sales:edit_invoice' %}" data-delete-url="{% url 'sales:delete_invoice' %}" role="menu" hidden>
     <button type="button" data-invoice-action="print"><span class="menu-icon">🖨️</span> In lại hóa đơn</button>
-    <button type="button" data-invoice-action="change" disabled><span class="menu-icon">🔄</span> Tính lại tiền thừa</button>
+    <button type="button" data-invoice-action="change"><span class="menu-icon">🔄</span> Tính lại tiền thừa</button>
     <span class="dropdown-separator"></span>
     <button type="button" data-invoice-action="complete"><span class="menu-icon">✅</span> Hoàn tất thanh toán</button>
     <span class="dropdown-separator"></span>
@@ -667,27 +683,124 @@
 <!-- MODAL: EDIT INVOICE -->
 {% include 'sales/invoice_edit_modal.html' %}
 
-<!-- MODAL: DELETE INVOICE -->
-<div class="legacy-order-dialog invoice-reason-dialog" id="invoice-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-delete-title" hidden>
-    <div class="modern-dialog-backdrop"></div>
-    <div class="modern-dialog-container">
-        <div class="invoice-reason-title">
-            <div class="dialog-title-text">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                <span id="invoice-delete-title">Xóa hóa đơn</span>
+<!-- MODAL: SALES STATISTICS -->
+{% include 'sales/sales_statistics_modal.html' %}
+
+<!-- MODAL: TÍNH LẠI TIỀN THỪA (RECALCULATE CHANGE) -->
+<div class="menu-modal-backdrop sub-modal reason-sub-modal" id="invoice-change-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-change-title" hidden>
+    <div class="menu-modal-dialog inv-reason-popup-dialog inv-change-popup-dialog">
+        <div class="menu-modal-header inv-reason-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <polyline points="1 20 1 14 7 14"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                <h3 id="invoice-change-title">Tính lại tiền thừa - HĐ <span id="recalc-invoice-code">#0001</span></h3>
+            </div>
+            <button type="button" class="dialog-close" id="invoice-change-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="inv-reason-popup-body">
+            <div class="recalc-change-summary">
+                <span>Tổng tiền thanh toán:</span>
+                <strong id="recalc-invoice-total">0 đ</strong>
+            </div>
+            <div class="inv-reason-field-group">
+                <label for="recalc-customer-paid">Tiền khách đưa</label>
+                <input id="recalc-customer-paid" class="inv-edit-reason-input recalc-money-input" type="number" min="0" step="1000" value="0" autocomplete="off">
+            </div>
+            <div class="recalc-quick-cash" id="recalc-quick-cash">
+                <button type="button" data-cash="50000">50.000</button>
+                <button type="button" data-cash="100000">100.000</button>
+                <button type="button" data-cash="200000">200.000</button>
+                <button type="button" data-cash="500000">500.000</button>
+            </div>
+            <div class="inv-reason-field-group">
+                <label for="recalc-change-amount">Tiền thừa trả khách</label>
+                <input id="recalc-change-amount" class="inv-edit-reason-input recalc-change-output" type="text" value="0 đ" readonly>
+            </div>
+            <div class="inv-reason-popup-actions">
+                <button type="button" id="invoice-change-confirm" class="btn-reason-confirm">Xác nhận</button>
+                <button type="button" id="invoice-change-cancel" class="btn-reason-cancel">Hủy bỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: DELETE INVOICE (LÝ DO XÓA HÓA ĐƠN - ĐỒNG BỘ LÝ DO SỬA HÓA ĐƠN) -->
+<div class="menu-modal-backdrop sub-modal reason-sub-modal" id="invoice-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-delete-title" hidden>
+    <div class="menu-modal-dialog inv-reason-popup-dialog">
+        <div class="menu-modal-header inv-reason-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                <h3 id="invoice-delete-title">Lý do xóa hóa đơn</h3>
             </div>
             <button type="button" class="dialog-close" id="invoice-delete-close" aria-label="Đóng">&times;</button>
         </div>
-        <div class="invoice-reason-body">
-            <p class="warning-text">⚠️ Hóa đơn sau khi xác nhận sẽ được hủy và ghi nhật ký kiểm toán hệ thống.</p>
-            <label class="invoice-reason-toggle">
-                <input id="invoice-delete-reason-enabled" type="checkbox">
-                <span>Nhập lý do hủy hóa đơn</span>
-            </label>
-            <input id="invoice-delete-reason" class="invoice-reason-input" type="text" maxlength="255" placeholder="Lý do xóa hóa đơn..." hidden>
-            <div class="dialog-actions">
-                <button type="button" id="invoice-delete-confirm" class="btn-dialog-danger">Xác nhận hủy</button>
-                <button type="button" id="invoice-delete-cancel" class="btn-dialog-secondary">Bỏ qua</button>
+        <div class="inv-reason-popup-body">
+            <div class="inv-reason-field-group">
+                <label for="invoice-delete-reason">Nhập lý do</label>
+                <input id="invoice-delete-reason" class="inv-edit-reason-input" type="text" maxlength="255" placeholder="Nhập lý do xóa hóa đơn..." autocomplete="off">
+            </div>
+            <div class="inv-reason-popup-actions">
+                <button type="button" id="invoice-delete-confirm" class="btn-reason-confirm" disabled>Xác nhận</button>
+                <button type="button" id="invoice-delete-cancel" class="btn-reason-cancel">Hủy bỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: XÁC NHẬN CHUYỂN / NHẬP / GHÉP BÀN (NHƯ ẢNH MẪU) -->
+<div class="menu-modal-backdrop sub-modal reason-sub-modal" id="table-action-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="table-action-confirm-title" hidden>
+    <div class="menu-modal-dialog inv-reason-popup-dialog table-confirm-popup-dialog">
+        <div class="menu-modal-header inv-reason-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="17 1 21 5 17 9"/>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <polyline points="7 23 3 19 7 15"/>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+                <h3 id="table-action-confirm-title">Chuyển bàn</h3>
+            </div>
+            <button type="button" class="dialog-close" id="table-action-confirm-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="inv-reason-popup-body">
+            <p class="table-confirm-message" id="table-action-confirm-msg">Chuyển từ bàn 2 đến bàn 1, Nhấn OK để xác nhận!</p>
+            <div class="inv-reason-popup-actions">
+                <button type="button" id="table-action-confirm-ok" class="btn-reason-confirm">OK</button>
+                <button type="button" id="table-action-confirm-cancel" class="btn-reason-cancel">Hủy bỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: TÁCH BÀN (SPLIT TABLE) -->
+<div class="menu-modal-backdrop sub-modal reason-sub-modal" id="table-split-dialog" role="dialog" aria-modal="true" aria-labelledby="table-split-title" hidden>
+    <div class="menu-modal-dialog inv-reason-popup-dialog table-split-popup-dialog">
+        <div class="menu-modal-header inv-reason-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+                    <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>
+                </svg>
+                <h3 id="table-split-title">Tách bàn</h3>
+            </div>
+            <button type="button" class="dialog-close" id="table-split-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="inv-reason-popup-body">
+            <div class="split-table-header-info">
+                <span>Tách từ <strong id="split-source-table-name">Bàn -</strong> sang:</span>
+                <select id="split-target-table-select" class="modern-select split-target-select"></select>
+            </div>
+            <div class="split-items-list" id="split-items-list"></div>
+            <p class="table-confirm-message split-confirm-note" id="split-confirm-note">Chọn số lượng món cần tách và nhấn OK để xác nhận!</p>
+            <div class="inv-reason-popup-actions">
+                <button type="button" id="table-split-ok" class="btn-reason-confirm">OK</button>
+                <button type="button" id="table-split-cancel" class="btn-reason-cancel">Hủy bỏ</button>
             </div>
         </div>
     </div>
@@ -3331,7 +3444,7 @@
         const padZero = (n) => String(n).padStart(2, '0');
         const getTodayFormatted = () => {
             const now = new Date();
-            return `${padZero(now.getDate())}/${padZero(now.getMonth() + 1)}/${now.getFullYear()}`;
+            return `${now.getFullYear()}-${padZero(now.getMonth() + 1)}-${padZero(now.getDate())}`;
         };
 
         const escapeHtml = (str) => {
@@ -3396,7 +3509,8 @@
                 }
 
                 tbody.innerHTML = logs.map(log => {
-                    const reasonHtml = log.reason ? `<span class="activity-reason-pill">Lý do: ${escapeHtml(log.reason)}</span>` : '';
+                    const hasReasonInDesc = log.reason && log.description && (log.description.includes(`(${log.reason})`) || log.description.includes(`Lý do: ${log.reason}`));
+                    const reasonHtml = (log.reason && !hasReasonInDesc) ? `<span class="activity-reason-pill">Lý do: ${escapeHtml(log.reason)}</span>` : '';
                     return `
                         <tr>
                             <td class="text-muted" style="white-space: nowrap; font-size: 12.5px;">${escapeHtml(log.formatted_time)}</td>
@@ -3406,11 +3520,11 @@
                                 </span>
                             </td>
                             <td class="activity-detail-cell">
-                                <span class="activity-desc">${escapeHtml(log.description)}</span>
+                                <span class="activity-desc" style="color: ${log.action_color || '#1e293b'}; font-weight: 500;">${escapeHtml(log.description)}</span>
                                 ${reasonHtml}
                             </td>
                             <td>
-                                <strong class="activity-actor-name">${escapeHtml(log.actor_name)}</strong>
+                                <strong class="activity-actor-name" style="color: ${log.action_color || '#334155'};">${escapeHtml(log.actor_name)}</strong>
                             </td>
                         </tr>
                     `;
@@ -3443,6 +3557,16 @@
                 if (modal) modal.hidden = true;
             });
         }
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.hidden = true;
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal && !modal.hidden) {
+                modal.hidden = true;
+            }
+        });
 
         // Event listeners for filters
         if (dateFromInput) dateFromInput.addEventListener('change', () => loadLogs());
@@ -3469,7 +3593,8 @@
         }
     })();
 </script>
-<script src="{% static 'js/invoice_editor.js' %}"></script>
+<script src="{% static 'js/invoice_editor.js' %}?v={% now 'U' %}"></script>
+<script src="{% static 'js/sales_statistics.js' %}?v={% now 'U' %}"></script>
 {% endblock %}
 
 

@@ -122,7 +122,7 @@ def checkout(request):
 			deduct_for_sale(order.items.all(), request.user, order.pk)
 
 			invoice = Invoice.objects.create(
-				invoice_code=f'INV-{timezone.now():%Y%m%d%H%M%S}-{uuid4().hex[:4].upper()}',
+				invoice_code=Invoice.next_invoice_code(),
 				order=order,
 				cashier=request.user,
 				subtotal=subtotal,
@@ -484,9 +484,16 @@ def edit_invoice(request):
 		old_total = invoice.total_amount
 		old_payment = invoice.payments.first()
 		old_method = old_payment.get_method_display() if old_payment else 'Tiền mặt'
-		old_cashier_name = invoice.cashier.get_full_name() or invoice.cashier.username
+		old_cashier_id = invoice.cashier_id
+		old_surcharge = invoice.surcharge_amount
+		old_discount = invoice.discount_amount
+		old_tax = invoice.tax_amount
 
 		order = invoice.order
+		old_items_sig = [
+			(it.product_name, int(it.quantity), it.unit_price, it.discount_amount)
+			for it in order.items.filter(status=OrderItem.Status.ACTIVE).order_by('id')
+		]
 		order.items.all().delete()
 
 		subtotal_calc = Decimal(0)
@@ -570,20 +577,37 @@ def edit_invoice(request):
 			)
 			new_payment_method_display = new_pm.get_method_display()
 
-		# Build descriptive activity log matching the screenshot format
-		change_details = []
-		change_details.append('thay đổi thông tin các món')
+		# Build descriptive activity log matching the screenshot format:
+		# Sửa hóa đơn số 00874 (thay đổi kiểu thanh toán, thông tin các món) thành tiền từ 210.000 đ thành 195.000 đ (lý do)
+		new_items_sig = [
+			(it.product_name, int(it.quantity), it.unit_price, it.discount_amount)
+			for it in order.items.filter(status=OrderItem.Status.ACTIVE).order_by('id')
+		]
+		change_parts = []
+		if old_cashier_id != invoice.cashier_id:
+			change_parts.append('nhân viên')
 		if old_method != new_payment_method_display:
-			change_details.append(f'thay đổi kiểu thanh toán từ {old_method} thành {new_payment_method_display}')
-		if old_total != total_calc:
-			old_fmt = f'{old_total:,.0f}'.replace(',', '.')
-			new_fmt = f'{total_calc:,.0f}'.replace(',', '.')
-		if reason:
-			log_description = f'Sửa hóa đơn số {invoice.invoice_code} {"; ".join(change_details)} (lý do: {reason})'
-		else:
-			log_description = f'Sửa hóa đơn số {invoice.invoice_code} {"; ".join(change_details)}'
+			change_parts.append('kiểu thanh toán')
+		if (
+			old_items_sig != new_items_sig
+			or old_surcharge != surcharge_val
+			or old_discount != discount_val
+			or old_tax != tax_amount
+			or not change_parts
+		):
+			change_parts.append('thông tin các món')
 
-		log_activity(
+		change_summary = f"(thay đổi {', '.join(change_parts)})"
+		old_fmt = f'{old_total:,.0f}'.replace(',', '.')
+		new_fmt = f'{total_calc:,.0f}'.replace(',', '.')
+		amount_summary = f'thành tiền từ {old_fmt} đ thành {new_fmt} đ'
+
+		if reason:
+			log_description = f'Sửa hóa đơn số {invoice.invoice_code} {change_summary} {amount_summary} ({reason})'
+		else:
+			log_description = f'Sửa hóa đơn số {invoice.invoice_code} {change_summary} {amount_summary}'
+
+		new_log = log_activity(
 			actor=request.user,
 			action=ActivityLog.Action.EDIT_INVOICE,
 			description=log_description,
@@ -593,6 +617,12 @@ def edit_invoice(request):
 			object_id=invoice.pk,
 		)
 
+		items_short_parts = []
+		for it in order.items.select_related('product').filter(status=OrderItem.Status.ACTIVE):
+			code_str = it.product.code if (it.product and it.product.code) else ''.join(w[0].upper() for w in it.product_name.split() if w)
+			items_short_parts.append(f'{code_str} ({it.quantity})')
+		items_short = ', '.join(items_short_parts)
+
 	return JsonResponse({
 		'ok': True,
 		'message': f'Đã cập nhật hóa đơn số {invoice.invoice_code} thành công.',
@@ -601,9 +631,24 @@ def edit_invoice(request):
 			'total_amount': float(invoice.total_amount),
 			'total_amount_formatted': f'{invoice.total_amount:,.0f}'.replace(',', '.'),
 			'subtotal_formatted': f'{invoice.subtotal:,.0f}'.replace(',', '.'),
+			'surcharge_formatted': f'{invoice.surcharge_amount:,.0f}'.replace(',', '.') if invoice.surcharge_amount else '0',
+			'discount_formatted': f'{invoice.discount_amount:,.0f}'.replace(',', '.') if invoice.discount_amount else '',
+			'tax_formatted': f'{invoice.tax_amount:,.0f}'.replace(',', '.') if invoice.tax_amount else '',
 			'cashier': invoice.cashier.get_full_name() or invoice.cashier.username,
 			'payment_method': new_payment_method_display,
-		}
+			'items_short': items_short,
+		},
+		'activity_log': {
+			'id': new_log.id,
+			'time': timezone.localtime(new_log.created_at).strftime('%I:%M %p'),
+			'formatted_time': new_log.formatted_time,
+			'action': new_log.action,
+			'action_display': new_log.get_action_display(),
+			'action_color': new_log.action_color,
+			'description': new_log.description,
+			'reason': new_log.reason,
+			'actor_name': new_log.display_actor,
+		},
 	})
 
 
@@ -629,14 +674,216 @@ def delete_invoice(request):
 	invoice.order.status = Order.Status.CANCELLED
 	invoice.order.save(update_fields=('status', 'updated_at'))
 
-	log_activity(
+	total_fmt = f'{invoice.total_amount:,.0f}'.replace(',', '.')
+	log_desc = f'Xóa hóa đơn số {invoice.invoice_code} thành tiền {total_fmt} đ ({reason})'
+	new_log = log_activity(
 		actor=request.user,
 		action=ActivityLog.Action.DELETE_INVOICE,
-		description=f'Hủy hóa đơn số {invoice.invoice_code}',
+		description=log_desc,
 		reason=reason,
 		request=request,
 		object_type='Invoice',
 		object_id=invoice.pk,
 	)
-	return JsonResponse({'ok': True, 'message': f'Đã hủy hóa đơn số {invoice.invoice_code}.'})
+	return JsonResponse({
+		'ok': True,
+		'message': f'Đã xóa hóa đơn số {invoice.invoice_code}.',
+		'activity_log': {
+			'id': new_log.id,
+			'time': timezone.localtime(new_log.created_at).strftime('%I:%M %p'),
+			'formatted_time': new_log.formatted_time,
+			'action': new_log.action,
+			'action_display': new_log.get_action_display(),
+			'action_color': new_log.action_color,
+			'description': new_log.description,
+			'reason': new_log.reason,
+			'actor_name': new_log.display_actor,
+		},
+	})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales')
+@require_POST
+def table_action_api(request):
+	"""API xử lý các nghiệp vụ bàn: Đặt chỗ, Hủy đặt, Mở bàn, Hủy bàn, Chuyển, Nhập, Ghép, Tách bàn và ghi Nhật ký hoạt động."""
+	try:
+		payload = json.loads(request.body or '{}')
+	except json.JSONDecodeError:
+		return JsonResponse({'ok': False, 'error': 'Dữ liệu thao tác bàn không hợp lệ.'}, status=400)
+
+	action_type = str(payload.get('action', '')).strip().lower()
+	source_id = payload.get('source_table_id')
+	target_id = payload.get('target_table_id')
+	detail_text = str(payload.get('detail', '')).strip()
+
+	source_table = DiningTable.objects.select_related('area').filter(pk=source_id, is_active=True).first() if source_id else None
+	target_table = DiningTable.objects.select_related('area').filter(pk=target_id, is_active=True).first() if target_id else None
+
+	if not source_table:
+		return JsonResponse({'ok': False, 'error': 'Không tìm thấy bàn thao tác.'}, status=404)
+
+	new_log = None
+	with transaction.atomic():
+		if action_type == 'reserve':
+			source_table.status = DiningTable.Status.RESERVED
+			source_table.save(update_fields=('status', 'updated_at'))
+			desc = detail_text or f'Đặt trước bàn {source_table.name} ({source_table.area.name})'
+			new_log = log_activity(
+				actor=request.user,
+				action=ActivityLog.Action.RESERVE_TABLE,
+				description=desc,
+				request=request,
+				object_type='DiningTable',
+				object_id=source_table.pk,
+			)
+		elif action_type == 'unreserve':
+			source_table.status = DiningTable.Status.AVAILABLE
+			source_table.save(update_fields=('status', 'updated_at'))
+			desc = detail_text or f'Hủy đặt bàn {source_table.name} ({source_table.area.name})'
+			new_log = log_activity(
+				actor=request.user,
+				action=ActivityLog.Action.RESERVE_TABLE,
+				description=desc,
+				request=request,
+				object_type='DiningTable',
+				object_id=source_table.pk,
+			)
+		elif action_type == 'cancel_open':
+			source_table.status = DiningTable.Status.AVAILABLE
+			source_table.save(update_fields=('status', 'updated_at'))
+		elif action_type == 'open':
+			source_table.status = DiningTable.Status.OCCUPIED
+			source_table.save(update_fields=('status', 'updated_at'))
+		elif action_type == 'transfer':
+			if not target_table:
+				return JsonResponse({'ok': False, 'error': 'Vui lòng chọn bàn đích để chuyển.'}, status=400)
+			source_table.status = DiningTable.Status.AVAILABLE
+			source_table.save(update_fields=('status', 'updated_at'))
+			target_table.status = DiningTable.Status.OCCUPIED
+			target_table.save(update_fields=('status', 'updated_at'))
+			desc = detail_text or f'Chuyển từ bàn {source_table.name} sang bàn {target_table.name}'
+			new_log = log_activity(
+				actor=request.user,
+				action=ActivityLog.Action.TRANSFER_TABLE,
+				description=desc,
+				request=request,
+				object_type='DiningTable',
+				object_id=source_table.pk,
+			)
+		elif action_type == 'import':
+			if not target_table:
+				return JsonResponse({'ok': False, 'error': 'Vui lòng chọn bàn để nhập.'}, status=400)
+			source_table.status = DiningTable.Status.AVAILABLE
+			source_table.save(update_fields=('status', 'updated_at'))
+			target_table.status = DiningTable.Status.OCCUPIED
+			target_table.save(update_fields=('status', 'updated_at'))
+			desc = detail_text or f'Nhập từ bàn {source_table.name} vào bàn {target_table.name}'
+			new_log = log_activity(
+				actor=request.user,
+				action=ActivityLog.Action.STOCK_RECEIPT,
+				description=desc,
+				request=request,
+				object_type='DiningTable',
+				object_id=target_table.pk,
+			)
+		elif action_type == 'combine':
+			if not target_table:
+				return JsonResponse({'ok': False, 'error': 'Vui lòng chọn bàn để ghép.'}, status=400)
+			source_table.status = DiningTable.Status.OCCUPIED
+			source_table.save(update_fields=('status', 'updated_at'))
+			target_table.status = DiningTable.Status.OCCUPIED
+			target_table.save(update_fields=('status', 'updated_at'))
+			desc = detail_text or f'Ghép bàn {source_table.name} với bàn {target_table.name}'
+			new_log = log_activity(
+				actor=request.user,
+				action=ActivityLog.Action.MERGE_TABLE,
+				description=desc,
+				request=request,
+				object_type='DiningTable',
+				object_id=source_table.pk,
+			)
+		elif action_type == 'split':
+			if not target_table:
+				return JsonResponse({'ok': False, 'error': 'Vui lòng chọn bàn đích để tách.'}, status=400)
+			target_table.status = DiningTable.Status.OCCUPIED
+			target_table.save(update_fields=('status', 'updated_at'))
+			desc = detail_text or f'Tách từ bàn {source_table.name} sang bàn {target_table.name}'
+			new_log = log_activity(
+				actor=request.user,
+				action=ActivityLog.Action.SPLIT_TABLE,
+				description=desc,
+				request=request,
+				object_type='DiningTable',
+				object_id=source_table.pk,
+			)
+		else:
+			return JsonResponse({'ok': False, 'error': 'Thao tác bàn không hợp lệ.'}, status=400)
+
+	response_data = {
+		'ok': True,
+		'action': action_type,
+		'source_table': {'id': source_table.id, 'name': source_table.name, 'status': source_table.status},
+		'target_table': {'id': target_table.id, 'name': target_table.name, 'status': target_table.status} if target_table else None,
+	}
+	if new_log:
+		response_data['activity_log'] = {
+			'id': new_log.id,
+			'time': timezone.localtime(new_log.created_at).strftime('%I:%M %p'),
+			'formatted_time': new_log.formatted_time,
+			'action': new_log.action,
+			'action_display': new_log.get_action_display(),
+			'action_color': new_log.action_color,
+			'description': new_log.description,
+			'reason': new_log.reason,
+			'actor_name': new_log.display_actor,
+		}
+	return JsonResponse(response_data)
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales')
+@require_GET
+def sales_statistics_api(request):
+	"""API trả về toàn bộ dữ liệu Thống kê bán hàng theo khoảng thời gian."""
+	from .statistics import get_sales_statistics_data, parse_datetime_param
+	from_str = request.GET.get('from', '') or request.GET.get('from_time', '')
+	to_str = request.GET.get('to', '') or request.GET.get('to_time', '')
+	start_dt = parse_datetime_param(from_str, is_end_of_day=False)
+	end_dt = parse_datetime_param(to_str, is_end_of_day=True)
+	stats = get_sales_statistics_data(start_dt, end_dt)
+	return JsonResponse({'ok': True, 'stats': stats})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales')
+@require_GET
+def sales_statistics_export_excel(request):
+	"""Xuất Thống kê bán hàng ra file Excel (CSV UTF-8 với BOM)."""
+	from .statistics import get_sales_statistics_data, export_sales_statistics_csv, parse_datetime_param
+	from_str = request.GET.get('from', '') or request.GET.get('from_time', '')
+	to_str = request.GET.get('to', '') or request.GET.get('to_time', '')
+	start_dt = parse_datetime_param(from_str, is_end_of_day=False)
+	end_dt = parse_datetime_param(to_str, is_end_of_day=True)
+	stats = get_sales_statistics_data(start_dt, end_dt)
+	return export_sales_statistics_csv(stats)
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales')
+@require_GET
+def sales_statistics_print(request):
+	"""Trang in kiểm bán hàng (In kiểm bán) tối ưu cho in ấn A4 / máy in nhiệt POS 80mm."""
+	from .statistics import get_sales_statistics_data, parse_datetime_param
+	from_str = request.GET.get('from', '') or request.GET.get('from_time', '')
+	to_str = request.GET.get('to', '') or request.GET.get('to_time', '')
+	start_dt = parse_datetime_param(from_str, is_end_of_day=False)
+	end_dt = parse_datetime_param(to_str, is_end_of_day=True)
+	stats = get_sales_statistics_data(start_dt, end_dt)
+	return render(request, 'sales/sales_statistics_print.html', {
+		'stats': stats,
+		'current_user': request.user,
+		'printed_at': timezone.localtime(),
+	})
+
 

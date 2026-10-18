@@ -1,0 +1,225 @@
+<!-- MODAL: THỐNG KÊ BÁN HÀNG CHUẨN F&B POS 2026 -->
+<div class="menu-modal-backdrop" id="modal-sales-statistics" hidden>
+    <div class="menu-modal-dialog sales-stats-modal-container">
+        <!-- Modal Header -->
+        <div class="menu-modal-header sales-stats-modal-header">
+            <div class="modal-title-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                <h3 id="sales-stats-modal-title">Thống kê bán hàng - {{ request.user.get_full_name|default:request.user.get_username }}</h3>
+            </div>
+            <button type="button" class="dialog-close" id="sales-stats-modal-close" aria-label="Đóng">&times;</button>
+        </div>
+
+        <!-- Filter & Actions Toolbar -->
+        <div class="sales-stats-toolbar">
+            <div class="sales-stats-datetime-group">
+                <div class="field-item">
+                    <label for="sales-stats-from-input">Từ</label>
+                    <input type="text" id="sales-stats-from-input" class="stats-input-date" placeholder="dd/mm/yyyy hh:mm">
+                </div>
+                <div class="field-item">
+                    <label for="sales-stats-to-input">Đến</label>
+                    <input type="text" id="sales-stats-to-input" class="stats-input-date" placeholder="dd/mm/yyyy hh:mm">
+                </div>
+            </div>
+
+            <div class="sales-stats-control-group">
+                <label for="sales-stats-mark-select">Cột dấu danh sách món</label>
+                <select id="sales-stats-mark-select" class="stats-select-mark">
+                    <option value="mark" selected>Mã</option>
+                    <option value="code">Mã món</option>
+                    <option value="initial">Ký tự đầu</option>
+                    <option value="none">Không</option>
+                </select>
+
+                <button type="button" class="btn-stats-run" id="sales-stats-btn-refresh">
+                    Thống kê
+                </button>
+
+                <button type="button" class="btn-stats-print" id="sales-stats-btn-print">
+                    In kiểm bán
+                </button>
+            </div>
+
+            <div class="sales-stats-search-group">
+                <label for="sales-stats-search-input">Tìm món</label>
+                <div class="search-input-wrap">
+                    <input type="text" id="sales-stats-search-input" placeholder="Tìm tên món hoặc mã món..." autocomplete="off">
+                    <button type="button" id="sales-stats-search-clear" class="btn-search-clear" hidden title="Xóa tìm kiếm">×</button>
+                </div>
+
+                <a href="{% url 'sales:statistics_export' %}" id="sales-stats-btn-export" class="btn-stats-excel" target="_blank" title="Xuất toàn bộ báo cáo ra file Excel">
+                    Xuất ra Excel
+                </a>
+            </div>
+        </div>
+
+        <!-- Modal Body: Split 2 Columns -->
+        <div class="sales-stats-body">
+            <!-- LEFT SECTION (Nhân viên, Khu vực, Kiểu thanh toán, Điểm bàn) -->
+            <div class="sales-stats-left-section">
+                <!-- Row 1: Nhân viên & Khu vực -->
+                <div class="sales-stats-grid-row">
+                    <!-- Table 1: Nhân viên -->
+                    <div class="stats-card-table">
+                        <div class="stats-card-scroll">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nhân viên</th>
+                                        <th style="width: 70px;" class="text-right">Số h/đơn</th>
+                                        <th style="width: 105px;" class="text-right">Doanh thu (đ)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-stats-cashiers-tbody">
+                                    <tr><td colspan="3" class="stats-loading">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Table 2: Khu vực -->
+                    <div class="stats-card-table">
+                        <div class="stats-card-scroll">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Khu vực</th>
+                                        <th style="width: 70px;" class="text-right">Số h/đơn</th>
+                                        <th style="width: 105px;" class="text-right">Doanh thu (đ)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-stats-areas-tbody">
+                                    <tr><td colspan="3" class="stats-loading">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Kiểu thanh toán & Điểm bàn -->
+                <div class="sales-stats-grid-row">
+                    <!-- Table 3: Kiểu thanh toán -->
+                    <div class="stats-card-table">
+                        <div class="stats-card-scroll">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Kiểu thanh toán</th>
+                                        <th style="width: 70px;" class="text-right">Số h/đơn</th>
+                                        <th style="width: 105px;" class="text-right">Doanh thu (đ)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-stats-payments-tbody">
+                                    <tr><td colspan="3" class="stats-loading">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Table 4: Điểm bàn -->
+                    <div class="stats-card-table">
+                        <div class="stats-card-scroll">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Điểm bàn</th>
+                                        <th style="width: 70px;" class="text-right">Số h/đơn</th>
+                                        <th style="width: 105px;" class="text-right">Doanh thu (đ)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-stats-tables-tbody">
+                                    <tr><td colspan="3" class="stats-loading">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SECTION (Danh sách món đã bán & Nhóm món / Loại món) -->
+            <div class="sales-stats-right-section">
+                <!-- Top Right: Danh sách món đã bán -->
+                <div class="stats-card-table dishes-card-table">
+                    <div class="stats-card-scroll dishes-scroll">
+                        <table class="stats-table dishes-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 32px;" class="text-center" id="th-dish-mark">M</th>
+                                    <th>Tên món</th>
+                                    <th style="width: 55px;" class="text-center">ĐVT</th>
+                                    <th style="width: 60px;" class="text-center">Số lượng</th>
+                                    <th style="width: 55px;" class="text-center">Số giảm</th>
+                                    <th style="width: 90px;" class="text-right">Tiền giảm (đ)</th>
+                                    <th style="width: 110px;" class="text-right">Doanh thu (đ)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-stats-dishes-tbody">
+                                <tr><td colspan="7" class="stats-loading">Đang tải danh sách món...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Bottom Right: Nhóm món & Loại món -->
+                <div class="sales-stats-grid-row bottom-categories-row">
+                    <!-- Table 5: Nhóm món -->
+                    <div class="stats-card-table">
+                        <div class="stats-card-scroll small-category-scroll">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nhóm món</th>
+                                        <th style="width: 110px;" class="text-right">Doanh thu (đ)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-stats-groups-tbody">
+                                    <tr><td colspan="2" class="stats-loading">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Table 6: Loại món -->
+                    <div class="stats-card-table">
+                        <div class="stats-card-scroll small-category-scroll">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Loại món</th>
+                                        <th style="width: 110px;" class="text-right">Doanh thu (đ)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-stats-types-tbody">
+                                    <tr><td colspan="2" class="stats-loading">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Footer: Summary & Profit Calculation -->
+        <div class="sales-stats-footer">
+            <div class="footer-summary-left">
+                <div class="summary-line-top">
+                    Số hóa đơn: <strong id="sales-stats-sum-invoices">0</strong>, Doanh thu thuần: <strong id="sales-stats-sum-revenue" class="highlight-revenue">0 đ</strong> <span class="discount-note">(Số đơn giảm giá: <span id="sales-stats-sum-discount-count">0</span>, Tiền giảm giá: <span id="sales-stats-sum-discount">0 đ</span>)</span>
+                </div>
+                <div class="summary-line-bottom">
+                    Lợi nhuận gộp = DTT - GVH = <strong id="sales-stats-sum-profit" class="highlight-profit">0 đ</strong>
+                </div>
+            </div>
+            <div class="footer-summary-right">
+                <div class="cogs-line">
+                    Giá vốn hàng: <strong id="sales-stats-sum-cogs">0 đ</strong> <span class="cogs-note">(Chỉ tính các món có định lượng & theo giá nguyên liệu hiện tại)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

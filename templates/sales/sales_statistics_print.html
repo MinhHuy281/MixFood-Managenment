@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>In kiểm bán hàng | MixFood POS 2026</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 20px;
+        }
+        .print-container {
+            max-width: 860px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .print-header {
+            text-align: center;
+            border-bottom: 2px dashed #cbd5e1;
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+        }
+        .store-brand {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #0f172a;
+        }
+        .store-sub {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+        .report-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-top: 12px;
+            color: #0f172a;
+            text-transform: uppercase;
+        }
+        .report-meta {
+            font-size: 13px;
+            color: #475569;
+            margin-top: 4px;
+        }
+        .summary-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 13px;
+        }
+        .summary-box strong {
+            color: #0f172a;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e293b;
+            text-transform: uppercase;
+            margin: 16px 0 8px;
+            border-left: 3px solid #0f172a;
+            padding-left: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        th {
+            background: #f1f5f9;
+            font-weight: 700;
+            color: #334155;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .signatures {
+            margin-top: 36px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            text-align: center;
+            font-size: 13px;
+        }
+        .sig-space {
+            height: 60px;
+        }
+        .no-print-bar {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .btn-print-now {
+            padding: 8px 20px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .print-container { box-shadow: none; padding: 0; max-width: 100%; }
+            .no-print-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <button type="button" class="btn-print-now" onclick="window.print()">🖨️ In trang này</button>
+    </div>
+
+    <div class="print-container">
+        <div class="print-header">
+            <div class="store-brand">MIX FOOD - CHI NHÁNH ĐÀ NẴNG</div>
+            <div class="store-sub">Ẩm Thực Thái • K38/37 Nguyễn Duy Hiệu, Q.Sơn Trà - TP. Đà Nẵng • Mã: 13255</div>
+            <div class="report-title">BẢNG KIỂM BÁN HÀNG & DOANH THU</div>
+            <div class="report-meta">Thời gian: Từ <strong>{{ stats.from_str }}</strong> đến <strong>{{ stats.to_str }}</strong></div>
+            <div class="report-meta">In lúc: {{ printed_at|date:'d/m/Y H:i:s' }} • Người in: {{ current_user.get_full_name|default:current_user.get_username }}</div>
+        </div>
+
+        <div class="summary-box">
+            <div>Số hóa đơn: <strong>{{ stats.total_invoices }}</strong></div>
+            <div>Doanh thu thuần: <strong>{{ stats.net_revenue_formatted }}</strong></div>
+            <div>Số đơn giảm giá: <strong>{{ stats.discount_invoice_count }}</strong></div>
+            <div>Tiền giảm giá: <strong>{{ stats.total_discount_formatted }}</strong></div>
+            <div>Giá vốn hàng bán: <strong>{{ stats.total_cogs_formatted }}</strong></div>
+            <div>Lợi nhuận gộp: <strong>{{ stats.gross_profit_formatted }}</strong></div>
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <div class="section-title">Nhân viên thu ngân</div>
+                <table>
+                    <thead>
+                        <tr><th>Nhân viên</th><th class="text-right">Số HĐ</th><th class="text-right">Doanh thu (đ)</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for c in stats.cashiers %}
+                        <tr><td>{{ c.name }}</td><td class="text-right">{{ c.count }}</td><td class="text-right">{{ c.revenue_formatted }}</td></tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center">Không có dữ liệu</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="section-title">Kiểu thanh toán</div>
+                <table>
+                    <thead>
+                        <tr><th>Phương thức</th><th class="text-right">Số HĐ</th><th class="text-right">Doanh thu (đ)</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in stats.payments %}
+                        <tr><td>{{ p.name }}</td><td class="text-right">{{ p.count }}</td><td class="text-right">{{ p.revenue_formatted }}</td></tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center">Không có dữ liệu</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <div class="section-title">Khu vực phục vụ</div>
+                <table>
+                    <thead>
+                        <tr><th>Khu vực</th><th class="text-right">Số HĐ</th><th class="text-right">Doanh thu (đ)</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for a in stats.areas %}
+                        <tr><td>{{ a.name }}</td><td class="text-right">{{ a.count }}</td><td class="text-right">{{ a.revenue_formatted }}</td></tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center">Không có dữ liệu</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="section-title">Điểm bàn</div>
+                <table>
+                    <thead>
+                        <tr><th>Điểm bàn</th><th class="text-right">Số HĐ</th><th class="text-right">Doanh thu (đ)</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for t in stats.tables %}
+                        <tr><td>{{ t.name }}</td><td class="text-right">{{ t.count }}</td><td class="text-right">{{ t.revenue_formatted }}</td></tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center">Không có dữ liệu</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-title">Chi tiết món ăn đã bán</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 35px;">M</th>
+                    <th>Tên món</th>
+                    <th class="text-center" style="width: 55px;">ĐVT</th>
+                    <th class="text-center" style="width: 55px;">SL</th>
+                    <th class="text-center" style="width: 55px;">Số giảm</th>
+                    <th class="text-right" style="width: 90px;">Tiền giảm (đ)</th>
+                    <th class="text-right" style="width: 105px;">Doanh thu (đ)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in stats.dishes %}
+                <tr>
+                    <td class="text-center">{{ d.mark }}</td>
+                    <td><strong>{{ d.name }}</strong></td>
+                    <td class="text-center">{{ d.unit }}</td>
+                    <td class="text-center">{{ d.quantity }}</td>
+                    <td class="text-center">{{ d.discount_count }}</td>
+                    <td class="text-right">{{ d.discount_amount_formatted }}</td>
+                    <td class="text-right"><strong>{{ d.revenue_formatted }}</strong></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center">Không có món nào được bán trong khoảng thời gian này.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="grid-2">
+            <div>
+                <div class="section-title">Doanh thu theo Nhóm món</div>
+                <table>
+                    <thead><tr><th>Nhóm món</th><th class="text-right">Doanh thu (đ)</th></tr></thead>
+                    <tbody>
+                        {% for g in stats.groups %}
+                        <tr><td>{{ g.name }}</td><td class="text-right"><strong>{{ g.revenue_formatted }}</strong></td></tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center">Không có dữ liệu</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="section-title">Doanh thu theo Loại món</div>
+                <table>
+                    <thead><tr><th>Loại món</th><th class="text-right">Doanh thu (đ)</th></tr></thead>
+                    <tbody>
+                        {% for t in stats.types %}
+                        <tr><td>{{ t.name }}</td><td class="text-right"><strong>{{ t.revenue_formatted }}</strong></td></tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center">Không có dữ liệu</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="signatures">
+            <div>
+                <strong>Người lập biểu</strong>
+                <div class="sig-space"></div>
+                <div>{{ current_user.get_full_name|default:current_user.get_username }}</div>
+            </div>
+            <div>
+                <strong>Quản lý xác nhận</strong>
+                <div class="sig-space"></div>
+                <div>(Ký và ghi rõ họ tên)</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            // Tự động mở hộp thoại in sau khi tải xong nếu có tham số auto=1
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('auto') === '1') {
+                window.print();
+            }
+        });
+    </script>
+</body>
+</html>
+

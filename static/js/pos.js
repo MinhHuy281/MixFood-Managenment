@@ -15,7 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const orderOpenActions = document.querySelector('#order-open-actions');
     const orderPrimaryAction = document.querySelector('#order-primary-action');
     const selectionPrimaryAction = document.querySelector('#cancel-selected-table');
-    const secondaryActions = Array.from(document.querySelectorAll('.order-actions button'));
+    const tableReserveActions = document.querySelector('#table-reserve-actions');
+    const btnTableReserve = document.querySelector('#btn-table-reserve');
+    const btnTableReserveLabel = document.querySelector('#btn-table-reserve-label');
+    const tableOpenTools = document.querySelector('#table-open-tools');
+    const tableToolButtons = Array.from(document.querySelectorAll('#table-open-tools button[data-table-tool]'));
+    const tableToolHint = document.querySelector('#table-tool-hint');
+    const tableToolHintText = document.querySelector('#table-tool-hint-text');
+    const tableToolHintCancel = document.querySelector('#table-tool-hint-cancel');
+
     const tableOrders = new Map();
     let cart = new Map();
     let selectedTableId = null;
@@ -25,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let itemsSentToKitchen = false;
     let previewedTable = null;
     let tablePreviewArmed = false;
+    let activeTableTool = null;
+    let pendingTargetTable = null;
 
     const dialog = document.querySelector('#order-dialog');
     const menuColumn = document.querySelector('.menu-column');
@@ -38,14 +48,163 @@ document.addEventListener('DOMContentLoaded', () => {
     const changeAmount = document.querySelector('#change-amount');
     const paymentConfirm = document.querySelector('#payment-confirm');
 
+    const getCsrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+
+    const showToast = (msg) => {
+        if (!systemNotice) return;
+        systemNotice.textContent = msg;
+        systemNotice.hidden = false;
+        window.clearTimeout(systemNoticeTimeout);
+        systemNoticeTimeout = window.setTimeout(() => { systemNotice.hidden = true; }, 4200);
+    };
+
+    const escapeHtml = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    const prependActivityLogRow = (log) => {
+        if (!log) return;
+        const scrollContainer = document.querySelector('#pos-live-activity-scroll') || document.querySelector('.activity-panel .activity-scroll');
+        if (!scrollContainer) return;
+
+        const emptyRow = scrollContainer.querySelector('.empty-row');
+        if (emptyRow) emptyRow.remove();
+
+        const rowEl = document.createElement('div');
+        rowEl.className = 'activity-row';
+        rowEl.title = `${log.formatted_time || ''} - ${log.action_display || ''}: ${log.description || ''}`;
+        const color = log.action_color || '#1e293b';
+
+        let chipClass = 'event-other';
+        let chipStyle = `color: ${color}; font-weight: 700;`;
+        if (log.action === 'edit_invoice' || log.action === 'update') {
+            chipClass = 'event-edit';
+            chipStyle = '';
+        } else if (log.action === 'delete_invoice' || log.action === 'delete' || log.action === 'cancel_item' || log.action === 'delete_order') {
+            chipClass = 'event-delete';
+            chipStyle = '';
+        } else if (log.action === 'return_item' || log.action === 'edit_price') {
+            chipClass = 'event-cancel';
+            chipStyle = '';
+        } else if (log.action === 'shift_close' || log.action === 'login') {
+            chipClass = 'event-payment';
+            chipStyle = '';
+        }
+
+        const hasReasonInDesc = log.reason && log.description && (log.description.includes(`(${log.reason})`) || log.description.includes(`Lý do: ${log.reason}`));
+        const reasonHtml = (log.reason && !hasReasonInDesc && log.action !== 'edit_invoice' && log.action !== 'delete_invoice')
+            ? `<span class="activity-reason-tag" style="display: inline-block; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 4px; padding: 0 6px; font-size: 11px; margin-left: 6px;">Lý do: ${escapeHtml(log.reason)}</span>`
+            : '';
+
+        rowEl.innerHTML = `
+            <time class="activity-time" style="font-weight: 600; color: ${color}; font-size: 11.5px;">${escapeHtml(log.time || '')}</time>
+            <div>
+                <span class="activity-event-chip ${chipClass}" style="${chipStyle}">${escapeHtml(log.action_display || '')}</span>
+            </div>
+            <div class="activity-detail-wrap" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <span class="activity-desc-text" style="color: ${color}; font-size: 12px; font-weight: 500;">${escapeHtml(log.description || '')}</span>
+                ${reasonHtml}
+            </div>
+            <div style="text-align: right; padding-right: 12px;">
+                <strong class="activity-actor-text" style="color: ${color}; font-size: 12px; font-weight: 600;">${escapeHtml(log.actor_name || '')}</strong>
+            </div>
+        `;
+        scrollContainer.prepend(rowEl);
+        scrollContainer.scrollTop = 0;
+    };
+    window.prependPosLiveActivityLog = prependActivityLogRow;
+
+    const postTableAction = async (payload) => {
+        const url = orderColumn?.dataset.tableActionUrl || '/sales/tables/action/';
+        try {
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify(payload),
+            });
+            const data = await resp.json();
+            if (data && data.activity_log) {
+                prependActivityLogRow(data.activity_log);
+            }
+            return data;
+        } catch (err) {
+            return { ok: false, error: err.message };
+        }
+    };
+
+    const showTableSpeechBubble = (tableButton, text) => {
+        if (!tableButton) return;
+        document.querySelectorAll('.table-speech-bubble').forEach((el) => el.remove());
+        const bubble = document.createElement('div');
+        bubble.className = 'table-speech-bubble';
+        bubble.textContent = text;
+        tableButton.appendChild(bubble);
+        window.setTimeout(() => {
+            bubble.classList.add('fade-out');
+            window.setTimeout(() => bubble.remove(), 350);
+        }, 4200);
+    };
+
+    const cancelActiveTableTool = () => {
+        activeTableTool = null;
+        pendingTargetTable = null;
+        tableToolButtons.forEach((btn) => btn.classList.remove('active'));
+        if (tableToolHint) tableToolHint.hidden = true;
+        document.querySelector('.table-sidebar')?.classList.remove('table-map-selecting');
+    };
+
+    const setActiveTableTool = (toolName) => {
+        if (!selectedTableId) {
+            showToast('Vui lòng mở bàn trước khi thực hiện thao tác này.');
+            return;
+        }
+        if (activeTableTool === toolName) {
+            cancelActiveTableTool();
+            return;
+        }
+        activeTableTool = toolName;
+        tableToolButtons.forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.tableTool === toolName);
+        });
+        document.querySelector('.table-sidebar')?.classList.add('table-map-selecting');
+        const toolLabels = {
+            transfer: 'Chuyển bàn: Nhấn chọn bàn đích trên sơ đồ bàn bên trái',
+            import: 'Nhập bàn: Nhấn chọn bàn đích trên sơ đồ bàn bên trái',
+            combine: 'Ghép bàn: Nhấn chọn bàn cần ghép trên sơ đồ bàn bên trái',
+            split: 'Tách bàn: Nhấn chọn bàn đích trên sơ đồ bàn bên trái',
+        };
+        if (tableToolHint && tableToolHintText) {
+            tableToolHintText.textContent = toolLabels[toolName] || 'Chọn bàn đích trên sơ đồ bàn...';
+            tableToolHint.hidden = false;
+        }
+    };
+
+    tableToolHintCancel?.addEventListener('click', cancelActiveTableTool);
+
     const setMenuUnlocked = (unlocked) => {
         menuUnlocked = unlocked;
         if (menuColumn) menuColumn.hidden = !unlocked;
         if (posLayout) posLayout.classList.toggle('menu-visible', unlocked);
         if (menuColumn) menuColumn.classList.toggle('menu-locked', !unlocked);
-        if (selectionActions) selectionActions.hidden = !selectedTableId || unlocked;
-        if (orderOpenActions) orderOpenActions.hidden = !unlocked;
-        if (selectedTableId && orderMode) orderMode.textContent = unlocked ? 'Đang gọi món' : 'Chưa gọi món';
+        if (selectionActions) selectionActions.hidden = !previewedTable || Boolean(selectedTableId);
+        if (orderOpenActions) orderOpenActions.hidden = !selectedTableId;
+        if (selectedTableId && orderMode) {
+            const tData = tableOrders.get(selectedTableId);
+            if (tData?.combinedWith) {
+                orderMode.textContent = `Ghép với bàn ${tData.combinedWith}`;
+            } else {
+                orderMode.textContent = unlocked ? 'Đang gọi món' : 'Đang phục vụ';
+            }
+        }
     };
 
     const renderOpenAction = () => {
@@ -66,40 +225,70 @@ document.addEventListener('DOMContentLoaded', () => {
         hour: '2-digit', minute: '2-digit', hour12: true,
     }).format(new Date());
 
-    const setSecondaryActions = (isPreview) => {
-        const labels = isPreview ? ['Đặt chỗ', '', '', ''] : ['Chuyển', 'Nhập', 'Ghép', 'Tách'];
-        secondaryActions.forEach((button, index) => { button.textContent = labels[index]; });
+    const updateReserveButtonUI = (tableButton) => {
+        if (!tableButton || !btnTableReserveLabel || !btnTableReserve) return;
+        const isReserved = tableButton.classList.contains('reserved');
+        btnTableReserveLabel.textContent = isReserved ? 'Hủy đặt' : 'Đặt chỗ';
+        btnTableReserve.classList.toggle('is-reserved', isReserved);
+    };
+
+    const setSecondaryActions = (isPreview, tableButton = previewedTable) => {
+        cancelActiveTableTool();
+        if (isPreview) {
+            if (tableReserveActions) tableReserveActions.hidden = false;
+            if (tableOpenTools) tableOpenTools.hidden = true;
+            updateReserveButtonUI(tableButton);
+        } else {
+            if (tableReserveActions) tableReserveActions.hidden = true;
+            if (tableOpenTools) tableOpenTools.hidden = false;
+        }
     };
 
     const showTablePreview = (tableButton) => {
         if (!tableButton) return;
         previewedTable = tableButton;
+        selectedTableId = null;
+        cart = new Map();
+        itemsSentToKitchen = false;
+
         document.querySelectorAll('.table').forEach((button) => button.classList.remove('selected', 'preview'));
         tableButton.classList.add('preview');
+
+        const isReserved = tableButton.classList.contains('reserved');
         if (orderTitle) orderTitle.textContent = `Bàn ${tableButton.dataset.tableName} - ${tableButton.dataset.area}`;
         if (selectedTable) selectedTable.textContent = tableButton.dataset.tableName;
         if (orderTime) orderTime.textContent = getArrivalTime();
         if (orderStatus) {
-            orderStatus.textContent = 'Trống';
-            orderStatus.classList.remove('pending');
+            orderStatus.textContent = isReserved ? 'Đã đặt trước' : 'Trống';
+            orderStatus.classList.toggle('pending', isReserved);
         }
         if (orderCustomer) orderCustomer.textContent = '-';
         if (orderRequestedBy && orderColumn) orderRequestedBy.textContent = orderColumn.dataset.currentUser;
-        if (orderMode) orderMode.textContent = '';
-        if (orderItems) orderItems.innerHTML = '';
+        if (orderMode) orderMode.textContent = isReserved ? 'Đã đặt trước' : 'Chưa gọi món';
+        if (orderItems) {
+            orderItems.innerHTML = `<p class="empty-order">${isReserved ? 'Bàn đã được đặt trước. Nhấn Mở bàn hoặc Gọi món khi khách vào.' : 'Bàn đang trống. Nhấn Mở bàn, Gọi món hoặc Đặt chỗ.'}</p>`;
+        }
+        if (subtotalElement) subtotalElement.textContent = '0 đ';
+        if (totalElement) totalElement.textContent = '0 đ';
         if (selectionPrimaryAction) selectionPrimaryAction.textContent = 'Mở bàn';
         if (selectionActions) selectionActions.hidden = false;
-        setSecondaryActions(true);
+        if (orderOpenActions) orderOpenActions.hidden = true;
+        setSecondaryActions(true, tableButton);
+        setMenuUnlocked(false);
     };
 
     const showSelectedTable = (tableButton) => {
         if (!tableButton) return;
         const tableName = tableButton.dataset.tableName;
+        const tData = tableOrders.get(tableButton.dataset.tableId);
         if (orderTitle) orderTitle.textContent = `Bàn ${tableName} - ${tableButton.dataset.area}`;
         if (selectedTable) selectedTable.textContent = tableName;
-        if (orderTime) orderTime.textContent = getArrivalTime();
+        if (orderTime) orderTime.textContent = tData?.arrivalTime || getArrivalTime();
         if (orderStatus) {
-            if (itemsSentToKitchen) {
+            if (tData?.combinedWith) {
+                orderStatus.textContent = `Đang phục vụ (Ghép bàn ${tData.combinedWith})`;
+                orderStatus.classList.add('pending');
+            } else if (itemsSentToKitchen) {
                 orderStatus.textContent = 'Đang phục vụ món';
                 orderStatus.classList.add('pending');
             } else {
@@ -113,42 +302,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const clearSelectedTable = () => {
         const activeTable = document.querySelector(`.table[data-table-id="${selectedTableId}"]`) || previewedTable;
+        const cancelingTableId = selectedTableId;
         if (selectedTableId) {
             tableOrders.delete(selectedTableId);
         }
         if (activeTable) {
-            activeTable.classList.remove('selected', 'preview', 'table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied');
+            activeTable.classList.remove('selected', 'preview', 'table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied', 'reserved');
+        }
+        if (cancelingTableId) {
+            postTableAction({ action: 'cancel_open', source_table_id: cancelingTableId });
         }
         selectedTableId = null;
         cart = new Map();
         itemsSentToKitchen = false;
         setMenuUnlocked(false);
         renderCart();
-        if (orderTitle) orderTitle.textContent = 'Bàn -';
-        if (selectedTable) selectedTable.textContent = '-';
-        if (orderStatus) {
-            orderStatus.textContent = 'Trống';
-            orderStatus.classList.remove('pending');
+        if (activeTable) {
+            showTablePreview(activeTable);
+        } else {
+            if (orderTitle) orderTitle.textContent = 'Bàn -';
+            if (selectedTable) selectedTable.textContent = '-';
+            if (orderStatus) {
+                orderStatus.textContent = 'Trống';
+                orderStatus.classList.remove('pending');
+            }
+            if (orderMode) orderMode.textContent = '';
         }
-        if (orderMode) orderMode.textContent = '';
         tablePreviewArmed = false;
+    };
+
+    const applyTableVisualState = (tableButton, tableData) => {
+        if (!tableButton) return;
+        tableButton.classList.remove('reserved', 'available');
+        if (!tableData) {
+            tableButton.classList.remove('table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied');
+            return;
+        }
+        if (tableData.itemsSentToKitchen) {
+            tableButton.classList.remove('table-opening', 'table-red');
+            tableButton.classList.add('kitchen-sent', 'table-green', 'occupied');
+        } else {
+            tableButton.classList.add('table-opening', 'table-red', 'occupied');
+            tableButton.classList.remove('kitchen-sent', 'table-green');
+        }
     };
 
     const openSelectedTable = (tableButton) => {
         if (!tableButton) return;
+        cancelActiveTableTool();
         selectedTableId = tableButton.dataset.tableId;
         previewedTable = tableButton;
 
         document.querySelectorAll('.table').forEach((button) => button.classList.remove('selected', 'preview'));
         tableButton.classList.add('selected');
+        tableButton.classList.remove('reserved');
 
         let tableData = tableOrders.get(selectedTableId);
+        const isNewlyOpened = !tableData;
         if (!tableData) {
             tableData = {
                 cart: new Map(),
                 itemsSentToKitchen: false,
                 tableName: tableButton.dataset.tableName,
                 area: tableButton.dataset.area,
+                arrivalTime: getArrivalTime(),
+                combinedWith: null,
             };
             tableOrders.set(selectedTableId, tableData);
         }
@@ -156,23 +374,400 @@ document.addEventListener('DOMContentLoaded', () => {
         cart = tableData.cart;
         itemsSentToKitchen = tableData.itemsSentToKitchen;
 
-        // Apply colors according to status:
-        // Lần 1 bấm mở bàn ra màu đỏ
-        // Khi thêm món xong hết (gửi bếp) mới ra màu xanh
-        if (itemsSentToKitchen) {
-            tableButton.classList.remove('table-opening', 'table-red');
-            tableButton.classList.add('kitchen-sent', 'table-green');
-        } else {
-            tableButton.classList.add('table-opening', 'table-red');
-            tableButton.classList.remove('kitchen-sent', 'table-green');
+        applyTableVisualState(tableButton, tableData);
+        if (isNewlyOpened) {
+            postTableAction({ action: 'open', source_table_id: selectedTableId });
         }
 
         showSelectedTable(tableButton);
         if (selectionPrimaryAction) selectionPrimaryAction.textContent = 'Hủy bàn';
-        setSecondaryActions(false);
+        setSecondaryActions(false, tableButton);
         setMenuUnlocked(true);
         renderCart();
     };
+
+    // =========================================================================
+    // ĐẶT BÀN / HỦY ĐẶT BÀN (RESERVE / UNRESERVE TABLE)
+    // =========================================================================
+    btnTableReserve?.addEventListener('click', async () => {
+        const targetBtn = previewedTable || document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
+        if (!targetBtn) return;
+        const tableId = targetBtn.dataset.tableId;
+        const isCurrentlyReserved = targetBtn.classList.contains('reserved');
+        const action = isCurrentlyReserved ? 'unreserve' : 'reserve';
+
+        if (isCurrentlyReserved) {
+            targetBtn.classList.remove('reserved');
+        } else {
+            targetBtn.classList.add('reserved');
+        }
+        showTablePreview(targetBtn);
+        await postTableAction({ action, source_table_id: tableId });
+    });
+
+    // =========================================================================
+    // CHUYỂN, NHẬP, GHÉP, TÁCH BÀN (TRANSFER, IMPORT, COMBINE, SPLIT)
+    // =========================================================================
+    const tableConfirmDialog = document.querySelector('#table-action-confirm-dialog');
+    const tableConfirmTitle = document.querySelector('#table-action-confirm-title');
+    const tableConfirmMsg = document.querySelector('#table-action-confirm-msg');
+    const tableConfirmOk = document.querySelector('#table-action-confirm-ok');
+    const tableConfirmCancel = document.querySelector('#table-action-confirm-cancel');
+    const tableConfirmClose = document.querySelector('#table-action-confirm-close');
+
+    const tableSplitDialog = document.querySelector('#table-split-dialog');
+    const splitSourceTableName = document.querySelector('#split-source-table-name');
+    const splitTargetTableSelect = document.querySelector('#split-target-table-select');
+    const splitItemsList = document.querySelector('#split-items-list');
+    const tableSplitOk = document.querySelector('#table-split-ok');
+    const tableSplitCancel = document.querySelector('#table-split-cancel');
+    const tableSplitClose = document.querySelector('#table-split-close');
+    let splitQuantities = new Map();
+
+    const closeTableConfirmDialog = () => {
+        if (tableConfirmDialog) tableConfirmDialog.hidden = true;
+        pendingTargetTable = null;
+    };
+
+    const closeTableSplitDialog = () => {
+        if (tableSplitDialog) tableSplitDialog.hidden = true;
+        pendingTargetTable = null;
+        splitQuantities.clear();
+    };
+
+    const openTableConfirmModal = (tool, targetButton) => {
+        const sourceButton = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
+        if (!sourceButton || !targetButton || !tableConfirmDialog) return;
+        pendingTargetTable = targetButton;
+        const sName = sourceButton.dataset.tableName;
+        const tName = targetButton.dataset.tableName;
+
+        if (tool === 'transfer') {
+            if (tableConfirmTitle) tableConfirmTitle.textContent = 'Chuyển bàn';
+            if (tableConfirmMsg) tableConfirmMsg.textContent = `Chuyển từ bàn ${sName} đến bàn ${tName}, Nhấn OK để xác nhận!`;
+        } else if (tool === 'import') {
+            if (tableConfirmTitle) tableConfirmTitle.textContent = 'Nhập bàn';
+            if (tableConfirmMsg) tableConfirmMsg.textContent = `Nhập từ bàn ${sName} vào bàn ${tName}, Nhấn OK để xác nhận!`;
+        } else if (tool === 'combine') {
+            if (tableConfirmTitle) tableConfirmTitle.textContent = 'Ghép bàn';
+            if (tableConfirmMsg) tableConfirmMsg.textContent = `Ghép bàn ${sName} với bàn ${tName}, Nhấn OK để xác nhận!`;
+        }
+        tableConfirmDialog.hidden = false;
+    };
+
+    const cloneCartMap = (sourceCart) => {
+        const next = new Map();
+        sourceCart.forEach((item, key) => {
+            next.set(String(key), { ...item });
+        });
+        return next;
+    };
+
+    const mergeCartInto = (targetCart, sourceCart) => {
+        sourceCart.forEach((item, key) => {
+            const k = String(key);
+            const existing = targetCart.get(k);
+            if (existing) {
+                existing.quantity += item.quantity;
+            } else {
+                targetCart.set(k, { ...item });
+            }
+        });
+    };
+
+    tableConfirmOk?.addEventListener('click', async () => {
+        const sourceButton = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
+        const targetButton = pendingTargetTable;
+        const tool = activeTableTool;
+        if (!sourceButton || !targetButton || !tool) {
+            closeTableConfirmDialog();
+            return;
+        }
+
+        const sourceId = sourceButton.dataset.tableId;
+        const targetId = targetButton.dataset.tableId;
+        const sName = sourceButton.dataset.tableName;
+        const tName = targetButton.dataset.tableName;
+        const sourceData = tableOrders.get(sourceId) || {
+            cart: cloneCartMap(cart),
+            itemsSentToKitchen,
+            tableName: sName,
+            area: sourceButton.dataset.area,
+            arrivalTime: getArrivalTime(),
+            combinedWith: null,
+        };
+
+        closeTableConfirmDialog();
+        cancelActiveTableTool();
+
+        if (tool === 'transfer') {
+            let targetData = tableOrders.get(targetId);
+            if (!targetData) {
+                targetData = {
+                    cart: cloneCartMap(sourceData.cart),
+                    itemsSentToKitchen: sourceData.itemsSentToKitchen,
+                    tableName: tName,
+                    area: targetButton.dataset.area,
+                    arrivalTime: sourceData.arrivalTime || getArrivalTime(),
+                    combinedWith: sourceData.combinedWith,
+                };
+            } else {
+                mergeCartInto(targetData.cart, sourceData.cart);
+                targetData.itemsSentToKitchen = targetData.itemsSentToKitchen || sourceData.itemsSentToKitchen;
+            }
+            tableOrders.set(targetId, targetData);
+            tableOrders.delete(sourceId);
+
+            applyTableVisualState(sourceButton, null);
+            applyTableVisualState(targetButton, targetData);
+
+            showTablePreview(sourceButton);
+            showTableSpeechBubble(sourceButton, `Đã chuyển sang bàn ${tName}!`);
+            await postTableAction({
+                action: 'transfer',
+                source_table_id: sourceId,
+                target_table_id: targetId,
+                detail: `Chuyển từ bàn ${sName} sang bàn ${tName}`,
+            });
+        } else if (tool === 'import') {
+            let targetData = tableOrders.get(targetId);
+            if (!targetData) {
+                targetData = {
+                    cart: cloneCartMap(sourceData.cart),
+                    itemsSentToKitchen: sourceData.itemsSentToKitchen,
+                    tableName: tName,
+                    area: targetButton.dataset.area,
+                    arrivalTime: sourceData.arrivalTime || getArrivalTime(),
+                    combinedWith: null,
+                };
+            } else {
+                mergeCartInto(targetData.cart, sourceData.cart);
+                targetData.itemsSentToKitchen = targetData.itemsSentToKitchen || sourceData.itemsSentToKitchen;
+            }
+            tableOrders.set(targetId, targetData);
+            tableOrders.delete(sourceId);
+
+            applyTableVisualState(sourceButton, null);
+            applyTableVisualState(targetButton, targetData);
+
+            openSelectedTable(targetButton);
+            showTableSpeechBubble(sourceButton, `Đã nhập vào bàn ${tName}!`);
+            await postTableAction({
+                action: 'import',
+                source_table_id: sourceId,
+                target_table_id: targetId,
+                detail: `Nhập từ bàn ${sName} vào bàn ${tName}`,
+            });
+        } else if (tool === 'combine') {
+            sourceData.combinedWith = tName;
+            tableOrders.set(sourceId, sourceData);
+            let targetData = tableOrders.get(targetId);
+            if (!targetData) {
+                targetData = {
+                    cart: cloneCartMap(sourceData.cart),
+                    itemsSentToKitchen: sourceData.itemsSentToKitchen,
+                    tableName: tName,
+                    area: targetButton.dataset.area,
+                    arrivalTime: sourceData.arrivalTime || getArrivalTime(),
+                    combinedWith: sName,
+                };
+            } else {
+                targetData.combinedWith = sName;
+            }
+            tableOrders.set(targetId, targetData);
+
+            applyTableVisualState(sourceButton, sourceData);
+            applyTableVisualState(targetButton, targetData);
+
+            showSelectedTable(sourceButton);
+            setMenuUnlocked(menuUnlocked);
+            showTableSpeechBubble(targetButton, `Đã ghép với bàn ${sName}!`);
+            await postTableAction({
+                action: 'combine',
+                source_table_id: sourceId,
+                target_table_id: targetId,
+                detail: `Ghép bàn ${sName} với bàn ${tName}`,
+            });
+        }
+    });
+
+    tableConfirmCancel?.addEventListener('click', closeTableConfirmDialog);
+    tableConfirmClose?.addEventListener('click', closeTableConfirmDialog);
+
+    const renderSplitModalItems = () => {
+        if (!splitItemsList) return;
+        splitItemsList.innerHTML = '';
+        if (!cart.size) {
+            splitItemsList.innerHTML = '<p class="empty-order">Bàn hiện tại chưa có món nào để tách.</p>';
+            return;
+        }
+        cart.forEach((item, productId) => {
+            const k = String(productId);
+            const splitQty = splitQuantities.get(k) || 0;
+            const row = document.createElement('div');
+            row.className = 'split-item-row';
+            row.innerHTML = `
+                <div class="split-item-info">
+                    <strong>${item.name}</strong>
+                    <small>Đang có: ${item.quantity} ${item.unit}</small>
+                </div>
+                <div class="split-item-qty-control">
+                    <button type="button" class="btn-split-minus" data-id="${k}">&minus;</button>
+                    <span class="split-qty-val">${splitQty}</span>
+                    <button type="button" class="btn-split-plus" data-id="${k}">&plus;</button>
+                </div>
+            `;
+            splitItemsList.appendChild(row);
+        });
+
+        splitItemsList.querySelectorAll('.btn-split-minus').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id;
+                const cur = splitQuantities.get(id) || 0;
+                splitQuantities.set(id, Math.max(0, cur - 1));
+                renderSplitModalItems();
+            });
+        });
+
+        splitItemsList.querySelectorAll('.btn-split-plus').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id;
+                const item = cart.get(id);
+                if (!item) return;
+                const cur = splitQuantities.get(id) || 0;
+                splitQuantities.set(id, Math.min(item.quantity, cur + 1));
+                renderSplitModalItems();
+            });
+        });
+    };
+
+    const openTableSplitModal = (preselectedTargetBtn = null) => {
+        const sourceButton = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
+        if (!sourceButton || !tableSplitDialog) return;
+        if (!cart.size) {
+            showToast('Bàn hiện tại chưa có món nào để tách.');
+            cancelActiveTableTool();
+            return;
+        }
+
+        if (splitSourceTableName) {
+            splitSourceTableName.textContent = `Bàn ${sourceButton.dataset.tableName}`;
+        }
+
+        if (splitTargetTableSelect) {
+            splitTargetTableSelect.innerHTML = '';
+            document.querySelectorAll('.table').forEach((btn) => {
+                if (btn.dataset.tableId === selectedTableId) return;
+                const opt = document.createElement('option');
+                opt.value = btn.dataset.tableId;
+                opt.textContent = `Bàn ${btn.dataset.tableName} (${btn.dataset.area})`;
+                if (preselectedTargetBtn && btn.dataset.tableId === preselectedTargetBtn.dataset.tableId) {
+                    opt.selected = true;
+                }
+                splitTargetTableSelect.appendChild(opt);
+            });
+        }
+
+        splitQuantities.clear();
+        let firstAssigned = false;
+        cart.forEach((item, productId) => {
+            if (!firstAssigned) {
+                splitQuantities.set(String(productId), 1);
+                firstAssigned = true;
+            } else {
+                splitQuantities.set(String(productId), 0);
+            }
+        });
+
+        renderSplitModalItems();
+        tableSplitDialog.hidden = false;
+    };
+
+    tableSplitOk?.addEventListener('click', async () => {
+        const sourceButton = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
+        const targetId = splitTargetTableSelect?.value;
+        const targetButton = targetId ? document.querySelector(`.table[data-table-id="${targetId}"]`) : null;
+        if (!sourceButton || !targetButton) {
+            closeTableSplitDialog();
+            return;
+        }
+
+        let totalSplitItems = 0;
+        splitQuantities.forEach((qty) => { totalSplitItems += qty; });
+        if (totalSplitItems <= 0) {
+            showToast('Vui lòng chọn ít nhất 1 món để tách sang bàn đích.');
+            return;
+        }
+
+        const sourceId = sourceButton.dataset.tableId;
+        const sName = sourceButton.dataset.tableName;
+        const tName = targetButton.dataset.tableName;
+
+        let targetData = tableOrders.get(targetId);
+        if (!targetData) {
+            targetData = {
+                cart: new Map(),
+                itemsSentToKitchen: itemsSentToKitchen,
+                tableName: tName,
+                area: targetButton.dataset.area,
+                arrivalTime: getArrivalTime(),
+                combinedWith: null,
+            };
+        }
+
+        splitQuantities.forEach((qty, productId) => {
+            if (qty <= 0) return;
+            const srcItem = cart.get(productId);
+            if (!srcItem) return;
+            const existingTarget = targetData.cart.get(productId);
+            if (existingTarget) {
+                existingTarget.quantity += qty;
+            } else {
+                targetData.cart.set(productId, { ...srcItem, quantity: qty });
+            }
+
+            if (srcItem.quantity > qty) {
+                srcItem.quantity -= qty;
+            } else {
+                cart.delete(productId);
+            }
+        });
+
+        tableOrders.set(targetId, targetData);
+        applyTableVisualState(targetButton, targetData);
+
+        closeTableSplitDialog();
+        cancelActiveTableTool();
+
+        if (cart.size === 0) {
+            tableOrders.delete(sourceId);
+            applyTableVisualState(sourceButton, null);
+            openSelectedTable(targetButton);
+        } else {
+            const sourceData = tableOrders.get(sourceId);
+            if (sourceData) sourceData.cart = cart;
+            renderCart();
+        }
+
+        showTableSpeechBubble(sourceButton, `Đã tách sang bàn ${tName}!`);
+        await postTableAction({
+            action: 'split',
+            source_table_id: sourceId,
+            target_table_id: targetId,
+            detail: `Tách từ bàn ${sName} sang bàn ${tName}`,
+        });
+    });
+
+    tableSplitCancel?.addEventListener('click', closeTableSplitDialog);
+    tableSplitClose?.addEventListener('click', closeTableSplitDialog);
+
+    tableToolButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const tool = btn.dataset.tableTool;
+            if (!tool) return;
+            setActiveTableTool(tool);
+        });
+    });
 
     const closeDialog = () => {
         dialog.hidden = true;
@@ -206,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeTable = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
         paymentConfirm.disabled = true;
         try {
-            const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+            const csrfToken = getCsrfToken();
             const response = await fetch(paymentDialog.dataset.checkoutUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
@@ -311,10 +906,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 closingDialog.hidden = false;
                 return;
             }
-            systemNotice.textContent = systemMessages[actionButton.dataset.action];
-            systemNotice.hidden = false;
-            window.clearTimeout(systemNoticeTimeout);
-            systemNoticeTimeout = window.setTimeout(() => { systemNotice.hidden = true; }, 4200);
+            showToast(systemMessages[actionButton.dataset.action]);
         });
     });
     document.querySelector('#closing-dialog-close').addEventListener('click', closeClosingDialog);
@@ -324,7 +916,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(closingDialog.dataset.closeUrl, {
                 method: 'POST',
-                headers: { 'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value },
+                headers: { 'X-CSRFToken': getCsrfToken() },
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Không thể kết ca.');
@@ -332,8 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
             closingSuccessDialog.hidden = false;
             window.setTimeout(() => document.querySelector('#closing-logout-form').submit(), 1200);
         } catch (error) {
-            systemNotice.textContent = error.message;
-            systemNotice.hidden = false;
+            showToast(error.message);
             closingConfirm.disabled = false;
         }
     });
@@ -348,53 +939,157 @@ document.addEventListener('DOMContentLoaded', () => {
             const menu = actionButton.closest('.pos-menu-item');
             menu.classList.remove('open');
             menu.querySelector(':scope > button').setAttribute('aria-expanded', 'false');
-            systemNotice.textContent = settingMessages[actionButton.dataset.setting];
-            systemNotice.hidden = false;
-            window.clearTimeout(systemNoticeTimeout);
-            systemNoticeTimeout = window.setTimeout(() => { systemNotice.hidden = true; }, 4200);
+            showToast(settingMessages[actionButton.dataset.setting]);
         });
     });
 
+    // =========================================================================
+    // CONTEXT MENU HÓA ĐƠN: TÍNH LẠI TIỀN THỪA, SỬA, XÓA HÓA ĐƠN
+    // =========================================================================
     const invoiceContextMenu = document.querySelector('#invoice-context-menu');
     const invoiceDeleteDialog = document.querySelector('#invoice-delete-dialog');
-    const invoiceDeleteReasonEnabled = document.querySelector('#invoice-delete-reason-enabled');
     const invoiceDeleteReason = document.querySelector('#invoice-delete-reason');
+    const invoiceDeleteConfirm = document.querySelector('#invoice-delete-confirm');
+    const invoiceChangeDialog = document.querySelector('#invoice-change-dialog');
+    const recalcInvoiceCodeEl = document.querySelector('#recalc-invoice-code');
+    const recalcInvoiceTotalEl = document.querySelector('#recalc-invoice-total');
+    const recalcCustomerPaidInput = document.querySelector('#recalc-customer-paid');
+    const recalcChangeAmountInput = document.querySelector('#recalc-change-amount');
+    let recalcInvoiceTotalAmount = 0;
     let selectedInvoiceRow = null;
+    let targetInvoiceRowForAction = null;
+
     const invoiceActionMessages = {
         print: 'Đang in lại hóa đơn.',
         complete: 'Hóa đơn đã được đánh dấu hoàn tất thanh toán.',
-        delete: 'Chức năng xóa hóa đơn cần xác nhận từ quản lý.',
         summary: 'Đã chọn tổng hợp hóa đơn.',
     };
+
+    const parseMoneyText = (txt) => {
+        if (!txt) return 0;
+        const digits = String(txt).replace(/[^\d]/g, '');
+        return Number(digits) || 0;
+    };
+
     const closeInvoiceContextMenu = () => {
         if (invoiceContextMenu) invoiceContextMenu.hidden = true;
         if (selectedInvoiceRow) selectedInvoiceRow.classList.remove('invoice-selected');
     };
+
+    const getRowInvoiceCode = (row) => {
+        if (!row) return '';
+        return row.dataset.invoiceCode || row.querySelector('td')?.textContent?.trim()?.replace(/^#/, '') || '';
+    };
+
     const openInvoiceEditDialog = () => {
-        if (!selectedInvoiceRow) return;
-        const code = selectedInvoiceRow.dataset.invoiceCode ||
-                     selectedInvoiceRow.querySelector('td')?.textContent?.trim()?.replace(/^#/, '');
+        const row = selectedInvoiceRow;
+        const code = getRowInvoiceCode(row);
         closeInvoiceContextMenu();
         if (code && typeof window.openInvoiceEditor === 'function') {
             window.openInvoiceEditor(code);
         }
     };
+
+    // --- TÍNH LẠI TIỀN THỪA ---
+    const updateRecalcChangeOutput = () => {
+        if (!recalcCustomerPaidInput || !recalcChangeAmountInput) return;
+        const paid = Number(recalcCustomerPaidInput.value) || 0;
+        const diff = paid - recalcInvoiceTotalAmount;
+        if (diff >= 0) {
+            recalcChangeAmountInput.value = formatMoney(diff);
+            recalcChangeAmountInput.classList.remove('is-negative');
+        } else {
+            recalcChangeAmountInput.value = `Còn thiếu ${formatMoney(Math.abs(diff))}`;
+            recalcChangeAmountInput.classList.add('is-negative');
+        }
+    };
+
+    const openInvoiceChangeDialog = () => {
+        const row = selectedInvoiceRow;
+        if (!row || !invoiceChangeDialog) return;
+        targetInvoiceRowForAction = row;
+        const code = getRowInvoiceCode(row);
+        const amountEl = row.querySelector('.total-highlight') || row.querySelector('.td-amount') || row.children[6];
+        const parsedFromDom = parseMoneyText(amountEl?.textContent);
+        const parsedFromDataset = parseMoneyText(row.dataset.totalAmount);
+        recalcInvoiceTotalAmount = parsedFromDom || parsedFromDataset || 0;
+
+        if (recalcInvoiceCodeEl) recalcInvoiceCodeEl.textContent = `#${code}`;
+        if (recalcInvoiceTotalEl) recalcInvoiceTotalEl.textContent = formatMoney(recalcInvoiceTotalAmount);
+        if (recalcCustomerPaidInput) {
+            recalcCustomerPaidInput.value = recalcInvoiceTotalAmount;
+        }
+        updateRecalcChangeOutput();
+        closeInvoiceContextMenu();
+        invoiceChangeDialog.hidden = false;
+        window.setTimeout(() => {
+            recalcCustomerPaidInput?.focus();
+            recalcCustomerPaidInput?.select();
+        }, 40);
+    };
+
+    const closeInvoiceChangeDialog = () => {
+        if (invoiceChangeDialog) invoiceChangeDialog.hidden = true;
+    };
+
+    recalcCustomerPaidInput?.addEventListener('input', updateRecalcChangeOutput);
+    document.querySelectorAll('#recalc-quick-cash button[data-cash]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const cashVal = Number(btn.dataset.cash) || 0;
+            if (recalcCustomerPaidInput) {
+                recalcCustomerPaidInput.value = cashVal;
+                updateRecalcChangeOutput();
+            }
+        });
+    });
+    document.querySelector('#invoice-change-close')?.addEventListener('click', closeInvoiceChangeDialog);
+    document.querySelector('#invoice-change-cancel')?.addEventListener('click', closeInvoiceChangeDialog);
+    document.querySelector('#invoice-change-confirm')?.addEventListener('click', () => {
+        const code = getRowInvoiceCode(targetInvoiceRowForAction);
+        const paid = Number(recalcCustomerPaidInput?.value) || 0;
+        const change = Math.max(0, paid - recalcInvoiceTotalAmount);
+        closeInvoiceChangeDialog();
+        showToast(`HĐ #${code}: Khách đưa ${formatMoney(paid)} — Tiền thừa trả khách: ${formatMoney(change)}`);
+    });
+
+    // --- LÝ DO XÓA HÓA ĐƠN (ĐỒNG BỘ VỚI LÝ DO SỬA HÓA ĐƠN) ---
     const openInvoiceDeleteDialog = () => {
-        if (!selectedInvoiceRow || !invoiceDeleteDialog) return;
-        const invoiceCode = selectedInvoiceRow.querySelector('td')?.textContent?.trim()?.replace(/^#/, '');
+        const row = selectedInvoiceRow;
+        if (!row || !invoiceDeleteDialog) return;
+        targetInvoiceRowForAction = row;
+        const invoiceCode = getRowInvoiceCode(row);
         const titleEl = document.querySelector('#invoice-delete-title');
-        if (titleEl) titleEl.textContent = `Xóa hóa đơn số ${invoiceCode}`;
-        if (invoiceDeleteReasonEnabled) invoiceDeleteReasonEnabled.checked = false;
+        if (titleEl) titleEl.textContent = `Lý do xóa hóa đơn`;
         if (invoiceDeleteReason) {
             invoiceDeleteReason.value = '';
-            invoiceDeleteReason.hidden = true;
+            invoiceDeleteReason.placeholder = `Nhập lý do xóa hóa đơn #${invoiceCode}...`;
+        }
+        if (invoiceDeleteConfirm) {
+            invoiceDeleteConfirm.disabled = true;
+            invoiceDeleteConfirm.textContent = 'Xác nhận';
         }
         closeInvoiceContextMenu();
         invoiceDeleteDialog.hidden = false;
+        window.setTimeout(() => invoiceDeleteReason?.focus(), 40);
     };
+
     const closeInvoiceDeleteDialog = () => {
         if (invoiceDeleteDialog) invoiceDeleteDialog.hidden = true;
     };
+
+    invoiceDeleteReason?.addEventListener('input', () => {
+        if (invoiceDeleteConfirm) {
+            invoiceDeleteConfirm.disabled = !invoiceDeleteReason.value.trim();
+        }
+    });
+
+    invoiceDeleteReason?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && invoiceDeleteReason.value.trim()) {
+            e.preventDefault();
+            invoiceDeleteConfirm?.click();
+        }
+    });
+
     const showInvoiceContextMenu = (event, row) => {
         event.preventDefault();
         if (selectedInvoiceRow) selectedInvoiceRow.classList.remove('invoice-selected');
@@ -407,6 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         invoiceContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - menuWidth - 4)}px`;
         invoiceContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - menuHeight - 4)}px`;
     };
+
     document.querySelectorAll('.invoice-table tbody tr[data-invoice-code]').forEach((row) => {
         row.addEventListener('contextmenu', (event) => showInvoiceContextMenu(event, row));
         row.addEventListener('dblclick', () => {
@@ -414,58 +1110,80 @@ document.addEventListener('DOMContentLoaded', () => {
             openInvoiceEditDialog();
         });
     });
+
     if (invoiceContextMenu) {
         invoiceContextMenu.querySelectorAll('button[data-invoice-action]').forEach((actionButton) => {
             actionButton.addEventListener('click', () => {
-                if (actionButton.dataset.invoiceAction === 'edit') {
+                const action = actionButton.dataset.invoiceAction;
+                if (action === 'edit') {
                     openInvoiceEditDialog();
-                } else if (actionButton.dataset.invoiceAction === 'delete') {
+                } else if (action === 'delete') {
                     openInvoiceDeleteDialog();
+                } else if (action === 'change') {
+                    openInvoiceChangeDialog();
                 } else if (!actionButton.disabled) {
-                    systemNotice.textContent = invoiceActionMessages[actionButton.dataset.invoiceAction];
-                    systemNotice.hidden = false;
-                    window.clearTimeout(systemNoticeTimeout);
-                    systemNoticeTimeout = window.setTimeout(() => { systemNotice.hidden = true; }, 4200);
+                    showToast(invoiceActionMessages[action] || 'Đã thực hiện thao tác.');
                     closeInvoiceContextMenu();
                 }
             });
         });
     }
+
     document.querySelector('#invoice-delete-close')?.addEventListener('click', closeInvoiceDeleteDialog);
     document.querySelector('#invoice-delete-cancel')?.addEventListener('click', closeInvoiceDeleteDialog);
-    document.querySelector('#invoice-delete-confirm')?.addEventListener('click', async () => {
-        if (!invoiceDeleteReasonEnabled?.checked || !invoiceDeleteReason?.value.trim()) {
-            systemNotice.textContent = 'Hãy bật và nhập lý do xóa hóa đơn.';
-            systemNotice.hidden = false;
-            return;
-        }
-        const invoiceCode = selectedInvoiceRow?.querySelector('td')?.textContent?.trim()?.replace(/^#/, '');
+    invoiceDeleteConfirm?.addEventListener('click', async () => {
+        const reason = invoiceDeleteReason?.value.trim() || '';
+        if (!reason) return;
+        const row = targetInvoiceRowForAction || selectedInvoiceRow;
+        const invoiceCode = getRowInvoiceCode(row);
         if (!invoiceCode || !invoiceContextMenu) return;
-        const response = await fetch(invoiceContextMenu.dataset.deleteUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '',
-            },
-            body: JSON.stringify({ invoice_code: invoiceCode, reason: invoiceDeleteReason.value.trim() }),
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            systemNotice.textContent = result.error || 'Không thể xóa hóa đơn.';
-            systemNotice.hidden = false;
-            return;
+
+        invoiceDeleteConfirm.disabled = true;
+        invoiceDeleteConfirm.textContent = 'Đang xử lý...';
+        try {
+            const response = await fetch(invoiceContextMenu.dataset.deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({ invoice_code: invoiceCode, reason }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                showToast(result.error || 'Không thể xóa hóa đơn.');
+                invoiceDeleteConfirm.disabled = false;
+                invoiceDeleteConfirm.textContent = 'Xác nhận';
+                return;
+            }
+            if (result.activity_log) {
+                prependActivityLogRow(result.activity_log);
+            }
+            if (row) {
+                row.remove();
+            }
+            closeInvoiceDeleteDialog();
+            showToast(result.message || `Đã xóa hóa đơn #${invoiceCode}.`);
+        } catch (err) {
+            showToast(err.message || 'Lỗi kết nối khi xóa hóa đơn.');
+            invoiceDeleteConfirm.disabled = false;
+            invoiceDeleteConfirm.textContent = 'Xác nhận';
         }
-        closeInvoiceDeleteDialog();
-        window.location.reload();
     });
+
     document.addEventListener('click', (event) => {
-        if (!invoiceContextMenu.contains(event.target) && !event.target.closest('.invoice-table')) closeInvoiceContextMenu();
+        if (invoiceContextMenu && !invoiceContextMenu.contains(event.target) && !event.target.closest('.invoice-table')) {
+            closeInvoiceContextMenu();
+        }
     });
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             closeInvoiceContextMenu();
-            closeInvoiceEditDialog();
             closeInvoiceDeleteDialog();
+            closeInvoiceChangeDialog();
+            closeTableConfirmDialog();
+            closeTableSplitDialog();
+            cancelActiveTableTool();
         }
     });
 
@@ -479,10 +1197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const menu = actionButton.closest('.pos-menu-item');
             menu.classList.remove('open');
             menu.querySelector(':scope > button').setAttribute('aria-expanded', 'false');
-            systemNotice.textContent = managementMessages[actionButton.dataset.management];
-            systemNotice.hidden = false;
-            window.clearTimeout(systemNoticeTimeout);
-            systemNoticeTimeout = window.setTimeout(() => { systemNotice.hidden = true; }, 4200);
+            showToast(managementMessages[actionButton.dataset.management]);
         });
     });
 
@@ -497,10 +1212,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const menu = actionButton.closest('.pos-menu-item');
             menu.classList.remove('open');
             menu.querySelector(':scope > button').setAttribute('aria-expanded', 'false');
-            systemNotice.textContent = reportMessages[actionButton.dataset.report];
-            systemNotice.hidden = false;
-            window.clearTimeout(systemNoticeTimeout);
-            systemNoticeTimeout = window.setTimeout(() => { systemNotice.hidden = true; }, 4200);
+            showToast(reportMessages[actionButton.dataset.report]);
         });
     });
 
@@ -633,7 +1345,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.table').forEach((tableButton) => {
         tableButton.addEventListener('click', () => {
-            openSelectedTable(tableButton);
+            const clickedId = tableButton.dataset.tableId;
+
+            // Nếu đang trong chế độ Chuyển / Nhập / Ghép / Tách bàn và người dùng nhấn vào bàn đích
+            if (activeTableTool && selectedTableId) {
+                if (clickedId === selectedTableId) {
+                    showToast('Vui lòng chọn một bàn khác với bàn hiện tại.');
+                    return;
+                }
+                if (activeTableTool === 'split') {
+                    openTableSplitModal(tableButton);
+                } else {
+                    openTableConfirmModal(activeTableTool, tableButton);
+                }
+                return;
+            }
+
+            // Nếu bàn đã được mở trước đó (đang gọi món / đang phục vụ), chuyển thẳng vào bàn đó
+            if (tableOrders.has(clickedId)) {
+                openSelectedTable(tableButton);
+                return;
+            }
+
+            // Nếu bàn đang ở trạng thái preview và nhấn lần 2 vào chính bàn đó -> Mở bàn luôn
+            if (previewedTable === tableButton && !selectedTableId && tablePreviewArmed) {
+                openSelectedTable(tableButton);
+                return;
+            }
+
+            // Lần 1 nhấn vào bàn trống / bàn đã đặt: hiển thị thông tin bàn (Mở bàn, Gọi món, Đặt chỗ / Hủy đặt)
+            showTablePreview(tableButton);
+            tablePreviewArmed = true;
         });
     });
 
@@ -666,7 +1408,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const activeTable = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
             if (activeTable) {
                 activeTable.classList.remove('table-opening', 'table-red');
-                activeTable.classList.add('kitchen-sent', 'table-green');
+                activeTable.classList.add('kitchen-sent', 'table-green', 'occupied');
             }
             orderStatus.textContent = 'Đang phục vụ món';
             orderStatus.classList.add('pending');

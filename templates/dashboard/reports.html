@@ -1,7 +1,18 @@
 {% extends 'base.html' %}
 {% block title %}Báo cáo doanh thu | MixFood Manager{% endblock %}
 {% block content %}
-<section class="list-header"><div><h1>Báo cáo doanh thu</h1><p class="muted">Số liệu lấy từ các hóa đơn đã thanh toán.</p></div><a class="secondary-button" href="{% url 'dashboard:home' %}">Về POS</a></section>
+<section class="list-header">
+    <div>
+        <h1>Báo cáo doanh thu & Thống kê bán hàng</h1>
+        <p class="muted">Số liệu lấy từ các hóa đơn đã thanh toán theo thời gian thực.</p>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a class="primary-button" href="{% url 'dashboard:home' %}?open_stats=1">📊 Mở Thống kê bán hàng</a>
+        <a class="secondary-button" href="{% url 'sales:statistics_print' %}" target="_blank">🖨️ In kiểm bán</a>
+        <a class="secondary-button" href="{% url 'sales:statistics_export' %}">📥 Xuất Excel</a>
+        <a class="secondary-button" href="{% url 'dashboard:home' %}">Về POS</a>
+    </div>
+</section>
 <form class="filter-bar report-filter" method="get"><label>Từ ngày</label><input type="date" name="from" value="{{ from_date }}"><label>Đến ngày</label><input type="date" name="to" value="{{ to_date }}"><button class="primary-button" type="submit">Xem báo cáo</button></form>
 <section class="report-metrics"><article><span>Doanh thu</span><strong>{{ total_revenue|floatformat:0 }} đ</strong></article><article><span>Số hóa đơn</span><strong>{{ invoice_count }}</strong></article><article><span>Giá trị đơn trung bình</span><strong>{{ average_order|floatformat:0 }} đ</strong></article></section>
 <section class="report-grid"><article class="report-panel"><h2>Doanh thu theo phương thức</h2>{% for row in payment_rows %}<div class="bar-row"><span>{{ row.label }}</span><b>{{ row.total|floatformat:0 }} đ</b><i><em style="width: {% widthratio row.total total_revenue 100 %}%"></em></i></div>{% empty %}<p class="muted">Chưa có dữ liệu.</p>{% endfor %}</article><article class="report-panel"><h2>Doanh thu theo danh mục</h2>{% for row in category_rows %}<div class="bar-row"><span>{{ row.name }}</span><b>{{ row.revenue|floatformat:0 }} đ</b><i><em style="width: {% widthratio row.revenue total_revenue 100 %}%"></em></i></div>{% empty %}<p class="muted">Chưa có dữ liệu.</p>{% endfor %}</article></section>

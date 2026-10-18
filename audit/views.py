@@ -20,22 +20,23 @@ ORDER_LOG_ACTIONS = [
 ]
 
 DISPLAY_ACTIONS = [
-    ('return_item', 'Trả món'),
-    ('cancel_item', 'Hủy món'),
-    ('edit_invoice', 'Sửa hóa đơn'),
-    ('delete_invoice', 'Xóa hóa đơn'),
-    ('menu_update', 'Cập nhật thực đơn'),
-    ('maintenance', 'Bảo trì dữ liệu'),
+    ('reserve_table', 'Đặt bàn'),
     ('transfer_table', 'Chuyển'),
     ('stock_receipt', 'Nhập'),
     ('merge_table', 'Ghép'),
     ('split_table', 'Tách'),
+    ('edit_invoice', 'Sửa hóa đơn'),
+    ('delete_invoice', 'Xóa hóa đơn'),
+    ('shift_close', 'Kết ca'),
+    ('login', 'Đăng nhập'),
     ('system', 'Hệ thống'),
+    ('menu_update', 'Cập nhật thực đơn'),
+    ('return_item', 'Trả món'),
+    ('cancel_item', 'Hủy món'),
     ('edit_price', 'Sửa tiền món'),
     ('delete_order', 'Xóa bỏ đơn'),
+    ('maintenance', 'Bảo trì dữ liệu'),
     ('warehouse', 'Quản lý kho'),
-    ('other', 'Khác'),
-    ('shift_close', 'Kết ca'),
     ('view_report', 'Xem báo cáo'),
     ('debt', 'Công nợ'),
 ]
@@ -61,7 +62,11 @@ def _parse_date(date_str, end_of_day=False):
 
 def _filter_logs(request):
     """Hàm dùng chung lọc ActivityLog theo tham số request."""
-    logs = ActivityLog.objects.select_related('actor').all()
+    logs = (
+        ActivityLog.objects.select_related('actor')
+        .exclude(description__startswith='POST /')
+        .exclude(action=ActivityLog.Action.PAYMENT)
+    )
 
     from_date_str = request.GET.get('from_date', '').strip()
     to_date_str = request.GET.get('to_date', '').strip()
@@ -111,9 +116,13 @@ def activity_list(request):
     logs = _filter_logs(request)
     staff_users = User.objects.filter(is_active=True).order_by('username')
 
-    today_str = timezone.now().strftime('%d/%m/%Y')
-    from_date = request.GET.get('from_date', today_str)
-    to_date = request.GET.get('to_date', today_str)
+    today_str = timezone.localdate().strftime('%Y-%m-%d')
+    raw_from = request.GET.get('from_date', today_str)
+    raw_to = request.GET.get('to_date', today_str)
+    parsed_from = _parse_date(raw_from)
+    parsed_to = _parse_date(raw_to)
+    from_date = parsed_from.strftime('%Y-%m-%d') if parsed_from else today_str
+    to_date = parsed_to.strftime('%Y-%m-%d') if parsed_to else today_str
 
     return render(request, 'audit/activity_list.html', {
         'logs': logs[:500],

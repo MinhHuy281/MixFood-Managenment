@@ -3,17 +3,17 @@
     <div class="menu-modal-dialog activity-admin-modal-container">
         <!-- Modal Header -->
         <div class="menu-modal-header activity-modal-header">
-            <div class="modal-title-wrap">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <div class="modal-title-wrap" style="color: #ffffff;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14 2 14 8 20 8"/>
                     <line x1="16" y1="13" x2="8" y2="13"/>
                     <line x1="16" y1="17" x2="8" y2="17"/>
                     <polyline points="10 9 9 9 8 9"/>
                 </svg>
-                <h3>Nhật ký hoạt động - {{ request.user.get_username|default:"Admin" }}</h3>
+                <h3 style="color: #ffffff !important;">Nhật ký hoạt động - {{ request.user.get_username|default:"Admin" }}</h3>
             </div>
-            <button type="button" class="modal-close" id="pos-activity-modal-close" aria-label="Đóng" style="color: #ffffff; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.background='#ef4444'; this.style.borderColor='#dc2626';" onmouseout="this.style.background='rgba(255, 255, 255, 0.15)'; this.style.borderColor='rgba(255, 255, 255, 0.3)';">✕</button>
+            <button type="button" class="dialog-close" id="pos-activity-modal-close" aria-label="Đóng">&times;</button>
         </div>
 
         <!-- Filter Toolbar (Từ ngày, Đến ngày, Loại hoạt động, Nhân viên, Nhật ký gọi món) -->
@@ -21,33 +21,34 @@
             <div class="activity-date-range">
                 <label for="pos-activity-date-from">Từ</label>
                 <div class="date-input-wrap">
-                    <input type="text" id="pos-activity-date-from" class="pos-activity-date-input" placeholder="dd/mm/yyyy">
+                    <input type="date" id="pos-activity-date-from" class="pos-activity-date-input filter-date-input" value="{{ current_time|date:'Y-m-d' }}">
                 </div>
                 <label for="pos-activity-date-to">Đến</label>
                 <div class="date-input-wrap">
-                    <input type="text" id="pos-activity-date-to" class="pos-activity-date-input" placeholder="dd/mm/yyyy">
+                    <input type="date" id="pos-activity-date-to" class="pos-activity-date-input filter-date-input" value="{{ current_time|date:'Y-m-d' }}">
                 </div>
             </div>
 
             <div class="activity-filters">
                 <select id="pos-activity-action-select" class="activity-select">
                     <option value="">&lt;Loại hoạt động&gt;</option>
-                    <option value="return_item">Trả món</option>
-                    <option value="cancel_item">Hủy món</option>
-                    <option value="edit_invoice">Sửa hóa đơn</option>
-                    <option value="delete_invoice">Xóa hóa đơn</option>
-                    <option value="menu_update">Cập nhật thực đơn</option>
-                    <option value="maintenance">Bảo trì dữ liệu</option>
+                    <option value="reserve_table">Đặt bàn</option>
                     <option value="transfer_table">Chuyển</option>
                     <option value="stock_receipt">Nhập</option>
                     <option value="merge_table">Ghép</option>
                     <option value="split_table">Tách</option>
-                    <option value="system">Hệ thống</option>
+                    <option value="edit_invoice">Sửa hóa đơn</option>
+                    <option value="delete_invoice">Xóa hóa đơn</option>
+                    <option value="shift_close">Kết ca</option>
+                    <option value="login">Đăng nhập</option>
+                    <option value="system">Hệ thống / Đổi ca</option>
+                    <option value="menu_update">Cập nhật thực đơn</option>
+                    <option value="return_item">Trả món</option>
+                    <option value="cancel_item">Hủy món</option>
                     <option value="edit_price">Sửa tiền món</option>
                     <option value="delete_order">Xóa bỏ đơn</option>
+                    <option value="maintenance">Bảo trì dữ liệu</option>
                     <option value="warehouse">Quản lý kho</option>
-                    <option value="other">Khác</option>
-                    <option value="shift_close">Kết ca</option>
                     <option value="view_report">Xem báo cáo</option>
                     <option value="debt">Công nợ</option>
                 </select>

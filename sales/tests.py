@@ -35,7 +35,9 @@ class CheckoutTests(TestCase):
 		self.assertEqual(order.status, Order.Status.PAID)
 		self.assertEqual(order.total_amount, 190000)
 		self.assertEqual(OrderItem.objects.get().total_amount, 190000)
-		self.assertEqual(Invoice.objects.get().total_amount, 190000)
+		invoice = Invoice.objects.get()
+		self.assertEqual(invoice.total_amount, 190000)
+		self.assertEqual(invoice.invoice_code, '0001')
 		self.assertEqual(Payment.objects.get().amount, 190000)
 		self.table.refresh_from_db()
 		self.assertEqual(self.table.status, DiningTable.Status.AVAILABLE)
@@ -296,9 +298,12 @@ class InvoiceEditTests(TestCase):
 
 		# Check audit log
 		log = ActivityLog.objects.filter(action=ActivityLog.Action.EDIT_INVOICE).latest('created_at')
-		self.assertIn('00064', log.description)
-		self.assertIn('Khách đổi món', log.description)
+		self.assertIn('Sửa hóa đơn số 00064', log.description)
+		self.assertIn('(thay đổi kiểu thanh toán, thông tin các món)', log.description)
+		self.assertIn('thành tiền từ 70.000 đ thành 80.000 đ', log.description)
+		self.assertIn('(Khách đổi món và yêu cầu thanh toán chuyển khoản)', log.description)
 		self.assertEqual(log.actor, self.user)
+		self.assertIn('activity_log', data)
 
 	def test_edit_invoice_requires_reason(self):
 		url = reverse('sales:edit_invoice')
@@ -324,5 +329,112 @@ class InvoiceEditTests(TestCase):
 		self.assertEqual(response.status_code, 400)
 		data = response.json()
 		self.assertFalse(data['ok'])
+
+	def test_sales_statistics_api(self):
+		url = reverse('sales:statistics_api')
+		response = self.client.get(url)
+		self.assertEqual(response.status_code, 200)
+		data = response.json()
+		self.assertTrue(data['ok'])
+		stats = data['stats']
+		self.assertIn('total_invoices', stats)
+		self.assertIn('net_revenue', stats)
+		self.assertIn('cashiers', stats)
+		self.assertIn('areas', stats)
+		self.assertIn('payments', stats)
+		self.assertIn('tables', stats)
+		self.assertIn('dishes', stats)
+		self.assertIn('groups', stats)
+		self.assertIn('types', stats)
+		self.assertGreaterEqual(stats['total_invoices'], 1)
+
+	def test_sales_statistics_export(self):
+		url = reverse('sales:statistics_export')
+		response = self.client.get(url)
+		self.assertEqual(response.status_code, 200)
+		self.assertIn('text/csv', response['Content-Type'])
+		self.assertTrue(response.has_header('Content-Disposition'))
+
+	def test_sales_statistics_print(self):
+		url = reverse('sales:statistics_print')
+		response = self.client.get(url)
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'print-container')
+		self.assertContains(response, 'summary-box')
+
+	def test_delete_invoice_logs_reason_like_edit(self):
+		from audit.models import ActivityLog
+		url = reverse('sales:delete_invoice')
+		response = self.client.post(url, data=json.dumps({
+			'invoice_code': '00064',
+			'reason': 'Khách báo hủy đơn',
+		}), content_type='application/json')
+		self.assertEqual(response.status_code, 200)
+		data = response.json()
+		self.assertTrue(data['ok'])
+		self.assertIn('activity_log', data)
+		self.assertIn('(Khách báo hủy đơn)', data['activity_log']['description'])
+		log = ActivityLog.objects.filter(action=ActivityLog.Action.DELETE_INVOICE).latest('created_at')
+		self.assertIn('Xóa hóa đơn số 00064', log.description)
+		self.assertIn('(Khách báo hủy đơn)', log.description)
+
+	def test_table_actions_reserve_transfer_import_combine_split(self):
+		from audit.models import ActivityLog
+		table2 = DiningTable.objects.create(area=self.area, name='2', code='T1-02')
+		url = reverse('sales:table_action_api')
+
+		# Reserve table 1
+		res = self.client.post(url, data=json.dumps({
+			'action': 'reserve',
+			'source_table_id': self.table.pk,
+		}), content_type='application/json')
+		self.assertEqual(res.status_code, 200)
+		self.table.refresh_from_db()
+		self.assertEqual(self.table.status, DiningTable.Status.RESERVED)
+
+		# Transfer from table 2 to table 1
+		res = self.client.post(url, data=json.dumps({
+			'action': 'transfer',
+			'source_table_id': table2.pk,
+			'target_table_id': self.table.pk,
+		}), content_type='application/json')
+		self.assertEqual(res.status_code, 200)
+		data = res.json()
+		self.assertTrue(data['ok'])
+		self.assertIn('Chuyển từ bàn 2 sang bàn 1', data['activity_log']['description'])
+		table2.refresh_from_db()
+		self.table.refresh_from_db()
+		self.assertEqual(table2.status, DiningTable.Status.AVAILABLE)
+		self.assertEqual(self.table.status, DiningTable.Status.OCCUPIED)
+
+		# Combine table 1 with table 2
+		res = self.client.post(url, data=json.dumps({
+			'action': 'combine',
+			'source_table_id': self.table.pk,
+			'target_table_id': table2.pk,
+		}), content_type='application/json')
+		self.assertEqual(res.status_code, 200)
+		self.assertIn('Ghép bàn 1 với bàn 2', res.json()['activity_log']['description'])
+
+		# Split from table 1 to table 2
+		res = self.client.post(url, data=json.dumps({
+			'action': 'split',
+			'source_table_id': self.table.pk,
+			'target_table_id': table2.pk,
+		}), content_type='application/json')
+		self.assertEqual(res.status_code, 200)
+		self.assertIn('Tách từ bàn 1 sang bàn 2', res.json()['activity_log']['description'])
+
+		# Import from table 2 into table 1
+		res = self.client.post(url, data=json.dumps({
+			'action': 'import',
+			'source_table_id': table2.pk,
+			'target_table_id': self.table.pk,
+		}), content_type='application/json')
+		self.assertEqual(res.status_code, 200)
+		self.assertIn('Nhập từ bàn 2 vào bàn 1', res.json()['activity_log']['description'])
+		self.assertEqual(ActivityLog.objects.filter(action=ActivityLog.Action.TRANSFER_TABLE).count(), 1)
+
+
 
 

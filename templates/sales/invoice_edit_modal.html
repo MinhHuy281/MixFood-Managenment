@@ -10,7 +10,7 @@
                 </svg>
                 <h3 id="inv-edit-modal-title">Sửa hóa đơn - Thu Ngân</h3>
             </div>
-            <button type="button" class="modal-close" id="modal-inv-edit-close" aria-label="Đóng">×</button>
+            <button type="button" class="dialog-close" id="modal-inv-edit-close" aria-label="Đóng">&times;</button>
         </div>
 
         <div class="invoice-editor-body">
@@ -39,7 +39,7 @@
                         <thead>
                             <tr>
                                 <th>Tên món</th>
-                                <th style="width: 90px;" class="text-right">Giá (đ)</th>
+                                <th style="width: 90px;" class="text-right">ĐG (đ)</th>
                                 <th style="width: 70px;" class="text-center">GG (%)</th>
                                 <th style="width: 55px;" class="text-center">SL</th>
                             </tr>
@@ -58,9 +58,9 @@
             <!-- Add Dish / Search Row -->
             <div class="inv-edit-add-section">
                 <div class="inv-edit-custom-row">
-                    <input type="text" id="inv-edit-custom-name" placeholder="<Thêm món khác / thay tiền thô>" class="inv-edit-input-custom">
+                    <input type="text" id="inv-edit-custom-name" placeholder="<Thêm món khác>" class="inv-edit-input-custom">
                     <input type="number" id="inv-edit-custom-price" placeholder="Đơn giá (đ)" class="inv-edit-input-custom-price" min="0" step="1000">
-                    <button type="button" id="inv-edit-btn-add-custom" class="btn-inv-find">Tìm / Thêm</button>
+                    <button type="button" id="inv-edit-btn-add-custom" class="btn-inv-find">Thêm</button>
                 </div>
                 <div class="inv-edit-product-row">
                     <select id="inv-edit-product-select" class="inv-edit-product-dropdown">
@@ -76,11 +76,11 @@
                     <strong class="total-val" id="inv-edit-subtotal-display">0 đ</strong>
                 </div>
                 <div class="inv-edit-total-row">
-                    <label for="inv-edit-surcharge-input" class="total-label">Phụ thu (2) (đ):</label>
+                    <label for="inv-edit-surcharge-input" class="total-label">Phụ thu (% | đ):</label>
                     <input type="number" id="inv-edit-surcharge-input" value="0" min="0" step="1000" class="inv-edit-calc-input">
                 </div>
                 <div class="inv-edit-total-row">
-                    <label for="inv-edit-discount-input" class="total-label">Giảm giá (%) (đ):</label>
+                    <label for="inv-edit-discount-input" class="total-label">Giảm giá (% | đ):</label>
                     <input type="number" id="inv-edit-discount-input" value="0" min="0" step="1000" class="inv-edit-calc-input">
                 </div>
                 <div class="inv-edit-total-row">
@@ -90,10 +90,6 @@
                 <div class="inv-edit-total-row final-total-row">
                     <span class="total-label">Thành tiền:</span>
                     <strong class="total-val final-val" id="inv-edit-total-display">0 đ</strong>
-                </div>
-                <div class="inv-edit-reason-box">
-                    <label for="inv-edit-reason-input">Lý do sửa hóa đơn <span class="required">*</span></label>
-                    <input type="text" id="inv-edit-reason-input" placeholder="Ví dụ: Khách đổi món, sửa tiền món, đổi phương thức thanh toán..." class="inv-edit-reason-input" required>
                 </div>
             </div>
 
@@ -109,4 +105,35 @@
         </div>
     </div>
 </div>
+
+<!-- SUB-MODAL: LÝ DO SỬA HÓA ĐƠN (HIỂN THỊ KHI BẤM XÁC NHẬN SỬA) -->
+<div class="menu-modal-backdrop sub-modal reason-sub-modal" id="modal-inv-edit-reason" hidden>
+    <div class="menu-modal-dialog inv-reason-popup-dialog" role="dialog" aria-modal="true" aria-labelledby="inv-reason-popup-title">
+        <div class="menu-modal-header inv-reason-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                <h3 id="inv-reason-popup-title">Lý do sửa hóa đơn</h3>
+            </div>
+            <button type="button" class="dialog-close" id="modal-inv-reason-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="inv-reason-popup-body">
+            <div class="inv-reason-field-group">
+                <label for="inv-edit-reason-input">Nhập lý do</label>
+                <input type="text" id="inv-edit-reason-input" class="inv-edit-reason-input" maxlength="255" placeholder="Nhập lý do sửa hóa đơn..." autocomplete="off">
+            </div>
+            <div class="inv-reason-popup-actions">
+                <button type="button" id="btn-inv-reason-confirm" class="btn-reason-confirm" disabled>
+                    Xác nhận
+                </button>
+                <button type="button" id="btn-inv-reason-cancel" class="btn-reason-cancel">
+                    Hủy bỏ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 

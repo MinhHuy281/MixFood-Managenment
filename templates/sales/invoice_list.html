@@ -229,7 +229,7 @@
 </div>
 
 {% include 'sales/invoice_edit_modal.html' %}
-<script src="{% static 'js/invoice_editor.js' %}"></script>
+<script src="{% static 'js/invoice_editor.js' %}?v={% now 'U' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.invoice-row-clickable').forEach(tr => {

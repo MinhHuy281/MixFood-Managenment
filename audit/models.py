@@ -11,6 +11,7 @@ class ActivityLog(models.Model):
 		MENU_UPDATE = 'menu_update', 'Cập nhật thực đơn'
 		MAINTENANCE = 'maintenance', 'Bảo trì dữ liệu'
 		TRANSFER_TABLE = 'transfer_table', 'Chuyển'
+		RESERVE_TABLE = 'reserve_table', 'Đặt bàn'
 		STOCK_RECEIPT = 'stock_receipt', 'Nhập'
 		MERGE_TABLE = 'merge_table', 'Ghép'
 		SPLIT_TABLE = 'split_table', 'Tách'
@@ -67,6 +68,8 @@ class ActivityLog(models.Model):
 	@property
 	def full_detail(self):
 		if self.reason:
+			if f'({self.reason})' in self.description or f'Lý do: {self.reason}' in self.description:
+				return self.description
 			return f"{self.description} (Lý do: {self.reason})"
 		return self.description
 
@@ -82,11 +85,15 @@ class ActivityLog(models.Model):
 			self.Action.EDIT_PRICE: '#d97706',       # Cam
 			self.Action.SHIFT_CLOSE: '#16a34a',      # Xanh lá
 			self.Action.PAYMENT: '#16a34a',          # Xanh lá
+			self.Action.LOGIN: '#16a34a',            # Xanh lá
+			self.Action.SYSTEM: '#0284c7',           # Xanh ngọc
 			self.Action.MENU_UPDATE: '#0284c7',      # Xanh ngọc
 			self.Action.CREATE: '#0284c7',           # Xanh ngọc
 			self.Action.UPDATE: '#0284c7',           # Xanh ngọc
 			self.Action.RETURN_ITEM: '#ea580c',      # Cam đậm
+			self.Action.RESERVE_TABLE: '#0284c7',    # Xanh ngọc
 			self.Action.TRANSFER_TABLE: '#1e293b',   # Đen / than
+			self.Action.STOCK_RECEIPT: '#1e293b',
 			self.Action.MERGE_TABLE: '#1e293b',
 			self.Action.SPLIT_TABLE: '#1e293b',
 		}

@@ -40,8 +40,79 @@
         discountInput: document.getElementById('inv-edit-discount-input'),
         taxInput: document.getElementById('inv-edit-tax-input'),
         totalDisplay: document.getElementById('inv-edit-total-display'),
+        reasonModal: document.getElementById('modal-inv-edit-reason'),
+        reasonCloseBtn: document.getElementById('modal-inv-reason-close'),
+        reasonConfirmBtn: document.getElementById('btn-inv-reason-confirm'),
+        reasonCancelBtn: document.getElementById('btn-inv-reason-cancel'),
         reasonInput: document.getElementById('inv-edit-reason-input'),
     });
+
+    const escapeHtml = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    const updateLivePosAfterEdit = (inv, log) => {
+        // 1. Update invoice row in main POS invoice table (.invoice-table)
+        if (inv && inv.invoice_code) {
+            const row = document.querySelector(`.invoice-table tbody tr[data-invoice-code="${inv.invoice_code}"]`);
+            if (row) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 8) {
+                    const userPill = cells[3].querySelector('.user-pill');
+                    if (userPill) userPill.textContent = inv.cashier;
+                    else cells[3].textContent = inv.cashier;
+
+                    cells[4].textContent = `${inv.subtotal_formatted} đ`;
+                    cells[5].textContent = inv.discount_formatted ? `-${inv.discount_formatted} đ` : '0 đ';
+
+                    const totalStrong = cells[6].querySelector('.total-highlight');
+                    if (totalStrong) totalStrong.textContent = `${inv.total_amount_formatted} đ`;
+                    else cells[6].innerHTML = `<strong class="total-highlight">${inv.total_amount_formatted} đ</strong>`;
+                    if (inv.total_amount !== undefined) {
+                        row.dataset.totalAmount = inv.total_amount;
+                    }
+
+                    const pmBadge = cells[7].querySelector('.payment-method-badge');
+                    if (pmBadge) pmBadge.textContent = inv.payment_method;
+                    else cells[7].innerHTML = `<span class="payment-method-badge">${escapeHtml(inv.payment_method)}</span>`;
+                }
+            }
+        }
+
+        // 2. Prepend new activity log row to bottom live panel (#pos-live-activity-scroll)
+        if (log) {
+            const scrollContainer = document.getElementById('pos-live-activity-scroll') || document.querySelector('.activity-panel .activity-scroll');
+            if (scrollContainer) {
+                const emptyRow = scrollContainer.querySelector('.empty-row');
+                if (emptyRow) emptyRow.remove();
+
+                const rowEl = document.createElement('div');
+                rowEl.className = 'activity-row';
+                rowEl.title = log.description || '';
+                const color = log.action_color || '#7c3aed';
+                rowEl.innerHTML = `
+                    <time class="activity-time" style="font-weight: 600; color: ${color}; font-size: 11.5px;">${escapeHtml(log.time || '')}</time>
+                    <div>
+                        <span class="activity-event-chip event-edit">${escapeHtml(log.action_display || 'Sửa hóa đơn')}</span>
+                    </div>
+                    <div class="activity-detail-wrap" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span class="activity-desc-text" style="color: ${color}; font-size: 12px; font-weight: 500;">${escapeHtml(log.description || '')}</span>
+                    </div>
+                    <div style="text-align: right; padding-right: 12px;">
+                        <strong class="activity-actor-text" style="color: ${color}; font-size: 12px; font-weight: 600;">${escapeHtml(log.actor_name || '')}</strong>
+                    </div>
+                `;
+                scrollContainer.prepend(rowEl);
+                scrollContainer.scrollTop = 0;
+            }
+        }
+    };
 
     const recalculateTotals = () => {
         const els = getElements();
@@ -112,6 +183,7 @@
         const els = getElements();
         if (!els.modal) return;
 
+        if (els.reasonModal) els.reasonModal.hidden = true;
         els.modal.hidden = false;
         if (els.modalTitle) els.modalTitle.textContent = `Sửa hóa đơn (Số ${invoiceCode}) - Đang tải...`;
         if (els.itemsTbody) els.itemsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 24px;">Đang tải dữ liệu hóa đơn...</td></tr>';
@@ -166,6 +238,7 @@
             if (els.discountInput) els.discountInput.value = inv.discount_amount || 0;
             if (els.taxInput) els.taxInput.value = inv.tax_amount || 0;
             if (els.reasonInput) els.reasonInput.value = '';
+            if (els.reasonConfirmBtn) els.reasonConfirmBtn.disabled = true;
 
             renderItemsTable();
         } catch (err) {
@@ -178,10 +251,36 @@
         const els = getElements();
         if (!els.modal) return;
 
-        // Close & Cancel
-        const closeModal = () => { els.modal.hidden = true; };
+        const closeReasonModal = () => {
+            if (els.reasonModal) els.reasonModal.hidden = true;
+        };
+
+        const openReasonModal = () => {
+            if (!els.reasonModal) return;
+            if (els.reasonInput) els.reasonInput.value = '';
+            if (els.reasonConfirmBtn) els.reasonConfirmBtn.disabled = true;
+            els.reasonModal.hidden = false;
+            setTimeout(() => {
+                els.reasonInput?.focus();
+            }, 50);
+        };
+
+        // Close & Cancel main modal
+        const closeModal = () => {
+            closeReasonModal();
+            els.modal.hidden = true;
+        };
         if (els.closeBtn) els.closeBtn.addEventListener('click', closeModal);
         if (els.cancelBtn) els.cancelBtn.addEventListener('click', closeModal);
+
+        // Close & Cancel reason popup modal
+        if (els.reasonCloseBtn) els.reasonCloseBtn.addEventListener('click', closeReasonModal);
+        if (els.reasonCancelBtn) els.reasonCancelBtn.addEventListener('click', closeReasonModal);
+        if (els.reasonModal) {
+            els.reasonModal.addEventListener('click', (e) => {
+                if (e.target === els.reasonModal) closeReasonModal();
+            });
+        }
 
         // Increase quantity (+)
         if (els.btnPlus) {
@@ -277,67 +376,117 @@
             }
         });
 
-        // Confirm submit
+        // Submit invoice edit after reason is entered
+        const submitInvoiceEdit = async () => {
+            if (!currentItems || currentItems.length === 0) {
+                alert('Hóa đơn phải có ít nhất một món ăn.');
+                return;
+            }
+
+            const reason = (els.reasonInput?.value || '').trim();
+            if (!reason) {
+                els.reasonInput?.focus();
+                return;
+            }
+
+            const payload = {
+                invoice_code: currentInvoiceCode,
+                cashier_id: Number(els.cashierSelect?.value) || null,
+                payment_method: els.paymentSelect?.value || 'cash',
+                items: currentItems,
+                surcharge_amount: Number(els.surchargeInput?.value) || 0,
+                discount_amount: Number(els.discountInput?.value) || 0,
+                tax_amount: Number(els.taxInput?.value) || 0,
+                reason: reason,
+            };
+
+            const origText = els.reasonConfirmBtn ? els.reasonConfirmBtn.textContent : 'Xác nhận';
+            if (els.reasonConfirmBtn) {
+                els.reasonConfirmBtn.disabled = true;
+                els.reasonConfirmBtn.textContent = 'Đang lưu...';
+            }
+
+            try {
+                const resp = await fetch('/sales/invoices/edit/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const res = await resp.json();
+                if (!resp.ok || !res.ok) throw new Error(res.error || 'Lỗi khi lưu sửa hóa đơn.');
+
+                closeReasonModal();
+                els.modal.hidden = true;
+
+                // Update live POS table and bottom activity log immediately
+                updateLivePosAfterEdit(res.invoice, res.activity_log);
+
+                // Show non-blocking system notice if available
+                const systemNotice = document.getElementById('system-notice');
+                if (systemNotice) {
+                    systemNotice.textContent = res.message || 'Đã cập nhật hóa đơn thành công.';
+                    systemNotice.hidden = false;
+                    setTimeout(() => { systemNotice.hidden = true; }, 4000);
+                }
+
+                // Refresh invoice report modal if open
+                const reportDialog = document.getElementById('invoice-report-dialog');
+                if (reportDialog && !reportDialog.hidden && typeof window.refreshInvoiceReportTable === 'function') {
+                    window.refreshInvoiceReportTable();
+                } else if (typeof window.fetchReport === 'function' && !document.getElementById('pos-live-activity-scroll')) {
+                    window.fetchReport(1);
+                }
+            } catch (err) {
+                alert('Lỗi: ' + (err.message || 'Không thể lưu hóa đơn.'));
+                if (els.reasonConfirmBtn) {
+                    els.reasonConfirmBtn.disabled = !(els.reasonInput?.value || '').trim();
+                }
+            } finally {
+                if (els.reasonConfirmBtn) {
+                    els.reasonConfirmBtn.textContent = origText;
+                }
+            }
+        };
+
+        // Clicking "Xác nhận sửa" opens the "Lý do sửa hóa đơn" popup
         if (els.confirmBtn) {
-            els.confirmBtn.addEventListener('click', async () => {
+            els.confirmBtn.addEventListener('click', () => {
                 if (!currentItems || currentItems.length === 0) {
                     alert('Hóa đơn phải có ít nhất một món ăn.');
                     return;
                 }
+                openReasonModal();
+            });
+        }
 
-                const reason = (els.reasonInput?.value || '').trim();
-                if (!reason) {
-                    alert('Vui lòng nhập lý do sửa hóa đơn để lưu vào nhật ký kiểm toán.');
-                    els.reasonInput?.focus();
-                    return;
-                }
-
-                const payload = {
-                    invoice_code: currentInvoiceCode,
-                    cashier_id: Number(els.cashierSelect?.value) || null,
-                    payment_method: els.paymentSelect?.value || 'cash',
-                    items: currentItems,
-                    surcharge_amount: Number(els.surchargeInput?.value) || 0,
-                    discount_amount: Number(els.discountInput?.value) || 0,
-                    tax_amount: Number(els.taxInput?.value) || 0,
-                    reason: reason,
-                };
-
-                const origText = els.confirmBtn.textContent;
-                els.confirmBtn.disabled = true;
-                els.confirmBtn.textContent = 'Đang lưu...';
-
-                try {
-                    const resp = await fetch('/sales/invoices/edit/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCsrfToken(),
-                        },
-                        body: JSON.stringify(payload),
-                    });
-                    const res = await resp.json();
-                    if (!resp.ok || !res.ok) throw new Error(res.error || 'Lỗi khi lưu sửa hóa đơn.');
-
-                    alert(res.message || 'Đã sửa hóa đơn thành công!');
-                    els.modal.hidden = true;
-
-                    // Trigger table refresh on page if function exists
-                    if (typeof window.refreshInvoiceReportTable === 'function') {
-                        window.refreshInvoiceReportTable();
-                    } else if (typeof window.fetchReport === 'function') {
-                        window.fetchReport(1);
-                    } else {
-                        // Reload page or reload invoice data
-                        setTimeout(() => { window.location.reload(); }, 300);
-                    }
-                } catch (err) {
-                    alert('Lỗi: ' + (err.message || 'Không thể lưu hóa đơn.'));
-                } finally {
-                    els.confirmBtn.disabled = false;
-                    els.confirmBtn.textContent = origText;
+        // Reason input typing & Enter key
+        if (els.reasonInput) {
+            els.reasonInput.addEventListener('input', () => {
+                const hasText = els.reasonInput.value.trim().length > 0;
+                if (els.reasonConfirmBtn) {
+                    els.reasonConfirmBtn.disabled = !hasText;
                 }
             });
+            els.reasonInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (els.reasonInput.value.trim().length > 0) {
+                        submitInvoiceEdit();
+                    }
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeReasonModal();
+                }
+            });
+        }
+
+        // Clicking "Xác nhận" in the reason popup submits the edit
+        if (els.reasonConfirmBtn) {
+            els.reasonConfirmBtn.addEventListener('click', submitInvoiceEdit);
         }
     };
 
@@ -347,4 +496,5 @@
         initEventListeners();
     }
 })();
+
 

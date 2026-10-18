@@ -65,7 +65,12 @@ def home(request):
 		'shift_total': shift_invoices.aggregate(total=Sum('total_amount'))['total'] or 0,
 		'shift_payment_rows': shift_payment_rows,
 		'shift': shift,
-		'activity_logs': ActivityLog.objects.filter(created_at__gte=day_started_at).select_related('actor')[:12],
+		'activity_logs': (
+			ActivityLog.objects.filter(created_at__gte=day_started_at)
+			.exclude(description__startswith='POST /')
+			.exclude(action=ActivityLog.Action.PAYMENT)
+			.select_related('actor')[:50]
+		),
 		'current_time': now,
 		'cashiers': User.objects.filter(is_active=True).order_by('username'),
 	})
@@ -91,14 +96,16 @@ def close_shift(request):
 	shift.ended_at = ended_at
 	shift.closed_by = request.user
 	shift.save(update_fields=('status', 'ended_at', 'closed_by'))
+	total_fmt = f'{total:,.0f}'.replace(',', '.')
 	ActivityLog.objects.create(
 		actor=request.user,
-		action=ActivityLog.Action.OTHER,
+		actor_name=request.user.get_full_name() or request.user.username,
+		action=ActivityLog.Action.SHIFT_CLOSE,
 		method=request.method,
 		path=request.path,
 		object_type='Shift',
 		object_id=shift.pk,
-		description=f'Kết ca chung ({shift_invoices.count()} hóa đơn, tổng {total:,.0f} đ)',
+		description=f'Kết ca chung ({shift_invoices.count()} hóa đơn, tổng {total_fmt} đ)',
 		status_code=200,
 		ip_address=request.META.get('REMOTE_ADDR'),
 	)
