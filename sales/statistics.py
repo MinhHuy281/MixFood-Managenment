@@ -193,7 +193,8 @@ def get_sales_statistics_data(start_dt, end_dt):
 				if key not in dishes_map:
 					cost_val = p.cost_price if p else Decimal(0)
 					cat_name = (p.category.name if (p and p.category) else '') or 'Không rõ'
-					p_type = (p.product_type if p else 'food') or 'food'
+					from sales.views import _classify_product_type
+					p_type = _classify_product_type(p)
 					dishes_map[key] = {
 						'mark': mark_code,
 						'code': p_code,

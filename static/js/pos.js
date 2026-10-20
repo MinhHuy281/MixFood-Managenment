@@ -1721,8 +1721,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.report-action').forEach((actionButton) => {
         actionButton.addEventListener('click', () => {
             const menu = actionButton.closest('.pos-menu-item');
-            menu.classList.remove('open');
-            menu.querySelector(':scope > button').setAttribute('aria-expanded', 'false');
+            if (menu) {
+                menu.classList.remove('open');
+                menu.querySelector(':scope > button')?.setAttribute('aria-expanded', 'false');
+            }
+            if (actionButton.dataset.report === 'guest-count') {
+                if (typeof window.openGuestCountTodayModal === 'function') {
+                    window.openGuestCountTodayModal();
+                }
+                return;
+            }
             showToast(reportMessages[actionButton.dataset.report]);
         });
     });
@@ -1817,6 +1825,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation();
                 const id = btn.dataset.id;
                 const doRemove = () => {
+                    const removedItem = cart.get(id);
+                    if (itemsSentToKitchen && removedItem && selectedTableId) {
+                        const tName = selectedTable?.textContent || '';
+                        postTableAction({
+                            action: 'cancel_item',
+                            source_table_id: selectedTableId,
+                            detail: `Bàn ${tName} hủy món ${removedItem.name} (đã nhận+xong ${removedItem.quantity} phần)`,
+                        });
+                    }
                     cart.delete(id);
                     const tableData = tableOrders.get(selectedTableId);
                     if (tableData) tableData.cart = cart;
@@ -1838,6 +1855,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const item = cart.get(id);
                 if (!item) return;
                 const doDecrease = () => {
+                    if (itemsSentToKitchen && selectedTableId) {
+                        const tName = selectedTable?.textContent || '';
+                        postTableAction({
+                            action: 'cancel_item',
+                            source_table_id: selectedTableId,
+                            detail: `Bàn ${tName} hủy món ${item.name} (đã nhận+xong 1 phần)`,
+                        });
+                    }
                     if (item.quantity > 1) {
                         item.quantity -= 1;
                     } else {
@@ -1941,6 +1966,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!itemsSentToKitchen) {
             // Thêm món xong hết: Bàn chuyển sang MÀU XANH và nút chuyển thành Thanh toán
             itemsSentToKitchen = true;
+            if (typeof window.recordPosKitchenReception === 'function') {
+                window.recordPosKitchenReception();
+            }
             const tableData = tableOrders.get(selectedTableId);
             if (tableData) {
                 tableData.itemsSentToKitchen = true;

@@ -7,6 +7,9 @@
         <p class="muted">Số liệu lấy từ các hóa đơn đã thanh toán theo thời gian thực.</p>
     </div>
     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a class="primary-button" href="{% url 'dashboard:home' %}?open_eod_report=1">📅 Báo cáo cuối ngày</a>
+        <a class="primary-button" href="{% url 'dashboard:home' %}?open_guest_count=1">🚶 Lượng khách hôm nay</a>
+        <a class="primary-button" href="{% url 'dashboard:home' %}?open_revenue_time=1">📈 Doanh thu (Theo thời gian)</a>
         <a class="primary-button" href="{% url 'dashboard:home' %}?open_stats=1">📊 Mở Thống kê bán hàng</a>
         <a class="secondary-button" href="{% url 'sales:statistics_print' %}" target="_blank">🖨️ In kiểm bán</a>
         <a class="secondary-button" href="{% url 'sales:statistics_export' %}">📥 Xuất Excel</a>

@@ -97,16 +97,9 @@
                     <a href="{% url 'inventory:recipes' %}" role="menuitem" id="open-recipe-admin-menu" class="dropdown-action">
                         <span class="dropdown-icon">⚖️</span> Định lượng nguyên liệu
                     </a>
-
                     <span class="dropdown-separator"></span>
-                    <button type="button" class="dropdown-action settings-action" data-setting="price-policy">
-                        <span class="dropdown-icon">🏷️</span> Chính sách giá & Sự kiện
-                    </button>
                     <button type="button" class="dropdown-action settings-action" data-setting="coupon">
                         <span class="dropdown-icon">🎟️</span> Mã giảm giá & Coupon
-                    </button>
-                    <button type="button" class="dropdown-action settings-action" data-setting="options">
-                        <span class="dropdown-icon">⚙️</span> Các tùy chọn POS
                     </button>
                 </div>
             </div>
@@ -154,7 +147,7 @@
                     <a href="{% url 'sales:invoices' %}" role="menuitem" id="open-invoice-report-menu" class="dropdown-action">
                         <span class="dropdown-icon">🧾</span> Hóa đơn thanh toán
                     </a>
-                    <a href="{% url 'dashboard:reports' %}" role="menuitem">
+                    <a href="{% url 'dashboard:reports' %}" role="menuitem" id="open-revenue-time-menu" class="dropdown-action">
                         <span class="dropdown-icon">📈</span> Doanh thu (Theo thời gian)
                     </a>
                     <button type="button" class="dropdown-action report-action" data-report="customer-revenue">
@@ -177,10 +170,10 @@
                         <span class="dropdown-icon">💵</span> Thống kê các khoản tiền
                     </button>
                     <span class="dropdown-separator"></span>
-                    <button type="button" class="dropdown-action report-action" data-report="guest-count">
+                    <button type="button" id="open-guest-count-menu" class="dropdown-action report-action" data-report="guest-count">
                         <span class="dropdown-icon">🚶</span> Lượng khách hôm nay
                     </button>
-                    <a href="{% url 'dashboard:reports' %}" role="menuitem">
+                    <a href="{% url 'dashboard:reports' %}" role="menuitem" id="open-end-of-day-report-menu" class="dropdown-action">
                         <span class="dropdown-icon">📅</span> Báo cáo cuối ngày
                     </a>
                 </div>
@@ -400,7 +393,7 @@
 
                 <div class="dish-grid" id="dish-grid">
                     {% for product in products %}
-                    <button class="dish" data-product-id="{{ product.pk }}" data-category-id="{{ product.category_id }}" data-code="{{ product.code|upper }}" data-dish="{{ product.name }}" data-subgroup="{{ product.subgroup }}" data-unit="{{ product.unit }}" data-price="{{ product.price }}" type="button">
+                    <button class="dish" data-product-id="{{ product.pk }}" data-category-id="{{ product.category_id }}" data-code="{{ product.code|upper }}" data-dish="{{ product.name }}" data-subgroup="{{ product.subgroup }}" data-unit="{{ product.unit }}" data-price="{{ product.price }}" data-product-type="{{ product.product_type|default:'food' }}" type="button">
                         <div class="dish-info">
                             <div class="dish-name-row">
                                 <b class="dish-name">{{ product.name }}</b>
@@ -688,6 +681,15 @@
 
 <!-- MODAL: SALES STATISTICS -->
 {% include 'sales/sales_statistics_modal.html' %}
+
+<!-- MODAL: DOANH THU (THEO THỜI GIAN) -->
+{% include 'sales/revenue_by_time_modal.html' %}
+
+<!-- MODAL: LƯỢNG KHÁCH HÔM NAY / CUỐI NGÀY -->
+{% include 'sales/guest_count_today_modal.html' %}
+
+<!-- MODAL: BÁO CÁO CUỐI NGÀY -->
+{% include 'sales/end_of_day_report_modal.html' %}
 
 <!-- MODAL: TÍNH LẠI TIỀN THỪA (RECALCULATE CHANGE) -->
 <div class="menu-modal-backdrop sub-modal reason-sub-modal" id="invoice-change-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-change-title" hidden>
@@ -4392,13 +4394,15 @@
         // 7. Quản lý khách hàng (manage_customers)
         guardElementWithPermission('.management-action[data-management="customers"]', 'manage_customers', 'Danh sách khách hàng');
         guardElementWithPermission('.report-action[data-report="customer-revenue"]', 'manage_customers', 'Doanh thu theo khách');
-        guardElementWithPermission('.report-action[data-report="guest-count"]', 'manage_customers', 'Lượng khách hôm nay');
 
         // 8. Xem báo cáo bán hàng (view_sales_report)
+        guardElementWithPermission('#open-guest-count-menu, .report-action[data-report="guest-count"]', 'view_sales_report', 'Lượng khách hôm nay');
         guardElementWithPermission('#open-invoice-report-menu', 'view_sales_report', 'Hóa đơn thanh toán');
         guardElementWithPermission('#open-invoice-report-menu-detail', 'view_sales_report', 'Hàng bán chi tiết');
+        guardElementWithPermission('#open-revenue-time-menu', 'view_sales_report', 'Doanh thu (Theo thời gian)');
         guardElementWithPermission('#open-sales-stats-menu', 'view_sales_report', 'Thống kê bán hàng');
-        guardElementWithPermission('.reports-menu a[href*="reports"]', 'view_sales_report', 'Báo cáo doanh thu');
+        guardElementWithPermission('#open-end-of-day-report-menu', 'view_sales_report', 'Báo cáo cuối ngày');
+        guardElementWithPermission('.reports-menu a[href*="reports"]:not(#open-revenue-time-menu):not(#open-end-of-day-report-menu)', 'view_sales_report', 'Báo cáo doanh thu');
 
         // 9. Tự động thu hồi quyền nâng cấp tạm thời khi đóng các modal chức năng
         // (Đảm bảo sau khi dùng xong chức năng và thoát ra, phiên làm việc vẫn là tài khoản ban đầu)
@@ -4412,6 +4416,10 @@
             'pos-recipe-admin-modal',
             'invoice-report-dialog',
             'sales-stats-modal',
+            'modal-sales-statistics',
+            'modal-revenue-by-time',
+            'modal-guest-count-today',
+            'modal-end-of-day-report',
             'invoice-edit-modal',
             'invoice-delete-dialog',
         ];

@@ -8113,3 +8113,530 @@ input, select, textarea {
     box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14);
     border: 1px solid #e2e8f0;
 }
+
+
+/* ==========================================================================
+   MODAL: DOANH THU (THEO THỜI GIAN) - ĐỒNG BỘ POS 2026 & ẢNH MẪU
+   ========================================================================== */
+#modal-revenue-by-time {
+    z-index: 9998;
+}
+
+.rev-time-modal-container {
+    width: 650px;
+    max-width: 96vw;
+    background: #f1f5f9;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(148, 163, 184, 0.35);
+    display: flex;
+    flex-direction: column;
+}
+
+.rev-time-modal-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 11px 16px;
+}
+
+.rev-time-filter-panel {
+    padding: 12px 16px 10px;
+    background: #f8fafc;
+    border-bottom: 1px solid #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rev-time-filter-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.rev-time-select {
+    height: 32px;
+    min-width: 118px;
+    padding: 0 10px;
+    border: 1px solid #94a3b8;
+    border-radius: 5px;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rev-time-select:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.rev-time-date-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rev-time-date-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    white-space: nowrap;
+}
+
+.rev-time-date-input {
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #94a3b8;
+    border-radius: 5px;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rev-time-date-input:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.rev-time-btn-run {
+    height: 32px;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 5px;
+    margin-left: auto;
+}
+
+.rev-time-slots-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 2px;
+}
+
+.rev-time-slot-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.rev-slot-check-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    user-select: none;
+    min-width: 145px;
+}
+
+.rev-slot-checkbox {
+    width: 15px;
+    height: 15px;
+    accent-color: #0284c7;
+    cursor: pointer;
+}
+
+.rev-slot-inputs {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rev-slot-time-input {
+    height: 28px;
+    width: 136px;
+    padding: 0 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #334155;
+    outline: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.rev-time-slot-row:not(.is-active) .rev-slot-time-input {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.rev-time-slot-row.is-active .rev-slot-check-label {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.rev-time-slot-row.is-active .rev-slot-time-input {
+    border-color: #0284c7;
+    background: #ffffff;
+    color: #0f172a;
+}
+
+.rev-slot-time-input:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.rev-time-body {
+    padding: 10px 16px 8px;
+    background: #f1f5f9;
+}
+
+.rev-time-table-wrap {
+    background: #ffffff;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    height: 310px;
+    overflow-y: auto;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.rev-time-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 13px;
+}
+
+.rev-time-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 7px 12px;
+    border-bottom: 1px solid #94a3b8;
+    border-right: 1px solid #cbd5e1;
+    text-align: left;
+    user-select: none;
+}
+
+.rev-time-table thead th:last-child {
+    border-right: none;
+}
+
+.rev-time-table thead th.text-right,
+.rev-time-table tbody td.text-right {
+    text-align: right;
+}
+
+.rev-time-table .col-period {
+    width: 36%;
+}
+
+.rev-time-table .col-invoices {
+    width: 30%;
+}
+
+.rev-time-table .col-revenue {
+    width: 34%;
+}
+
+.rev-time-table tbody td {
+    height: 24px;
+    padding: 4px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    color: #0f172a;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.rev-time-table tbody td:last-child {
+    border-right: none;
+}
+
+.rev-time-data-row {
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.rev-time-data-row:hover td {
+    background: #e0f2fe;
+}
+
+.rev-time-data-row.is-selected td {
+    background: #0078d7;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.rev-time-empty-row td {
+    background: #ffffff;
+    pointer-events: none;
+}
+
+.rev-time-loading,
+.rev-time-error {
+    text-align: center !important;
+    padding: 28px 12px !important;
+    color: #475569;
+    font-weight: 600;
+}
+
+.rev-time-error {
+    color: #dc2626 !important;
+}
+
+.rev-time-footer {
+    padding: 8px 16px 12px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.rev-time-summary {
+    font-size: 13px;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.rev-time-summary strong {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.rev-time-summary .rev-total-highlight {
+    color: #0369a1;
+}
+
+.rev-time-btn-export {
+    height: 32px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+
+/* ==========================================================================
+   MODAL: LƯỢNG KHÁCH HÔM NAY / CUỐI NGÀY (ĐỒNG BỘ POS 2026 & ẢNH MẪU)
+   ========================================================================== */
+.guest-count-popup-dialog {
+    width: 440px;
+    max-width: 94vw;
+}
+
+.guest-count-popup-body {
+    padding: 20px 22px 14px;
+    background: #ffffff;
+    gap: 18px;
+}
+
+.guest-count-content-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.guest-count-info-badge {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #0284c7, #0078d7);
+    color: #ffffff;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 21px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.35);
+    user-select: none;
+}
+
+.guest-count-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #0f172a;
+}
+
+.gc-stat-line {
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.gc-stat-line strong {
+    font-weight: 700;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+
+.gc-stat-subline {
+    padding-left: 14px;
+    color: #334155;
+}
+
+.guest-count-popup-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 6px;
+    margin: 0 -22px -14px;
+    padding: 10px 18px;
+    background: #f1f5f9;
+    border-top: 1px solid #e2e8f0;
+}
+
+.btn-guest-count-ok {
+    min-width: 86px;
+    height: 29px;
+    padding: 0 18px;
+    border: 1.5px solid #0078d7;
+    border-radius: 4px;
+    background: #e0f2fe;
+    color: #0f172a;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.14s ease;
+    box-shadow: inset 0 0 0 1px rgba(2, 132, 199, 0.2);
+}
+
+.btn-guest-count-ok:hover,
+.btn-guest-count-ok:focus {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0369a1;
+    outline: none;
+}
+
+
+/* ==========================================================================
+   MODAL: BÁO CÁO CUỐI NGÀY (ĐỒNG BỘ POS 2026 & ẢNH MẪU)
+   ========================================================================== */
+.eod-report-popup-dialog {
+    width: 470px;
+    max-width: 95vw;
+}
+
+.eod-report-popup-body {
+    padding: 18px 22px 14px;
+    background: #ffffff;
+    gap: 14px;
+}
+
+.eod-report-content-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.eod-info-badge {
+    margin-top: 8px;
+}
+
+.eod-report-stats-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    font-size: 12.5px;
+    line-height: 1.42;
+    color: #0f172a;
+}
+
+.eod-top-grid {
+    display: grid;
+    grid-template-columns: 145px 1fr;
+    row-gap: 2px;
+    column-gap: 10px;
+}
+
+.eod-top-grid .eod-label {
+    color: #1e293b;
+}
+
+.eod-top-grid .eod-val {
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+
+.eod-payment-grid {
+    display: grid;
+    grid-template-columns: 155px 38px 1fr;
+    row-gap: 2px;
+    column-gap: 8px;
+    font-variant-numeric: tabular-nums;
+}
+
+.eod-pay-label {
+    color: #1e293b;
+}
+
+.eod-pay-count {
+    text-align: right;
+    color: #0f172a;
+    padding-right: 4px;
+}
+
+.eod-pay-amount {
+    color: #0f172a;
+}
+
+.eod-section-text {
+    color: #1e293b;
+    line-height: 1.45;
+}
+
+.eod-unpaid-row {
+    display: grid;
+    grid-template-columns: 195px 1fr;
+    column-gap: 10px;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+
+.eod-instructions {
+    color: #1e293b;
+    line-height: 1.42;
+    padding-top: 2px;
+}
+
+.eod-report-popup-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 2px -22px -14px;
+    padding: 10px 16px;
+    background: #f1f5f9;
+    border-top: 1px solid #e2e8f0;
+}
+
+.btn-eod-cancel {
+    min-width: 86px;
+    height: 29px;
+    padding: 0 16px;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: #1e293b;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.14s ease;
+}
+
+.btn-eod-cancel:hover {
+    background: #cbd5e1;
+    color: #0f172a;
+}

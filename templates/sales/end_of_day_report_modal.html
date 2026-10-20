@@ -1,0 +1,361 @@
+<!-- MODAL: BÁO CÁO CUỐI NGÀY (ĐỒNG BỘ POS 2026 & ẢNH MẪU) -->
+<div class="menu-modal-backdrop sub-modal reason-sub-modal" id="modal-end-of-day-report"
+     data-api-url="{% url 'sales:end_of_day_api' %}"
+     data-print-url="{% url 'sales:end_of_day_print' %}"
+     role="dialog" aria-modal="true" aria-labelledby="eod-report-modal-title" hidden>
+    <div class="menu-modal-dialog inv-reason-popup-dialog eod-report-popup-dialog">
+        <!-- Modal Header -->
+        <div class="menu-modal-header inv-reason-popup-header eod-report-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <h3 id="eod-report-modal-title">Báo cáo cuối ngày - {{ request.user.get_full_name|default:request.user.get_username }}</h3>
+            </div>
+            <button type="button" class="dialog-close" id="eod-report-modal-close" aria-label="Đóng">&times;</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="inv-reason-popup-body eod-report-popup-body">
+            <div class="eod-report-content-row">
+                <div class="guest-count-info-badge eod-info-badge" aria-hidden="true">i</div>
+                <div class="eod-report-stats-block">
+                    <!-- 1. Thông tin tổng hợp tính đến thời điểm hiện tại -->
+                    <div class="eod-top-grid">
+                        <span class="eod-label">Tính đến thời điểm:</span>
+                        <span class="eod-val" id="eod-as-of-time">--/--/---- --:-- --</span>
+
+                        <span class="eod-label">Tổng số hóa đơn:</span>
+                        <span class="eod-val" id="eod-total-invoices">0</span>
+
+                        <span class="eod-label">Tổng số tiền bán:</span>
+                        <span class="eod-val" id="eod-total-revenue">0 đ</span>
+                    </div>
+
+                    <!-- 2. Chi tiết 9 phương thức thanh toán / loại hóa đơn -->
+                    <div class="eod-payment-grid">
+                        <span class="eod-pay-label">Hóa đơn tiền mặt:</span>
+                        <span class="eod-pay-count" id="eod-pay-cash-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-cash-amount">0</span>
+
+                        <span class="eod-pay-label">Hóa đơn thẻ ngân hàng:</span>
+                        <span class="eod-pay-count" id="eod-pay-card-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-card-amount">0</span>
+
+                        <span class="eod-pay-label">Hóa đơn ví điện tử:</span>
+                        <span class="eod-pay-count" id="eod-pay-ewallet-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-ewallet-amount">0</span>
+
+                        <span class="eod-pay-label">Hóa đơn thẻ trả trước:</span>
+                        <span class="eod-pay-count" id="eod-pay-prepaid-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-prepaid-amount">(0)</span>
+
+                        <span class="eod-pay-label">Hóa đơn thẻ tích điểm:</span>
+                        <span class="eod-pay-count" id="eod-pay-points-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-points-amount">(0)</span>
+
+                        <span class="eod-pay-label">Hóa đơn hệ thống khác:</span>
+                        <span class="eod-pay-count" id="eod-pay-other-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-other-amount">0</span>
+
+                        <span class="eod-pay-label">Hóa đơn tiếp khách:</span>
+                        <span class="eod-pay-count" id="eod-pay-guest-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-guest-amount">(0)</span>
+
+                        <span class="eod-pay-label">Hóa đơn ghi nợ:</span>
+                        <span class="eod-pay-count" id="eod-pay-debt-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-debt-amount">0</span>
+
+                        <span class="eod-pay-label">Hóa đơn nạp tiền:</span>
+                        <span class="eod-pay-count" id="eod-pay-topup-count">0</span>
+                        <span class="eod-pay-amount" id="eod-pay-topup-amount">0</span>
+                    </div>
+
+                    <!-- 3. Thông tin giảm giá -->
+                    <div class="eod-section-text" id="eod-discount-summary">
+                        Có 0 hóa đơn giảm giá (0 mã giảm, 0 thẻ vip, 0 tặng món) -<br>
+                        Giảm 0 đ
+                    </div>
+
+                    <!-- 4. Thống kê sửa giá / hủy món / sửa xóa hóa đơn -->
+                    <div class="eod-section-text">
+                        <div id="eod-edit-price-summary">Có 0 lần sửa đơn giá/giảm giá món</div>
+                        <div id="eod-cancel-edit-summary">Có 0 lần trả/hủy món, 0 lần sửa/xóa hóa đơn</div>
+                    </div>
+
+                    <!-- 5. Hóa đơn chưa thanh toán (các bàn đang mở trên POS) -->
+                    <div class="eod-unpaid-row">
+                        <span>Hóa đơn chưa thanh toán: <span id="eod-unpaid-count">0</span></span>
+                        <span class="eod-unpaid-amt" id="eod-unpaid-amount">0</span>
+                    </div>
+
+                    <!-- 6. Hướng dẫn phím tắt in báo cáo -->
+                    <div class="eod-instructions">
+                        <div>Nhấn [OK] để in báo cáo, [Cancel] để bỏ qua.</div>
+                        <div>Giữ phím CTRL trong khi nhấn [OK] để in báo cáo chi tiết hôm nay</div>
+                        <div>Giữ phím SHIFT trong khi nhấn [OK] để in báo cáo chi tiết hôm qua</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="eod-report-popup-footer">
+                <button type="button" id="eod-report-modal-ok" class="btn-guest-count-ok">OK</button>
+                <button type="button" id="eod-report-modal-cancel" class="btn-eod-cancel">Hủy bỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function initEndOfDayReportModal() {
+    const modal = document.getElementById('modal-end-of-day-report');
+    if (!modal) return;
+
+    const closeBtn = document.getElementById('eod-report-modal-close');
+    const okBtn = document.getElementById('eod-report-modal-ok');
+    const cancelBtn = document.getElementById('eod-report-modal-cancel');
+
+    const asOfTimeEl = document.getElementById('eod-as-of-time');
+    const totalInvoicesEl = document.getElementById('eod-total-invoices');
+    const totalRevenueEl = document.getElementById('eod-total-revenue');
+
+    const payRefs = {
+        cash: {
+            count: document.getElementById('eod-pay-cash-count'),
+            amount: document.getElementById('eod-pay-cash-amount'),
+        },
+        card: {
+            count: document.getElementById('eod-pay-card-count'),
+            amount: document.getElementById('eod-pay-card-amount'),
+        },
+        e_wallet: {
+            count: document.getElementById('eod-pay-ewallet-count'),
+            amount: document.getElementById('eod-pay-ewallet-amount'),
+        },
+        prepaid: {
+            count: document.getElementById('eod-pay-prepaid-count'),
+            amount: document.getElementById('eod-pay-prepaid-amount'),
+        },
+        points: {
+            count: document.getElementById('eod-pay-points-count'),
+            amount: document.getElementById('eod-pay-points-amount'),
+        },
+        other: {
+            count: document.getElementById('eod-pay-other-count'),
+            amount: document.getElementById('eod-pay-other-amount'),
+        },
+        guest: {
+            count: document.getElementById('eod-pay-guest-count'),
+            amount: document.getElementById('eod-pay-guest-amount'),
+        },
+        debt: {
+            count: document.getElementById('eod-pay-debt-count'),
+            amount: document.getElementById('eod-pay-debt-amount'),
+        },
+        topup: {
+            count: document.getElementById('eod-pay-topup-count'),
+            amount: document.getElementById('eod-pay-topup-amount'),
+        },
+    };
+
+    const discountSummaryEl = document.getElementById('eod-discount-summary');
+    const editPriceSummaryEl = document.getElementById('eod-edit-price-summary');
+    const cancelEditSummaryEl = document.getElementById('eod-cancel-edit-summary');
+    const unpaidCountEl = document.getElementById('eod-unpaid-count');
+    const unpaidAmountEl = document.getElementById('eod-unpaid-amount');
+
+    const POS_STORAGE_KEY = 'mixfood_pos_table_orders_v1';
+    let latestUnpaidStats = { count: 0, amount: 0 };
+
+    function formatDot(val) {
+        const num = Math.round(Number(val) || 0);
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function computeLiveUnpaidOrders() {
+        let count = 0;
+        let totalAmount = 0;
+
+        try {
+            const raw = sessionStorage.getItem(POS_STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                Object.values(parsed).forEach((tData) => {
+                    const entries = Array.isArray(tData?.items) ? tData.items : [];
+                    if (!entries.length) return;
+
+                    let tableSubtotal = 0;
+                    let tableItemDiscount = 0;
+                    entries.forEach((entry) => {
+                        const item = Array.isArray(entry) ? entry[1] : entry;
+                        const qty = Number(item?.quantity) || 0;
+                        const price = Number(item?.price) || 0;
+                        if (qty <= 0) return;
+                        const gross = qty * price;
+                        const discPct = Math.min(100, Math.max(0, Number(item?.discount_percent) || 0));
+                        const discAmt = item?.discount_amount !== undefined
+                            ? Number(item.discount_amount) || 0
+                            : Math.round((gross * discPct) / 100);
+                        tableSubtotal += gross;
+                        tableItemDiscount += Math.min(gross, Math.max(0, discAmt));
+                    });
+
+                    const surcharge = Math.max(0, Number(tData?.surchargeAmount) || 0);
+                    const orderDiscount = Math.max(0, Number(tData?.orderDiscountAmount) || 0);
+                    const netTableTotal = Math.max(0, tableSubtotal - tableItemDiscount - orderDiscount + surcharge);
+
+                    count += 1;
+                    totalAmount += netTableTotal;
+                });
+            }
+        } catch (err) {
+            // Ignore sessionStorage errors
+        }
+
+        return { count, amount: totalAmount };
+    }
+
+    async function fetchAndRenderEndOfDay() {
+        const apiUrl = modal.dataset.apiUrl;
+        if (!apiUrl) return;
+
+        const hideNumbers =
+            typeof window.posGetExtraOption === 'function' &&
+            Boolean(window.posGetExtraOption('hide_shift_close_numbers'));
+
+        latestUnpaidStats = computeLiveUnpaidOrders();
+        if (unpaidCountEl) unpaidCountEl.textContent = hideNumbers ? '***' : String(latestUnpaidStats.count);
+        if (unpaidAmountEl) unpaidAmountEl.textContent = hideNumbers ? '***' : formatDot(latestUnpaidStats.amount);
+
+        try {
+            const response = await fetch(apiUrl, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await response.json();
+            if (!response.ok || !data.ok) {
+                throw new Error(data.error || 'Không thể tải dữ liệu báo cáo cuối ngày.');
+            }
+
+            if (asOfTimeEl) asOfTimeEl.textContent = data.as_of_display || '';
+            if (totalInvoicesEl) totalInvoicesEl.textContent = hideNumbers ? '***' : String(data.total_invoices ?? 0);
+            if (totalRevenueEl) totalRevenueEl.textContent = hideNumbers ? '*** đ' : `${data.total_revenue_formatted || '0'} đ`;
+
+            const pmap = data.payments_by_key || {};
+            Object.entries(payRefs).forEach(([key, refs]) => {
+                const row = pmap[key];
+                const defaultParen = ['prepaid', 'points', 'guest'].includes(key);
+                if (refs.count) {
+                    refs.count.textContent = hideNumbers ? '*' : String(row ? row.count : 0);
+                }
+                if (refs.amount) {
+                    if (hideNumbers) {
+                        refs.amount.textContent = defaultParen ? '(***)' : '***';
+                    } else {
+                        refs.amount.textContent = row ? row.amount_formatted : (defaultParen ? '(0)' : '0');
+                    }
+                }
+            });
+
+            if (discountSummaryEl) {
+                const dCount = hideNumbers ? '*' : (data.discount_invoice_count ?? 0);
+                const dAmt = hideNumbers ? '***' : (data.discount_total_formatted || '0');
+                discountSummaryEl.innerHTML =
+                    `Có ${dCount} hóa đơn giảm giá (${data.coupon_count ?? 0} mã giảm, ${data.vip_count ?? 0} thẻ vip, ${data.gift_count ?? 0} tặng món) -<br>` +
+                    `Giảm ${dAmt} đ`;
+            }
+
+            if (editPriceSummaryEl) {
+                editPriceSummaryEl.textContent = `Có ${data.edit_price_discount_count ?? 0} lần sửa đơn giá/giảm giá món`;
+            }
+            if (cancelEditSummaryEl) {
+                cancelEditSummaryEl.textContent =
+                    `Có ${data.cancel_return_item_count ?? 0} lần trả/hủy món, ${data.edit_delete_invoice_count ?? 0} lần sửa/xóa hóa đơn`;
+            }
+        } catch (err) {
+            if (asOfTimeEl) asOfTimeEl.textContent = 'Lỗi tải dữ liệu';
+        }
+    }
+
+    function triggerPrintReport(event) {
+        const printUrl = modal.dataset.printUrl;
+        if (!printUrl) {
+            closeModal();
+            return;
+        }
+        let mode = 'summary';
+        if (event && (event.ctrlKey || event.metaKey)) {
+            mode = 'detail_today';
+        } else if (event && event.shiftKey) {
+            mode = 'detail_yesterday';
+        }
+
+        const params = new URLSearchParams({
+            mode,
+            unpaid_count: String(latestUnpaidStats.count || 0),
+            unpaid_amount: String(latestUnpaidStats.amount || 0),
+        });
+        window.open(`${printUrl}?${params.toString()}`, '_blank', 'noopener');
+        closeModal();
+    }
+
+    function openModal() {
+        document.querySelectorAll('.pos-menu-item.open').forEach((item) => {
+            item.classList.remove('open');
+            const btn = item.querySelector('.nav-menu-btn') || item.querySelector(':scope > button');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        });
+
+        modal.hidden = false;
+        fetchAndRenderEndOfDay();
+        window.setTimeout(() => okBtn?.focus(), 40);
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+    }
+
+    window.openEndOfDayReportModal = openModal;
+    window.closeEndOfDayReportModal = closeModal;
+
+    document.querySelectorAll('#open-end-of-day-report-menu, [data-open-eod-report]').forEach((trigger) => {
+        trigger.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openModal();
+        });
+    });
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (okBtn) {
+        okBtn.addEventListener('click', (e) => {
+            triggerPrintReport(e);
+        });
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (modal.hidden) return;
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeModal();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            triggerPrintReport(e);
+        }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open_eod_report') === '1') {
+        window.setTimeout(() => openModal(), 150);
+    }
+})();
+</script>
+

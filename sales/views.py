@@ -723,7 +723,7 @@ def delete_invoice(request):
 
 
 @login_required
-@role_required('Owner', 'Manager', 'Sales')
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
 @require_POST
 def table_action_api(request):
 	"""API xử lý các nghiệp vụ bàn: Đặt chỗ, Hủy đặt, Mở bàn, Hủy bàn, Chuyển, Nhập, Ghép, Tách bàn và ghi Nhật ký hoạt động."""
@@ -832,6 +832,26 @@ def table_action_api(request):
 			new_log = log_activity(
 				actor=request.user,
 				action=ActivityLog.Action.SPLIT_TABLE,
+				description=desc,
+				request=request,
+				object_type='DiningTable',
+				object_id=source_table.pk,
+			)
+		elif action_type == 'cancel_item':
+			desc = detail_text or f'Bàn {source_table.name} hủy món'
+			new_log = log_activity(
+				actor=request.user,
+				action=ActivityLog.Action.CANCEL_ITEM,
+				description=desc,
+				request=request,
+				object_type='DiningTable',
+				object_id=source_table.pk,
+			)
+		elif action_type == 'edit_price':
+			desc = detail_text or f'Bàn {source_table.name} sửa đơn giá/giảm giá món'
+			new_log = log_activity(
+				actor=request.user,
+				action=ActivityLog.Action.EDIT_PRICE,
 				description=desc,
 				request=request,
 				object_type='DiningTable',
@@ -1063,3 +1083,568 @@ def undo_payment(request):
 
 
 
+
+def _parse_rev_date(date_str, default_date):
+	"""Parse YYYY-MM-DD hoặc DD/MM/YYYY thành đối tượng date."""
+	from datetime import datetime
+	if not date_str:
+		return default_date
+	raw = str(date_str).strip()
+	for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
+		try:
+			return datetime.strptime(raw, fmt).date()
+		except ValueError:
+			continue
+	return default_date
+
+
+def _parse_rev_time(time_str, default_time):
+	"""Parse HH:MM hoặc HH:MM AM/PM thành đối tượng time."""
+	from datetime import datetime
+	if not time_str:
+		return default_time
+	raw = str(time_str).strip().upper()
+	for fmt in ('%H:%M', '%H:%M:%S', '%I:%M %p', '%I:%M%p'):
+		try:
+			return datetime.strptime(raw, fmt).time()
+		except ValueError:
+			continue
+	return default_time
+
+
+def _compute_revenue_by_time_data(request):
+	"""
+	Tổng hợp dữ liệu Doanh thu (theo thời gian) đồng bộ với ảnh mẫu DRS Manager / MixFood POS:
+	- Chế độ gộp (`mode`): 'day' (Theo ngày), 'month' (Theo tháng), 'year' (Theo năm)
+	- Khoảng ngày (`from_date`, `to_date`)
+	- Tối đa 3 khung giờ lọc trong ngày (`Xem trong khoảng`):
+	  + Khung 1: mặc định 06:00 AM -> 11:30 AM
+	  + Khung 2: mặc định 12:00 PM -> 05:30 PM
+	  + Khung 3: mặc định 06:00 PM -> 11:30 PM
+	"""
+	from datetime import datetime, time, timedelta
+
+	now_local = timezone.localtime()
+	today = now_local.date()
+
+	mode = str(request.GET.get('mode', 'day') or 'day').strip().lower()
+	if mode not in ('day', 'month', 'year'):
+		mode = 'day'
+
+	from_date = _parse_rev_date(request.GET.get('from_date') or request.GET.get('from'), today)
+	to_date = _parse_rev_date(request.GET.get('to_date') or request.GET.get('to'), today)
+	if from_date > to_date:
+		from_date, to_date = to_date, from_date
+
+	start_dt = timezone.make_aware(datetime.combine(from_date, time.min))
+	end_dt = timezone.make_aware(datetime.combine(to_date + timedelta(days=1), time.min))
+
+	default_slots = [
+		(time(6, 0), time(11, 30)),
+		(time(12, 0), time(17, 30)),
+		(time(18, 0), time(23, 30)),
+	]
+	active_slots = []
+	slots_meta = []
+	for idx, (def_start, def_end) in enumerate(default_slots, start=1):
+		enabled_raw = str(request.GET.get(f'slot{idx}_enabled', '')).strip().lower()
+		is_enabled = enabled_raw in ('1', 'true', 'yes', 'on')
+		t_from = _parse_rev_time(request.GET.get(f'slot{idx}_from'), def_start)
+		t_to = _parse_rev_time(request.GET.get(f'slot{idx}_to'), def_end)
+		slots_meta.append({
+			'index': idx,
+			'enabled': is_enabled,
+			'from': t_from.strftime('%H:%M'),
+			'to': t_to.strftime('%H:%M'),
+			'from_12h': t_from.strftime('%I:%M %p'),
+			'to_12h': t_to.strftime('%I:%M %p'),
+		})
+		if is_enabled:
+			active_slots.append((t_from, t_to))
+
+	invoices = (
+		Invoice.objects.filter(
+			status=Invoice.Status.PAID,
+			paid_at__gte=start_dt,
+			paid_at__lt=end_dt,
+		)
+		.only('id', 'paid_at', 'total_amount')
+		.order_by('paid_at', 'id')
+	)
+
+	def _matches_slots(local_t):
+		if not active_slots:
+			return True
+		check_hm = (local_t.hour, local_t.minute)
+		for s_from, s_to in active_slots:
+			from_hm = (s_from.hour, s_from.minute)
+			to_hm = (s_to.hour, s_to.minute)
+			if from_hm <= to_hm:
+				if from_hm <= check_hm <= to_hm:
+					return True
+			else:
+				if check_hm >= from_hm or check_hm <= to_hm:
+					return True
+		return False
+
+	grouped = {}
+	total_invoices = 0
+	total_revenue = Decimal('0')
+
+	for inv in invoices:
+		local_dt = timezone.localtime(inv.paid_at)
+		if not _matches_slots(local_dt.time()):
+			continue
+
+		if mode == 'month':
+			sort_key = (local_dt.year, local_dt.month)
+			label = local_dt.strftime('%m/%Y')
+		elif mode == 'year':
+			sort_key = (local_dt.year,)
+			label = local_dt.strftime('%Y')
+		else:
+			sort_key = (local_dt.year, local_dt.month, local_dt.day)
+			label = local_dt.strftime('%d/%m/%Y')
+
+		if sort_key not in grouped:
+			grouped[sort_key] = {
+				'period': label,
+				'invoice_count': 0,
+				'revenue': Decimal('0'),
+			}
+		grouped[sort_key]['invoice_count'] += 1
+		grouped[sort_key]['revenue'] += inv.total_amount
+		total_invoices += 1
+		total_revenue += inv.total_amount
+
+	rows = []
+	for sort_key in sorted(grouped.keys()):
+		item = grouped[sort_key]
+		rev_val = item['revenue']
+		rows.append({
+			'period': item['period'],
+			'invoice_count': item['invoice_count'],
+			'revenue': float(rev_val),
+			'revenue_formatted': f'{rev_val:,.0f}'.replace(',', '.'),
+		})
+
+	mode_headers = {
+		'day': 'Ngày',
+		'month': 'Tháng',
+		'year': 'Năm',
+	}
+
+	return {
+		'mode': mode,
+		'period_header': mode_headers.get(mode, 'Ngày'),
+		'from_date': from_date.strftime('%Y-%m-%d'),
+		'to_date': to_date.strftime('%Y-%m-%d'),
+		'from_date_display': from_date.strftime('%d/%m/%Y'),
+		'to_date_display': to_date.strftime('%d/%m/%Y'),
+		'slots': slots_meta,
+		'rows': rows,
+		'total_invoices': total_invoices,
+		'total_revenue': float(total_revenue),
+		'total_revenue_formatted': f'{total_revenue:,.0f}'.replace(',', '.'),
+	}
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+@require_GET
+def revenue_by_time_api(request):
+	"""API trả về báo cáo Doanh thu (theo thời gian)."""
+	data = _compute_revenue_by_time_data(request)
+	return JsonResponse({'ok': True, **data})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+@require_GET
+def revenue_by_time_export_excel(request):
+	"""Xuất báo cáo Doanh thu (theo thời gian) ra file CSV (UTF-8 với BOM) mở trực tiếp bằng Excel."""
+	import csv
+	from django.http import HttpResponse
+
+	data = _compute_revenue_by_time_data(request)
+	filename = f"doanh_thu_theo_thoi_gian_{data['from_date']}_{data['to_date']}.csv"
+
+	response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+	response['Content-Disposition'] = f'attachment; filename="{filename}"'
+	response.write('\ufeff')
+
+	writer = csv.writer(response)
+	user_display = request.user.get_full_name() or request.user.username
+	writer.writerow([f'BÁO CÁO DOANH THU (THEO THỜI GIAN) - {user_display}'])
+	writer.writerow([f"Từ ngày: {data['from_date_display']} - Đến ngày: {data['to_date_display']}"])
+
+	enabled_slots = [s for s in data['slots'] if s['enabled']]
+	if enabled_slots:
+		slot_texts = [f"{s['from_12h']} -> {s['to_12h']}" for s in enabled_slots]
+		writer.writerow(['Khung giờ lọc:', '; '.join(slot_texts)])
+
+	writer.writerow([])
+	writer.writerow([data['period_header'], 'Tổng hóa đơn', 'Doanh thu (đ)'])
+
+	for row in data['rows']:
+		writer.writerow([row['period'], row['invoice_count'], row['revenue_formatted']])
+
+	writer.writerow([])
+	writer.writerow(['TỔNG CỘNG', data['total_invoices'], f"{data['total_revenue_formatted']} đ"])
+	return response
+
+
+
+def _classify_product_type(product):
+	"""
+	Phân loại món thành 'food' (Đồ ăn), 'drink' (Thức uống), hoặc 'other' (Loại khác)
+	dựa trên cả product_type lẫn tên danh mục (Category).
+	"""
+	if not product:
+		return 'food'
+	raw_type = str(getattr(product, 'product_type', '') or '').strip().lower()
+	if raw_type == 'drink':
+		return 'drink'
+	if raw_type in ('other', 'topping'):
+		return 'other'
+
+	cat_name = ''
+	if getattr(product, 'category_id', None) and getattr(product, 'category', None):
+		cat_name = str(product.category.name or '').strip().upper()
+
+	drink_keywords = ('UỐNG', 'NƯỚC', 'TRÀ', 'CAFE', 'CÀ PHÊ', 'BIA', 'SINH TỐ', 'SODA', 'DRINK', 'BEVERAGE')
+	other_keywords = ('SHIP', 'KHÁC', 'PHỤ THU', 'KHĂN')
+
+	if any(kw in cat_name for kw in drink_keywords):
+		return 'drink'
+	if any(kw in cat_name for kw in other_keywords):
+		return 'other'
+	return 'food'
+
+
+def _compute_guest_count_today_data():
+	"""
+	Tổng hợp số liệu Lượng khách hôm nay / cuối ngày đồng bộ với DRS Manager / MixFood POS:
+	- Số điểm bàn có khách / Tổng số điểm bàn
+	- Số khách hiện có / Tổng số khách hôm nay (?/?)
+	- Số món đang bán / Tổng số món bán hôm nay (chia theo: + Đồ ăn, + Thức uống, + Loại khác)
+	- Số lượt nhận món bếp hôm nay
+	"""
+	from datetime import datetime, time, timedelta
+
+	now_local = timezone.localtime()
+	day_start = timezone.make_aware(datetime.combine(now_local.date(), time.min))
+	day_end = day_start + timedelta(days=1)
+
+	active_tables_qs = DiningTable.objects.filter(is_active=True)
+	total_tables = active_tables_qs.count()
+	db_occupied_table_ids = [
+		str(tid)
+		for tid in active_tables_qs.filter(status=DiningTable.Status.OCCUPIED).values_list('id', flat=True)
+	]
+
+	all_products = Product.objects.select_related('category').filter(is_active=True)
+	product_type_map = {
+		str(p.id): _classify_product_type(p)
+		for p in all_products
+	}
+
+	paid_invoices_today = (
+		Invoice.objects.filter(
+			status=Invoice.Status.PAID,
+			paid_at__gte=day_start,
+			paid_at__lt=day_end,
+		)
+		.select_related('order')
+		.prefetch_related('order__items', 'order__items__product', 'order__items__product__category')
+	)
+
+	paid_invoices_count = 0
+	paid_food_qty = 0
+	paid_drink_qty = 0
+	paid_other_qty = 0
+
+	for inv in paid_invoices_today:
+		paid_invoices_count += 1
+		order = inv.order
+		if not order:
+			continue
+		for item in order.items.all():
+			if item.status != OrderItem.Status.ACTIVE:
+				continue
+			qty = int(item.quantity or 0)
+			if qty <= 0:
+				continue
+			ptype = (
+				product_type_map.get(str(item.product_id))
+				or _classify_product_type(item.product)
+			)
+			if ptype == 'drink':
+				paid_drink_qty += qty
+			elif ptype == 'other':
+				paid_other_qty += qty
+			else:
+				paid_food_qty += qty
+
+	paid_total_qty = paid_food_qty + paid_drink_qty + paid_other_qty
+
+	return {
+		'date': now_local.strftime('%Y-%m-%d'),
+		'date_display': now_local.strftime('%d/%m/%Y'),
+		'total_tables': total_tables,
+		'db_occupied_table_ids': db_occupied_table_ids,
+		'paid_invoices_count': paid_invoices_count,
+		'paid_food_qty': paid_food_qty,
+		'paid_drink_qty': paid_drink_qty,
+		'paid_other_qty': paid_other_qty,
+		'paid_total_qty': paid_total_qty,
+		'product_type_map': product_type_map,
+	}
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+@require_GET
+def guest_count_today_api(request):
+	"""API trả về thống kê Lượng khách hôm nay / cuối ngày."""
+	data = _compute_guest_count_today_data()
+	return JsonResponse({'ok': True, **data})
+
+
+
+def _fmt_dot(value):
+	val = int(round(Decimal(str(value or 0))))
+	return f'{val:,.0f}'.replace(',', '.')
+
+
+def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
+	"""
+	Tính toán toàn bộ số liệu Báo cáo cuối ngày đồng bộ với ảnh mẫu DRS Manager / MixFood POS:
+	- Tính đến thời điểm: dd/mm/yyyy hh:mm AM/PM
+	- Tổng số hóa đơn & Tổng số tiền bán (đ)
+	- 9 dòng phương thức thanh toán / loại hóa đơn:
+	  + Hóa đơn tiền mặt
+	  + Hóa đơn thẻ ngân hàng
+	  + Hóa đơn ví điện tử
+	  + Hóa đơn thẻ trả trước (hiển thị trong ngoặc đơn)
+	  + Hóa đơn thẻ tích điểm (hiển thị trong ngoặc đơn)
+	  + Hóa đơn hệ thống khác
+	  + Hóa đơn tiếp khách (hiển thị trong ngoặc đơn)
+	  + Hóa đơn ghi nợ
+	  + Hóa đơn nạp tiền
+	- Thống kê giảm giá: Có X hóa đơn giảm giá (0 mã giảm, 0 thẻ vip, 0 tặng món) - Giảm Y đ
+	- Thống kê thao tác kiểm soát:
+	  + Có X lần sửa đơn giá/giảm giá món
+	  + Có Y lần trả/hủy món, Z lần sửa/xóa hóa đơn
+	- Hóa đơn chưa thanh toán: số lượng & thành tiền
+	"""
+	from datetime import datetime, time, timedelta
+
+	now_local = timezone.localtime()
+	if target_date is None:
+		if is_yesterday:
+			target_date = now_local.date() - timedelta(days=1)
+		else:
+			target_date = now_local.date()
+
+	day_start = timezone.make_aware(datetime.combine(target_date, time.min))
+	day_end = day_start + timedelta(days=1)
+
+	if target_date < now_local.date():
+		as_of_dt = timezone.make_aware(datetime.combine(target_date, time(23, 59)))
+	else:
+		as_of_dt = now_local
+
+	invoices = list(
+		Invoice.objects.filter(
+			status=Invoice.Status.PAID,
+			paid_at__gte=day_start,
+			paid_at__lt=day_end,
+		)
+		.select_related('order', 'cashier', 'order__table', 'order__table__area')
+		.prefetch_related('payments', 'order__items', 'order__items__product')
+		.order_by('paid_at')
+	)
+
+	total_invoices = len(invoices)
+	total_revenue = Decimal('0')
+
+	pay_buckets = {
+		'cash': {'label': 'Hóa đơn tiền mặt:', 'count': 0, 'amount': Decimal('0'), 'paren': False},
+		'card': {'label': 'Hóa đơn thẻ ngân hàng:', 'count': 0, 'amount': Decimal('0'), 'paren': False},
+		'e_wallet': {'label': 'Hóa đơn ví điện tử:', 'count': 0, 'amount': Decimal('0'), 'paren': False},
+		'prepaid': {'label': 'Hóa đơn thẻ trả trước:', 'count': 0, 'amount': Decimal('0'), 'paren': True},
+		'points': {'label': 'Hóa đơn thẻ tích điểm:', 'count': 0, 'amount': Decimal('0'), 'paren': True},
+		'other': {'label': 'Hóa đơn hệ thống khác:', 'count': 0, 'amount': Decimal('0'), 'paren': False},
+		'guest': {'label': 'Hóa đơn tiếp khách:', 'count': 0, 'amount': Decimal('0'), 'paren': True},
+		'debt': {'label': 'Hóa đơn ghi nợ:', 'count': 0, 'amount': Decimal('0'), 'paren': False},
+		'topup': {'label': 'Hóa đơn nạp tiền:', 'count': 0, 'amount': Decimal('0'), 'paren': False},
+	}
+
+	discount_invoice_count = 0
+	discount_total_amount = Decimal('0')
+	item_price_or_discount_changes = 0
+	cancelled_order_items_count = 0
+
+	for inv in invoices:
+		total_revenue += inv.total_amount
+		if inv.discount_amount and inv.discount_amount > 0:
+			discount_invoice_count += 1
+			discount_total_amount += inv.discount_amount
+
+		payments = list(inv.payments.all())
+		if payments:
+			for p in payments:
+				m = p.method
+				if m == Payment.Method.CASH:
+					bkey = 'cash'
+				elif m in (Payment.Method.CARD, Payment.Method.BANK):
+					bkey = 'card'
+				elif m == Payment.Method.E_WALLET:
+					bkey = 'e_wallet'
+				else:
+					bkey = 'other'
+				pay_buckets[bkey]['count'] += 1
+				pay_buckets[bkey]['amount'] += p.amount
+		else:
+			pay_buckets['cash']['count'] += 1
+			pay_buckets['cash']['amount'] += inv.total_amount
+
+		order = inv.order
+		if order:
+			for item in order.items.all():
+				if item.status == OrderItem.Status.CANCELLED:
+					cancelled_order_items_count += 1
+					continue
+				if item.discount_amount and item.discount_amount > 0:
+					item_price_or_discount_changes += 1
+				elif item.product and item.unit_price != item.product.price:
+					item_price_or_discount_changes += 1
+
+	# Đếm các thao tác trong Nhật ký hoạt động của ngày đó
+	day_logs = ActivityLog.objects.filter(
+		created_at__gte=day_start,
+		created_at__lt=day_end,
+	)
+
+	log_edit_price_count = day_logs.filter(action=ActivityLog.Action.EDIT_PRICE).count()
+	log_cancel_return_count = day_logs.filter(
+		action__in=[
+			ActivityLog.Action.CANCEL_ITEM,
+			ActivityLog.Action.RETURN_ITEM,
+			ActivityLog.Action.DELETE_ORDER,
+		]
+	).count()
+	log_edit_delete_invoice_count = day_logs.filter(
+		action__in=[
+			ActivityLog.Action.EDIT_INVOICE,
+			ActivityLog.Action.DELETE_INVOICE,
+		]
+	).count()
+
+	edit_price_discount_count = max(log_edit_price_count, item_price_or_discount_changes)
+	cancel_return_item_count = max(log_cancel_return_count, cancelled_order_items_count)
+	edit_delete_invoice_count = log_edit_delete_invoice_count
+
+	# Định dạng danh sách 9 dòng phương thức thanh toán
+	payment_order = ['cash', 'card', 'e_wallet', 'prepaid', 'points', 'other', 'guest', 'debt', 'topup']
+	payment_rows = []
+	for key in payment_order:
+		b = pay_buckets[key]
+		amt_str = _fmt_dot(b['amount'])
+		if b['paren']:
+			amt_str = f'({amt_str})'
+		payment_rows.append({
+			'key': key,
+			'label': b['label'],
+			'count': b['count'],
+			'amount': float(b['amount']),
+			'amount_formatted': amt_str,
+			'paren': b['paren'],
+		})
+
+	return {
+		'date': target_date.strftime('%Y-%m-%d'),
+		'date_display': target_date.strftime('%d/%m/%Y'),
+		'as_of_display': as_of_dt.strftime('%d/%m/%Y %I:%M %p'),
+		'total_invoices': total_invoices,
+		'total_revenue': float(total_revenue),
+		'total_revenue_formatted': _fmt_dot(total_revenue),
+		'payment_rows': payment_rows,
+		'payments_by_key': {r['key']: r for r in payment_rows},
+		'discount_invoice_count': discount_invoice_count,
+		'coupon_count': 0,
+		'vip_count': 0,
+		'gift_count': 0,
+		'discount_total_amount': float(discount_total_amount),
+		'discount_total_formatted': _fmt_dot(discount_total_amount),
+		'edit_price_discount_count': edit_price_discount_count,
+		'cancel_return_item_count': cancel_return_item_count,
+		'edit_delete_invoice_count': edit_delete_invoice_count,
+	}
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+@require_GET
+def end_of_day_report_api(request):
+	"""API trả về số liệu Báo cáo cuối ngày."""
+	day_param = str(request.GET.get('day', 'today') or 'today').strip().lower()
+	is_yesterday = (day_param == 'yesterday')
+	data = _compute_end_of_day_report_data(is_yesterday=is_yesterday)
+	return JsonResponse({'ok': True, **data})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+@require_GET
+def end_of_day_report_print(request):
+	"""
+	Trang in Báo cáo cuối ngày:
+	- mode='summary' (mặc định khi nhấn OK): In phiếu tổng hợp Báo cáo cuối ngày.
+	- mode='detail_today' (Giữ CTRL + nhấn OK): In báo cáo chi tiết hôm nay (kèm chi tiết món bán).
+	- mode='detail_yesterday' (Giữ SHIFT + nhấn OK): In báo cáo chi tiết hôm qua (kèm chi tiết món bán hôm qua).
+	"""
+	from datetime import datetime, time, timedelta
+	from .statistics import get_sales_statistics_data
+
+	mode = str(request.GET.get('mode', 'summary') or 'summary').strip().lower()
+	is_yesterday = (mode == 'detail_yesterday')
+	is_detailed = mode in ('detail_today', 'detail_yesterday')
+
+	eod = _compute_end_of_day_report_data(is_yesterday=is_yesterday)
+
+	try:
+		unpaid_count = max(0, int(request.GET.get('unpaid_count', 0) or 0))
+	except (TypeError, ValueError):
+		unpaid_count = 0
+
+	try:
+		unpaid_amount = max(Decimal('0'), Decimal(str(request.GET.get('unpaid_amount', '0') or '0')))
+	except (InvalidOperation, TypeError, ValueError):
+		unpaid_amount = Decimal('0')
+
+	if is_yesterday:
+		unpaid_count = 0
+		unpaid_amount = Decimal('0')
+
+	eod['unpaid_count'] = unpaid_count
+	eod['unpaid_amount_formatted'] = _fmt_dot(unpaid_amount)
+
+	stats = None
+	if is_detailed:
+		now_local = timezone.localtime()
+		target_date = (now_local.date() - timedelta(days=1)) if is_yesterday else now_local.date()
+		start_dt = timezone.make_aware(datetime.combine(target_date, time(0, 0, 0)))
+		end_dt = timezone.make_aware(datetime.combine(target_date, time(23, 59, 59)))
+		stats = get_sales_statistics_data(start_dt, end_dt)
+
+	return render(request, 'sales/end_of_day_print.html', {
+		'eod': eod,
+		'mode': mode,
+		'is_detailed': is_detailed,
+		'is_yesterday': is_yesterday,
+		'stats': stats,
+		'current_user': request.user,
+		'printed_at': timezone.localtime(),
+	})
