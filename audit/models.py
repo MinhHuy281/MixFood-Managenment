@@ -96,6 +96,7 @@ class ActivityLog(models.Model):
 			self.Action.STOCK_RECEIPT: '#1e293b',
 			self.Action.MERGE_TABLE: '#1e293b',
 			self.Action.SPLIT_TABLE: '#1e293b',
+			self.Action.OTHER: '#1e293b',
 		}
 		return color_map.get(self.action, '#475569')
 

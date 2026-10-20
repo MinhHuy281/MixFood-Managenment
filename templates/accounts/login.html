@@ -74,7 +74,7 @@
 
                 <div class="login-field-group">
                     <label for="id_username">
-                        <span>Tên đăng nhập</span>
+                        <span>Tên đăng nhập {% if allow_numeric_password_only %}<small style="font-weight: 500; color: #059669;">(Có thể bỏ trống nếu nhập mật khẩu số)</small>{% endif %}</span>
                     </label>
                     <div class="input-with-icon">
                         <span class="field-icon">
@@ -101,6 +101,14 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </button>
             </form>
+            {% if allow_numeric_password_only %}
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const uInput = document.getElementById('id_username');
+                    if (uInput) uInput.removeAttribute('required');
+                });
+            </script>
+            {% endif %}
 
             <div class="login-card-footer">
                 <span class="system-version">Hệ thống <strong>MixFood POS 2026</strong></span>

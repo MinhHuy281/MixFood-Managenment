@@ -14,7 +14,7 @@ from accounts.decorators import role_required
 from audit.models import ActivityLog, log_activity
 from catalog.models import Product
 from dining.models import DiningTable
-from inventory.services import deduct_for_sale
+from inventory.services import deduct_for_sale, restore_stock_for_undone_sale
 
 from .models import Invoice, Order, OrderItem, Payment
 
@@ -28,7 +28,7 @@ def _money(value, default='0'):
 
 
 @login_required
-@role_required('Owner', 'Manager', 'Sales')
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
 @require_POST
 def checkout(request):
 	try:
@@ -50,8 +50,9 @@ def checkout(request):
 	if order_type not in {choice[0] for choice in Order.OrderType.choices}:
 		return JsonResponse({'error': 'Loại đơn không hợp lệ.'}, status=400)
 
-	validated_items = {}
-	validated_products = {}
+	parsed_items = []
+	subtotal = Decimal('0')
+	item_discounts_sum = Decimal('0')
 	for raw_item in raw_items:
 		try:
 			product_id = int(raw_item.get('product_id'))
@@ -60,13 +61,33 @@ def checkout(request):
 			return JsonResponse({'error': 'Món hoặc số lượng không hợp lệ.'}, status=400)
 		if quantity < 1 or quantity > 999:
 			return JsonResponse({'error': 'Số lượng món phải từ 1 đến 999.'}, status=400)
-		product = Product.objects.filter(pk=product_id, is_active=True, is_available=True).first()
+		product = Product.objects.filter(pk=product_id, is_active=True).first()
 		if product is None:
 			return JsonResponse({'error': 'Một món trong đơn không còn được bán.'}, status=400)
-		validated_items[product.pk] = validated_items.get(product.pk, 0) + quantity
-		validated_products[product.pk] = product
-	subtotal = sum((validated_products[product_id].price * quantity for product_id, quantity in validated_items.items()), Decimal('0'))
-	discount_amount = _money(payload.get('discount_amount'))
+
+		raw_price = raw_item.get('unit_price')
+		unit_price = _money(raw_price, default=str(product.price)) if raw_price is not None else product.price
+		if unit_price <= 0:
+			unit_price = product.price
+		disc_pct = _money(raw_item.get('discount_percent', 0))
+		if disc_pct > 100:
+			disc_pct = Decimal('100')
+		line_gross = unit_price * quantity
+		line_disc = (line_gross * disc_pct / Decimal('100')).quantize(Decimal('1'))
+		note = str(raw_item.get('note', '') or '').strip()[:255]
+
+		parsed_items.append({
+			'product': product,
+			'quantity': quantity,
+			'unit_price': unit_price,
+			'discount_amount': line_disc,
+			'note': note,
+		})
+		subtotal += line_gross
+		item_discounts_sum += line_disc
+
+	explicit_discount = _money(payload.get('discount_amount'))
+	discount_amount = explicit_discount if explicit_discount > 0 else item_discounts_sum
 	if discount_amount > subtotal:
 		return JsonResponse({'error': 'Giảm giá không được lớn hơn tiền món.'}, status=400)
 
@@ -95,20 +116,19 @@ def checkout(request):
 				note=str(payload.get('note', ''))[:500],
 				created_by=request.user,
 			)
-			subtotal = Decimal('0')
-			for product_id, quantity in validated_items.items():
-				product = validated_products[product_id]
+			for p_item in parsed_items:
+				prod = p_item['product']
 				OrderItem.objects.create(
 					order=order,
-					product=product,
-					product_name=product.name,
-					unit=product.unit,
-					quantity=quantity,
-					unit_price=product.price,
+					product=prod,
+					product_name=prod.name,
+					unit=prod.unit,
+					quantity=p_item['quantity'],
+					unit_price=p_item['unit_price'],
+					discount_amount=p_item['discount_amount'],
+					note=p_item['note'],
 				)
-				subtotal += product.price * quantity
 
-			discount_amount = _money(payload.get('discount_amount'))
 			surcharge_amount = _money(payload.get('surcharge_amount'))
 			tax_amount = _money(payload.get('tax_amount'))
 			total_amount = max(subtotal - discount_amount + surcharge_amount + tax_amount, Decimal('0'))
@@ -885,5 +905,161 @@ def sales_statistics_print(request):
 		'current_user': request.user,
 		'printed_at': timezone.localtime(),
 	})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+@require_POST
+def undo_payment(request):
+	"""
+	Chức năng Hoàn tác thanh toán (như ảnh mẫu DRS Manager / MixFood POS):
+	- Hoàn tác hóa đơn đã thanh toán của bàn (hoặc theo mã hóa đơn)
+	- Hoàn trả lại tồn kho nguyên liệu đã xuất
+	- Xóa hóa đơn thanh toán, đưa bàn về lại trạng thái Đang phục vụ (màu xanh) với đầy đủ các món, giảm giá, phụ thu
+	- Ghi nhận vào Nhật ký hoạt động: 'Hoàn tác thanh toán cho bàn <Tên bàn> (hóa đơn số <Mã HĐ>)' (Hoạt động: Khác)
+	"""
+	try:
+		payload = json.loads(request.body or '{}')
+	except json.JSONDecodeError:
+		return JsonResponse({'ok': False, 'error': 'Dữ liệu hoàn tác thanh toán không hợp lệ.'}, status=400)
+
+	invoice_code = str(payload.get('invoice_code', '') or '').strip().lstrip('#')
+	table_id = payload.get('table_id')
+
+	qs = Invoice.objects.select_related(
+		'order', 'order__table', 'order__table__area', 'cashier'
+	).prefetch_related('order__items', 'order__items__product', 'payments').filter(
+		status=Invoice.Status.PAID
+	)
+
+	invoice = None
+	if invoice_code:
+		invoice = qs.filter(invoice_code=invoice_code).first()
+	elif table_id:
+		invoice = qs.filter(order__table_id=table_id).order_by('-paid_at').first()
+
+	if invoice is None:
+		return JsonResponse({'ok': False, 'error': 'Không tìm thấy hóa đơn thanh toán cần hoàn tác.'}, status=404)
+
+	order = invoice.order
+	table = order.table if order else None
+	table_id_val = table.pk if table else None
+	table_name = table.name if table else 'Mang về'
+	area_name = (table.area.name if table and table.area else 'Mang về')
+	inv_code = invoice.invoice_code
+	arrival_dt = timezone.localtime(order.created_at) if order else timezone.localtime(invoice.paid_at)
+	arrival_time_str = arrival_dt.strftime('%I:%M %p')
+	cashier_name = invoice.cashier.get_full_name() or invoice.cashier.username
+
+	restored_items = []
+	if order:
+		for item in order.items.filter(status=OrderItem.Status.ACTIVE).order_by('id'):
+			gross = item.unit_price * item.quantity
+			disc_pct = round(float(item.discount_amount * Decimal('100') / gross), 1) if gross > 0 else 0.0
+			restored_items.append({
+				'product_id': item.product_id,
+				'name': item.product_name,
+				'unit': item.unit,
+				'price': float(item.unit_price),
+				'quantity': int(item.quantity),
+				'discount_amount': float(item.discount_amount),
+				'discount_percent': disc_pct,
+				'note': item.note or '',
+			})
+
+	subtotal_val = float(invoice.subtotal)
+	discount_val = float(invoice.discount_amount)
+	items_disc_sum = sum(float(it['discount_amount']) for it in restored_items)
+	extra_order_discount_val = max(0.0, round(discount_val - items_disc_sum, 2))
+	surcharge_val = float(invoice.surcharge_amount)
+	tax_val = float(invoice.tax_amount)
+	total_val = float(invoice.total_amount)
+	discount_pct_val = round(discount_val * 100.0 / subtotal_val, 1) if subtotal_val > 0 else 0.0
+
+	with transaction.atomic():
+		if order:
+			restore_stock_for_undone_sale(order.pk)
+
+		if table:
+			table.status = DiningTable.Status.OCCUPIED
+			table.save(update_fields=('status', 'updated_at'))
+
+		# Xóa Payment -> Invoice -> Order để hóa đơn được hoàn tác hoàn toàn khỏi danh sách đã thanh toán
+		invoice.payments.all().delete()
+		invoice.delete()
+		if order:
+			order.delete()
+
+		log_desc = f'Hoàn tác thanh toán cho bàn {table_name} (hóa đơn số {inv_code})'
+		new_log = log_activity(
+			actor=request.user,
+			action=ActivityLog.Action.OTHER,
+			description=log_desc,
+			request=request,
+			object_type='DiningTable',
+			object_id=table_id_val,
+		)
+
+		# Kiểm tra xem bàn này còn hóa đơn đã thanh toán nào trước đó trong ngày không
+		previous_last_paid = None
+		if table_id_val:
+			now = timezone.localtime()
+			from datetime import datetime, time
+			day_start = timezone.make_aware(datetime.combine(now.date(), time.min))
+			prev_inv = (
+				Invoice.objects.filter(
+					status=Invoice.Status.PAID,
+					order__table_id=table_id_val,
+					paid_at__gte=day_start,
+				)
+				.order_by('-paid_at')
+				.first()
+			)
+			if prev_inv:
+				prev_local = timezone.localtime(prev_inv.paid_at)
+				prev_total_fmt = f'{prev_inv.total_amount:,.0f}'.replace(',', '.')
+				previous_last_paid = {
+					'invoice_code': prev_inv.invoice_code,
+					'table_id': table_id_val,
+					'table_name': table_name,
+					'paid_time_short': prev_local.strftime('%I:%M'),
+					'paid_datetime_full': prev_local.strftime('%d/%m/%Y %I:%M %p'),
+					'total_amount': float(prev_inv.total_amount),
+					'total_formatted': f'{prev_total_fmt} đ',
+				}
+
+	return JsonResponse({
+		'ok': True,
+		'message': 'Đã hoàn tác việc thanh toán!',
+		'undone_invoice_code': inv_code,
+		'restored_order': {
+			'table_id': str(table_id_val) if table_id_val else '',
+			'table_name': table_name,
+			'area_name': area_name,
+			'arrival_time': arrival_time_str,
+			'cashier_name': cashier_name,
+			'subtotal': subtotal_val,
+			'discount_amount': extra_order_discount_val,
+			'total_discount_amount': discount_val,
+			'discount_percent': discount_pct_val,
+			'surcharge_amount': surcharge_val,
+			'tax_amount': tax_val,
+			'total_amount': total_val,
+			'items': restored_items,
+		},
+		'previous_last_paid': previous_last_paid,
+		'activity_log': {
+			'id': new_log.id,
+			'time': timezone.localtime(new_log.created_at).strftime('%I:%M %p'),
+			'formatted_time': new_log.formatted_time,
+			'action': new_log.action,
+			'action_display': new_log.get_action_display(),
+			'action_color': new_log.action_color,
+			'description': new_log.description,
+			'reason': new_log.reason,
+			'actor_name': new_log.display_actor,
+		},
+	})
+
 
 

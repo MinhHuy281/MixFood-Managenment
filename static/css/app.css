@@ -1903,7 +1903,7 @@ input, select, textarea {
     to { opacity: 1; }
 }
 
-.modern-dialog-container, .password-dialog-body {
+.modern-dialog-container {
     width: 100%;
     max-width: 440px;
     border-radius: var(--radius-2xl);
@@ -1955,7 +1955,7 @@ input, select, textarea {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.legacy-order-body, .payment-dialog-body, .invoice-edit-body, .invoice-reason-body, .closing-dialog-body {
+.legacy-order-body, .payment-dialog-body, .invoice-edit-body, .invoice-reason-body, .closing-dialog-body, .password-dialog-body {
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -7070,3 +7070,1046 @@ input, select, textarea {
     color: #dc2626 !important;
 }
 
+/* --------------------------------------------------------------------------
+   17. USER ADMIN MODAL & PAGE (NGƯỜI DÙNG - ADMIN TRÊN POS)
+   -------------------------------------------------------------------------- */
+.user-admin-modal-container {
+    width: 820px;
+    max-width: 95vw;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.4);
+}
+
+.user-admin-modal-header {
+    background: #0f172a;
+    padding: 11px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #ffffff;
+    border-bottom: 1px solid #1e293b;
+}
+
+.user-admin-modal-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff !important;
+}
+
+.user-admin-modal-body {
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #f8fafc;
+}
+
+.user-admin-table-wrap {
+    height: 255px;
+    overflow-y: auto;
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+.user-admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+.user-admin-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 9px 12px;
+    border-bottom: 1.5px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.user-admin-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #f8fafc;
+    color: #1e293b;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.user-admin-table tbody tr:hover td {
+    background: #f0f9ff;
+}
+
+.user-admin-table tbody tr.selected td {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+    font-weight: 600;
+}
+
+.user-dept-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.user-dept-badge.dept-admin {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+.user-dept-badge.dept-cashier {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+
+.user-dept-badge.dept-manager {
+    background: #e0e7ff;
+    color: #4338ca;
+    border-color: #c7d2fe;
+}
+
+.user-admin-bottom-split {
+    display: grid;
+    grid-template-columns: 1fr 370px;
+    gap: 18px;
+    align-items: stretch;
+}
+
+.user-admin-left-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 2px;
+}
+
+.user-admin-crud-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-user-crud {
+    min-width: 96px;
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.btn-user-crud:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+}
+
+.btn-user-crud.btn-user-add {
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    border-color: #0369a1;
+}
+
+.btn-user-crud.btn-user-add:hover {
+    opacity: 0.93;
+}
+
+.btn-user-crud.btn-user-del:not(:disabled) {
+    color: #dc2626;
+    border-color: #fecaca;
+    background: #fff1f2;
+}
+
+.btn-user-crud.btn-user-del:hover:not(:disabled) {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+}
+
+.btn-user-crud:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #e2e8f0;
+    color: #64748b;
+}
+
+.user-admin-selected-hint {
+    font-size: 12.5px;
+    color: #64748b;
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 12px 14px;
+    line-height: 1.5;
+    margin: 12px 0;
+}
+
+.user-admin-pin-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    user-select: none;
+    padding-top: 6px;
+}
+
+.user-admin-pin-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #0284c7;
+    cursor: pointer;
+}
+
+/* Right Form Box matching screenshot's cream/blue bordered card */
+.user-admin-form-box {
+    background: #fefce8;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.user-admin-form-header {
+    background: linear-gradient(135deg, #bae6fd, #93c5fd);
+    color: #0f172a;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    border-bottom: 1px solid #93c5fd;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.user-form-mode-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.75);
+    color: #0369a1;
+    font-weight: 700;
+}
+
+.user-form-mode-badge.mode-edit {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.user-admin-form-body {
+    padding: 12px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.user-form-row {
+    display: grid;
+    grid-template-columns: 105px 1fr;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-form-row label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.user-form-input,
+.user-form-select {
+    width: 100%;
+    height: 31px;
+    padding: 4px 10px;
+    border: 1px solid #94a3b8;
+    border-radius: 5px;
+    font-size: 12.5px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: inherit;
+}
+
+.user-form-input:focus,
+.user-form-select:focus {
+    outline: none;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.user-area-input-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-user-area-help {
+    width: 31px;
+    height: 31px;
+    flex-shrink: 0;
+    border: 1px solid #94a3b8;
+    border-radius: 5px;
+    background: #f1f5f9;
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-user-area-help:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+
+.user-area-picker-popover {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 2px;
+}
+
+.area-popover-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+.area-popover-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.area-pick-chip {
+    padding: 3px 9px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+}
+
+.area-pick-chip:hover,
+.area-pick-chip.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+
+.user-form-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 6px;
+    padding-top: 6px;
+}
+
+.btn-user-submit {
+    min-width: 92px;
+    padding: 6px 18px;
+    border-radius: 5px;
+    border: 1px solid #047857;
+    background: linear-gradient(135deg, #059669, #047857);
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.btn-user-submit:hover {
+    opacity: 0.92;
+}
+
+.btn-user-cancel {
+    min-width: 92px;
+    padding: 6px 18px;
+    border-radius: 5px;
+    border: 1px solid #94a3b8;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-user-cancel:hover {
+    background: #f1f5f9;
+}
+
+@media (max-width: 760px) {
+    .user-admin-bottom-split {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+   PHÂN QUYỀN SỬ DỤNG - ADMIN MODAL (#pos-role-permission-modal)
+   Đồng bộ chuẩn giao diện MixFood POS 2026 & Ảnh 1
+   ========================================================================== */
+.role-permission-modal-container {
+    width: min(1040px, 97vw);
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.42);
+}
+
+.role-permission-modal-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #ffffff;
+    padding: 12px 18px;
+}
+
+.role-permission-modal-body {
+    padding: 14px 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+.role-permission-subtitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    padding-left: 2px;
+}
+
+.role-permission-table-wrap {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.role-permission-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 900px;
+}
+
+.role-permission-table thead th {
+    background: #f1f5f9;
+    color: #1e293b;
+    font-weight: 700;
+    text-align: center;
+    padding: 8px 6px;
+    border-bottom: 1px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+    line-height: 1.32;
+    vertical-align: middle;
+}
+
+.role-permission-table thead th:last-child {
+    border-right: none;
+}
+
+.role-permission-table thead th.perm-role-col {
+    width: 112px;
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.role-permission-table thead th.perm-dual-col {
+    width: 118px;
+}
+
+.role-permission-table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+    transition: background 0.12s;
+}
+
+.role-permission-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.role-permission-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.role-permission-table tbody td {
+    padding: 9px 6px;
+    text-align: center;
+    vertical-align: middle;
+    border-right: 1px solid #e2e8f0;
+}
+
+.role-permission-table tbody td:last-child {
+    border-right: none;
+}
+
+.role-permission-table tbody td.perm-role-name {
+    background: #f1f5f9;
+    color: #0f172a;
+    font-weight: 700;
+    text-align: center;
+    font-size: 12.5px;
+}
+
+.role-permission-table tbody td.perm-cell-dual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+}
+
+.role-permission-table input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #0284c7;
+    cursor: pointer;
+    margin: 0;
+}
+
+.role-permission-table input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.role-permission-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 4px;
+    flex-wrap: wrap;
+}
+
+.role-permission-extra-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #1e293b;
+}
+
+.perm-extra-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+}
+
+.perm-extra-label {
+    font-weight: 700;
+    color: #0f172a;
+    margin-right: 4px;
+}
+
+.perm-extra-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+    color: #334155;
+}
+
+.perm-extra-check input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #0284c7;
+    cursor: pointer;
+    margin: 0;
+}
+
+.role-permission-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.btn-perm-confirm {
+    min-width: 96px;
+    height: 32px;
+    padding: 0 18px;
+    border-radius: 5px;
+    border: 1px solid #0284c7;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.btn-perm-confirm:hover {
+    opacity: 0.92;
+}
+
+.btn-perm-cancel {
+    min-width: 92px;
+    height: 32px;
+    padding: 0 16px;
+    border-radius: 5px;
+    border: 1px solid #94a3b8;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-perm-cancel:hover {
+    background: #f1f5f9;
+}
+
+/* ==========================================================================
+   YÊU CẦU QUYỀN HẠN MODAL (#pos-permission-request-modal)
+   Đồng bộ chuẩn giao diện MixFood POS 2026 & Ảnh 2
+   ========================================================================== */
+.permission-request-modal-container {
+    width: min(370px, 94vw);
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    border-radius: 9px;
+    overflow: hidden;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.45);
+    border: 1px solid #cbd5e1;
+}
+
+.permission-request-modal-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #ffffff;
+    padding: 10px 15px;
+}
+
+.permission-request-modal-body {
+    padding: 16px 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.perm-req-feature-hint {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0369a1;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    padding: 5px 10px;
+    border-radius: 5px;
+    margin-bottom: 2px;
+}
+
+.perm-req-field-row {
+    display: grid;
+    grid-template-columns: 98px 1fr;
+    align-items: center;
+    gap: 10px;
+}
+
+.perm-req-field-row label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.perm-req-input {
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    background: #ffffff;
+    font-size: 13px;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.perm-req-input:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.18);
+}
+
+.perm-req-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+.btn-perm-req-submit {
+    min-width: 88px;
+    height: 31px;
+    padding: 0 16px;
+    border-radius: 4px;
+    border: 1px solid #0284c7;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-perm-req-submit:hover {
+    opacity: 0.93;
+}
+
+.btn-perm-req-cancel {
+    min-width: 82px;
+    height: 31px;
+    padding: 0 14px;
+    border-radius: 4px;
+    border: 1px solid #94a3b8;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-perm-req-cancel:hover {
+    background: #f1f5f9;
+}
+
+/* Ẩn số tiền và số hóa đơn kết ca khi bật tùy chọn hide_shift_close_numbers */
+.closing-dialog.hide-closing-numbers .closing-summary,
+.closing-dialog.hide-closing-numbers .closing-payment-list,
+.closing-dialog.hide-closing-numbers .closing-total-box {
+    display: none !important;
+}
+
+/* =========================================================================
+   HOÀN TÁC THANH TOÁN (UNDO PAYMENT) & THỜI ĐIỂM PHỤC VỤ GẦN NHẤT
+   ========================================================================= */
+
+/* Giờ thanh toán gần nhất màu xanh dưới chân thẻ bàn trống */
+.table-last-paid-time {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #2563eb;
+    line-height: 1.2;
+    margin-top: 2px;
+    letter-spacing: 0.01em;
+}
+
+/* Khối "Thời điểm phục vụ gần nhất" trong cột thông tin bàn trống */
+.last-served-info-box {
+    margin: 4px 2px 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+    border: 1px solid #bfdbfe;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.16s ease;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+}
+
+.last-served-info-box:hover {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.14);
+}
+
+.last-served-info-box:active {
+    transform: translateY(0);
+}
+
+.last-served-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1d4ed8;
+    margin-bottom: 5px;
+}
+
+.last-served-detail {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #1e293b;
+}
+
+.last-served-datetime {
+    font-weight: 500;
+    color: #334155;
+}
+
+.last-served-amount {
+    font-weight: 800;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Nhãn giảm giá món (-20%) */
+.order-item-discount-tag {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #dc2626;
+}
+
+/* Hộp thoại xác nhận Hoàn tác thanh toán (đồng bộ ảnh mẫu + POS 2026) */
+.undo-payment-popup-dialog {
+    width: 410px !important;
+    max-width: 94vw !important;
+}
+
+.undo-payment-popup-body {
+    padding: 18px 20px 16px !important;
+}
+
+.undo-payment-question-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.undo-payment-question-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #3b82f6, #1d4ed8);
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(29, 78, 216, 0.32), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+}
+
+.undo-payment-question-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.undo-payment-question-text p {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.4;
+}
+
+.undo-payment-question-text .undo-payment-submsg {
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+}
+
+.undo-payment-popup-actions {
+    display: flex;
+    justify-content: center !important;
+    gap: 12px !important;
+    padding-top: 6px;
+}
+
+.undo-payment-popup-actions .btn-reason-confirm,
+.undo-payment-popup-actions .btn-reason-cancel {
+    min-width: 86px;
+}
+
+/* =========================================================================
+   ĐỔI MẬT KHẨU (PASSWORD CHANGE MODAL & STANDALONE PAGE)
+   ========================================================================= */
+.password-dialog-container {
+    max-width: 440px;
+    width: 100%;
+}
+
+.password-user-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+}
+
+.password-user-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--brand-primary), #047857);
+    color: #ffffff;
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.28);
+}
+
+.password-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.password-user-info strong {
+    font-family: var(--font-heading);
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.password-user-info span {
+    font-size: 11.5px;
+    color: #64748b;
+}
+
+.password-user-info code {
+    font-family: monospace;
+    font-weight: 700;
+    color: #0f172a;
+    background: #e2e8f0;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.password-security-badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    font-size: 10.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.req-star {
+    color: #e11d48;
+}
+
+.password-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrap .modern-input {
+    padding-right: 40px;
+    height: 40px;
+}
+
+.btn-toggle-pwd {
+    position: absolute;
+    right: 6px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-toggle-pwd:hover,
+.btn-toggle-pwd.active {
+    color: var(--brand-primary);
+    background: #f1f5f9;
+}
+
+.password-feedback-alert {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.password-feedback-alert.is-error {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.password-feedback-alert.is-success {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.password-match-hint {
+    font-size: 11.5px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.password-match-hint.is-match {
+    color: #059669;
+}
+
+.password-match-hint.is-mismatch {
+    color: #dc2626;
+}
+
+.password-change-page-container {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.password-standalone-card {
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14);
+    border: 1px solid #e2e8f0;
+}

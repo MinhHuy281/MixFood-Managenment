@@ -85,3 +85,30 @@ def receive_stock(receipt, user):
     receipt.status = StockReceipt.Status.CONFIRMED
     receipt.confirmed_at = timezone.now()
     receipt.save(update_fields=('status', 'confirmed_at'))
+
+
+def restore_stock_for_undone_sale(order_id):
+    """Hoàn trả lại tồn kho nguyên liệu khi hoàn tác thanh toán một đơn hàng."""
+    if not order_id:
+        return
+    sale_txs = list(
+        StockTransaction.objects.filter(
+            reference_type='order',
+            reference_id=order_id,
+            transaction_type=StockTransaction.TransactionType.SALE,
+        )
+    )
+    if not sale_txs:
+        return
+
+    ingredient_ids = list({tx.ingredient_id for tx in sale_txs})
+    locked = {
+        ing.pk: ing
+        for ing in Ingredient.objects.select_for_update().filter(pk__in=ingredient_ids)
+    }
+    for tx in sale_txs:
+        ing = locked.get(tx.ingredient_id)
+        if ing is not None:
+            ing.current_stock += abs(tx.quantity)
+            ing.save(update_fields=('current_stock', 'updated_at'))
+    StockTransaction.objects.filter(pk__in=[tx.pk for tx in sale_txs]).delete()

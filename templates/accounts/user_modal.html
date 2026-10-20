@@ -1,0 +1,139 @@
+<!-- Modal: Người dùng - Admin (Đồng bộ chuẩn giao diện MixFood POS 2026) -->
+<div class="menu-modal-backdrop" id="pos-user-admin-modal" hidden>
+    <div class="menu-modal-dialog user-admin-modal-container" role="dialog" aria-modal="true" aria-labelledby="pos-user-modal-title">
+        <!-- Modal Header -->
+        <div class="menu-modal-header user-admin-modal-header">
+            <div class="modal-title-wrap" style="color: #ffffff;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <h3 id="pos-user-modal-title" style="color: #ffffff !important;">Người dùng - {{ request.user.get_full_name|default:request.user.username|default:"Admin" }}</h3>
+            </div>
+            <button type="button" class="dialog-close" id="pos-user-modal-close" aria-label="Đóng">&times;</button>
+        </div>
+
+        <!-- Alert Banner -->
+        <div id="pos-user-modal-alert" class="menu-alert-banner" style="margin: 10px 18px 0;" hidden></div>
+
+        <!-- Modal Body -->
+        <div class="user-admin-modal-body">
+            <!-- Top Section: Users Data Table -->
+            <div class="user-admin-table-wrap">
+                <table class="user-admin-table" id="pos-user-admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 58px;">Mã</th>
+                            <th style="width: 145px;">Tên truy cập</th>
+                            <th style="width: 110px;">Mật khẩu</th>
+                            <th style="width: 175px;">Họ tên</th>
+                            <th style="width: 135px;">Số điện thoại</th>
+                            <th style="width: 140px;">Bộ phận</th>
+                            <th>Khu vực / Mã</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pos-user-admin-tbody">
+                        <tr>
+                            <td colspan="7" class="activity-empty-notice">Đang tải danh sách người dùng...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bottom Section: Left Controls & Right Form Box (Như ảnh mẫu) -->
+            <div class="user-admin-bottom-split">
+                <!-- Left Column: Action Buttons (Thêm, Sửa, Xóa) + Bottom Checkbox -->
+                <div class="user-admin-left-panel">
+                    <div class="user-admin-crud-buttons">
+                        <button type="button" class="btn-user-crud btn-user-add" id="pos-user-btn-add">
+                            + Thêm
+                        </button>
+                        <button type="button" class="btn-user-crud btn-user-edit" id="pos-user-btn-edit" disabled>
+                            Sửa
+                        </button>
+                        <button type="button" class="btn-user-crud btn-user-del" id="pos-user-btn-delete" disabled>
+                            Xóa
+                        </button>
+                    </div>
+
+                    <div class="user-admin-selected-hint" id="pos-user-selected-hint">
+                        Nhấp chọn 1 dòng trên bảng để <strong>Sửa</strong> hoặc <strong>Xóa</strong>, hoặc nhấn <strong>Thêm</strong> để tạo người dùng mới.
+                    </div>
+
+                    <label class="user-admin-pin-checkbox">
+                        <input type="checkbox" id="pos-user-allow-pin-only">
+                        <span>Cho phép chỉ cần nhập mật khẩu (dạng số) để truy cập</span>
+                    </label>
+                </div>
+
+                <!-- Right Column: Thêm / Sửa người dùng Form Card -->
+                <div class="user-admin-form-box" id="pos-user-form-card">
+                    <div class="user-admin-form-header">
+                        <span id="pos-user-form-title">Thêm người dùng</span>
+                        <span class="user-form-mode-badge" id="pos-user-form-badge">Tạo mới</span>
+                    </div>
+                    <form id="pos-user-admin-form" class="user-admin-form-body" autocomplete="off">
+                        <input type="hidden" id="pos-user-id" value="">
+
+                        <div class="user-form-row">
+                            <label for="pos-user-username">Tên truy cập</label>
+                            <input type="text" id="pos-user-username" class="user-form-input" placeholder="Ví dụ: thungan3" required autocomplete="off">
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="pos-user-password">Mật khẩu</label>
+                            <input type="password" id="pos-user-password" class="user-form-input" placeholder="Nhập mật khẩu..." autocomplete="new-password">
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="pos-user-fullname">Họ tên</label>
+                            <input type="text" id="pos-user-fullname" class="user-form-input" placeholder="Ví dụ: Thu Ngân 3">
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="pos-user-phone">Số điện thoại</label>
+                            <input type="text" id="pos-user-phone" class="user-form-input" placeholder="Ví dụ: 0905123456">
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="pos-user-department">Bộ phận</label>
+                            <select id="pos-user-department" class="user-form-select">
+                                <option value="undefined">Không xác định</option>
+                                <option value="admin">Quản trị</option>
+                                <option value="manager">Quản lý</option>
+                                <option value="accountant">Kế toán</option>
+                                <option value="cashier">Thu ngân</option>
+                                <option value="kitchen">Chế biến</option>
+                                <option value="waiter">Phục vụ</option>
+                            </select>
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="pos-user-area">Khu vực / Mã</label>
+                            <div class="user-area-input-group">
+                                <input type="text" id="pos-user-area" class="user-form-input" value="ALL" placeholder="ALL hoặc tên khu vực">
+                                <button type="button" class="btn-user-area-help" id="pos-user-area-help-btn" title="Chọn nhanh Khu vực / Mã">?</button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Area Picker Popover (toggled by ? button) -->
+                        <div class="user-area-picker-popover" id="pos-user-area-popover" hidden>
+                            <div class="area-popover-title">Chọn nhanh Khu vực phụ trách:</div>
+                            <div class="area-popover-chips" id="pos-user-area-chips">
+                                <button type="button" class="area-pick-chip active" data-area="ALL">ALL (Tất cả)</button>
+                            </div>
+                        </div>
+
+                        <div class="user-form-actions">
+                            <button type="submit" class="btn-user-submit" id="pos-user-btn-submit">Đồng ý</button>
+                            <button type="button" class="btn-user-cancel" id="pos-user-btn-cancel">Bỏ qua</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

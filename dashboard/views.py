@@ -11,14 +11,23 @@ from catalog.models import Category, Product
 from dining.models import Area, DiningTable
 from sales.models import Invoice, OrderItem, Payment, Shift
 from accounts.decorators import role_required
+from accounts.models import UserSystemConfig
 from audit.models import ActivityLog
 from django.contrib.auth import get_user_model
+import json
 
 User = get_user_model()
 
 
 @login_required
 def home(request):
+	# Khi tải lại màn hình chính POS, luôn xóa quyền nâng cấp tạm thời để giữ đúng quyền của tài khoản hiện tại
+	request.session.pop('pos_elevated_auth', None)
+	request.session.pop('pos_elevated_by', None)
+	sys_config = UserSystemConfig.get_solo()
+	user_permissions = sys_config.get_user_permissions(request.user)
+	extra_options = sys_config.extra_options or {}
+
 	shift = Shift.objects.filter(status=Shift.Status.OPEN).order_by('started_at').first()
 	now = timezone.localtime()
 	day_started_at = timezone.make_aware(datetime.combine(now.date(), time.min))
@@ -53,13 +62,39 @@ def home(request):
 		}
 		for method, label in Payment.Method.choices
 	]
+	paid_today_invoices = list(
+		Invoice.objects.filter(
+			status=Invoice.Status.PAID,
+			paid_at__gte=day_started_at,
+			paid_at__lt=day_started_at + timedelta(days=1),
+		)
+		.select_related('order', 'cashier', 'order__table', 'order__table__area')
+		.prefetch_related('payments', 'order__items')
+		.order_by('-paid_at')
+	)
+	table_last_paid = {}
+	for inv in paid_today_invoices:
+		tbl = inv.order.table if inv.order else None
+		if tbl and str(tbl.pk) not in table_last_paid:
+			local_paid = timezone.localtime(inv.paid_at)
+			total_fmt = f'{inv.total_amount:,.0f}'.replace(',', '.')
+			table_last_paid[str(tbl.pk)] = {
+				'invoice_code': inv.invoice_code,
+				'table_id': tbl.pk,
+				'table_name': tbl.name,
+				'paid_time_short': local_paid.strftime('%I:%M'),
+				'paid_datetime_full': local_paid.strftime('%d/%m/%Y %I:%M %p'),
+				'total_amount': float(inv.total_amount),
+				'total_formatted': f'{total_fmt} đ',
+			}
+
 	return render(request, 'dashboard/home.html', {
 		'areas': Area.objects.filter(is_active=True).prefetch_related(Prefetch('tables', queryset=DiningTable.objects.filter(is_active=True))),
 		'categories': Category.objects.filter(is_active=True),
 		'menu_categories': Category.objects.filter(is_active=True).order_by('display_order', 'name'),
 		'products': Product.objects.filter(is_active=True, is_available=True).select_related('category').order_by('category__display_order', 'category__name', 'subgroup', 'name'),
 		'all_menu_products': Product.objects.filter(is_active=True).select_related('category').order_by('category__display_order', 'name'),
-		'invoices': Invoice.objects.filter(paid_at__gte=day_started_at, paid_at__lt=day_started_at + timedelta(days=1)).select_related('order', 'cashier', 'order__table').prefetch_related('payments')[:30],
+		'invoices': paid_today_invoices[:30],
 		'shift_started_at': shift_started_at,
 		'shift_invoice_count': shift_invoices.count(),
 		'shift_total': shift_invoices.aggregate(total=Sum('total_amount'))['total'] or 0,
@@ -73,11 +108,15 @@ def home(request):
 		),
 		'current_time': now,
 		'cashiers': User.objects.filter(is_active=True).order_by('username'),
+		'pos_user_permissions_json': json.dumps(user_permissions),
+		'pos_extra_options_json': json.dumps(extra_options),
+		'hide_shift_close_numbers': bool(extra_options.get('hide_shift_close_numbers', False)),
+		'table_last_paid_json': json.dumps(table_last_paid),
 	})
 
 
 @login_required
-@role_required('Owner', 'Manager', 'Sales')
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
 @require_POST
 def close_shift(request):
 	shift = Shift.objects.filter(status=Shift.Status.OPEN).order_by('started_at').first()

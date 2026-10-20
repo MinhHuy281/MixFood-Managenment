@@ -1,0 +1,250 @@
+<!-- Modal 1: Phân quyền sử dụng - Admin (Đồng bộ chuẩn giao diện MixFood POS 2026 & Ảnh 1) -->
+<div class="menu-modal-backdrop" id="pos-role-permission-modal" hidden>
+    <div class="menu-modal-dialog role-permission-modal-container" role="dialog" aria-modal="true" aria-labelledby="pos-role-perm-modal-title">
+        <!-- Modal Header -->
+        <div class="menu-modal-header role-permission-modal-header">
+            <div class="modal-title-wrap" style="color: #ffffff;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                </svg>
+                <h3 id="pos-role-perm-modal-title" style="color: #ffffff !important;">Phân quyền sử dụng - Admin</h3>
+            </div>
+            <button type="button" class="dialog-close" id="pos-role-perm-modal-close" aria-label="Đóng">&times;</button>
+        </div>
+
+        <!-- Alert Banner -->
+        <div id="pos-role-perm-modal-alert" class="menu-alert-banner" style="margin: 10px 18px 0;" hidden></div>
+
+        <!-- Modal Body -->
+        <div class="role-permission-modal-body">
+            <div class="role-permission-subtitle">
+                Thiết lập các quyền hạn ứng với từng cấp bậc người dùng
+            </div>
+
+            <!-- Permission Matrix Table -->
+            <div class="role-permission-table-wrap">
+                <table class="role-permission-table" id="pos-role-permission-table">
+                    <thead>
+                        <tr>
+                            <th class="perm-role-col">Cấp bậc<br>người dùng</th>
+                            <th class="perm-dual-col">Hủy món đã nhận<br>- Sửa giá</th>
+                            <th class="perm-dual-col">Sửa xóa h.đơn -<br>In lại H.Đơn</th>
+                            <th>Xem báo cáo<br>bán hàng</th>
+                            <th>Quản lý kho,<br>nguyên liệu</th>
+                            <th>Quản lý thu chi,<br>tiền mặt</th>
+                            <th>Quản lý nhân<br>viên, ca</th>
+                            <th>Quản lý<br>khách hàng</th>
+                            <th>Cài đặt<br>kinh doanh</th>
+                            <th>Thiết lập<br>hệ thống</th>
+                            <th>Quản trị<br>cao cấp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pos-role-permission-tbody">
+                        <!-- Dòng 1: Quản trị (luôn khóa tick toàn bộ) -->
+                        <tr data-role="admin" class="perm-row-admin">
+                            <td class="perm-role-name">Quản trị</td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="admin" data-perm="cancel_received_item" checked disabled title="Hủy món đã nhận">
+                                <input type="checkbox" data-role="admin" data-perm="edit_item_price" checked disabled title="Sửa giá">
+                            </td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="admin" data-perm="edit_delete_invoice" checked disabled title="Sửa xóa hóa đơn">
+                                <input type="checkbox" data-role="admin" data-perm="reprint_invoice" checked disabled title="In lại hóa đơn">
+                            </td>
+                            <td><input type="checkbox" data-role="admin" data-perm="view_sales_report" checked disabled></td>
+                            <td><input type="checkbox" data-role="admin" data-perm="manage_inventory" checked disabled></td>
+                            <td><input type="checkbox" data-role="admin" data-perm="manage_cashbook" checked disabled></td>
+                            <td><input type="checkbox" data-role="admin" data-perm="manage_staff_shift" checked disabled></td>
+                            <td><input type="checkbox" data-role="admin" data-perm="manage_customers" checked disabled></td>
+                            <td><input type="checkbox" data-role="admin" data-perm="business_settings" checked disabled></td>
+                            <td><input type="checkbox" data-role="admin" data-perm="system_settings" checked disabled></td>
+                            <td><input type="checkbox" data-role="admin" data-perm="super_admin" checked disabled></td>
+                        </tr>
+                        <!-- Dòng 2: Quản lý -->
+                        <tr data-role="manager">
+                            <td class="perm-role-name">Quản lý</td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="manager" data-perm="cancel_received_item" title="Hủy món đã nhận">
+                                <input type="checkbox" data-role="manager" data-perm="edit_item_price" title="Sửa giá">
+                            </td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="manager" data-perm="edit_delete_invoice" title="Sửa xóa hóa đơn">
+                                <input type="checkbox" data-role="manager" data-perm="reprint_invoice" title="In lại hóa đơn">
+                            </td>
+                            <td><input type="checkbox" data-role="manager" data-perm="view_sales_report"></td>
+                            <td><input type="checkbox" data-role="manager" data-perm="manage_inventory"></td>
+                            <td><input type="checkbox" data-role="manager" data-perm="manage_cashbook"></td>
+                            <td><input type="checkbox" data-role="manager" data-perm="manage_staff_shift"></td>
+                            <td><input type="checkbox" data-role="manager" data-perm="manage_customers"></td>
+                            <td><input type="checkbox" data-role="manager" data-perm="business_settings"></td>
+                            <td><input type="checkbox" data-role="manager" data-perm="system_settings"></td>
+                            <td><input type="checkbox" data-role="manager" data-perm="super_admin"></td>
+                        </tr>
+                        <!-- Dòng 3: Kế toán -->
+                        <tr data-role="accountant">
+                            <td class="perm-role-name">Kế toán</td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="accountant" data-perm="cancel_received_item" title="Hủy món đã nhận">
+                                <input type="checkbox" data-role="accountant" data-perm="edit_item_price" title="Sửa giá">
+                            </td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="accountant" data-perm="edit_delete_invoice" title="Sửa xóa hóa đơn">
+                                <input type="checkbox" data-role="accountant" data-perm="reprint_invoice" title="In lại hóa đơn">
+                            </td>
+                            <td><input type="checkbox" data-role="accountant" data-perm="view_sales_report"></td>
+                            <td><input type="checkbox" data-role="accountant" data-perm="manage_inventory"></td>
+                            <td><input type="checkbox" data-role="accountant" data-perm="manage_cashbook"></td>
+                            <td><input type="checkbox" data-role="accountant" data-perm="manage_staff_shift"></td>
+                            <td><input type="checkbox" data-role="accountant" data-perm="manage_customers"></td>
+                            <td><input type="checkbox" data-role="accountant" data-perm="business_settings"></td>
+                            <td><input type="checkbox" data-role="accountant" data-perm="system_settings"></td>
+                            <td><input type="checkbox" data-role="accountant" data-perm="super_admin"></td>
+                        </tr>
+                        <!-- Dòng 4: Thu ngân -->
+                        <tr data-role="cashier">
+                            <td class="perm-role-name">Thu ngân</td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="cashier" data-perm="cancel_received_item" title="Hủy món đã nhận">
+                                <input type="checkbox" data-role="cashier" data-perm="edit_item_price" title="Sửa giá">
+                            </td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="cashier" data-perm="edit_delete_invoice" title="Sửa xóa hóa đơn">
+                                <input type="checkbox" data-role="cashier" data-perm="reprint_invoice" title="In lại hóa đơn">
+                            </td>
+                            <td><input type="checkbox" data-role="cashier" data-perm="view_sales_report"></td>
+                            <td><input type="checkbox" data-role="cashier" data-perm="manage_inventory"></td>
+                            <td><input type="checkbox" data-role="cashier" data-perm="manage_cashbook"></td>
+                            <td><input type="checkbox" data-role="cashier" data-perm="manage_staff_shift"></td>
+                            <td><input type="checkbox" data-role="cashier" data-perm="manage_customers"></td>
+                            <td><input type="checkbox" data-role="cashier" data-perm="business_settings"></td>
+                            <td><input type="checkbox" data-role="cashier" data-perm="system_settings"></td>
+                            <td><input type="checkbox" data-role="cashier" data-perm="super_admin"></td>
+                        </tr>
+                        <!-- Dòng 5: Chế biến -->
+                        <tr data-role="kitchen">
+                            <td class="perm-role-name">Chế biến</td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="kitchen" data-perm="cancel_received_item" title="Hủy món đã nhận">
+                                <input type="checkbox" data-role="kitchen" data-perm="edit_item_price" title="Sửa giá">
+                            </td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="kitchen" data-perm="edit_delete_invoice" title="Sửa xóa hóa đơn">
+                                <input type="checkbox" data-role="kitchen" data-perm="reprint_invoice" title="In lại hóa đơn">
+                            </td>
+                            <td><input type="checkbox" data-role="kitchen" data-perm="view_sales_report"></td>
+                            <td><input type="checkbox" data-role="kitchen" data-perm="manage_inventory"></td>
+                            <td><input type="checkbox" data-role="kitchen" data-perm="manage_cashbook"></td>
+                            <td><input type="checkbox" data-role="kitchen" data-perm="manage_staff_shift"></td>
+                            <td><input type="checkbox" data-role="kitchen" data-perm="manage_customers"></td>
+                            <td><input type="checkbox" data-role="kitchen" data-perm="business_settings"></td>
+                            <td><input type="checkbox" data-role="kitchen" data-perm="system_settings"></td>
+                            <td><input type="checkbox" data-role="kitchen" data-perm="super_admin"></td>
+                        </tr>
+                        <!-- Dòng 6: Phục vụ -->
+                        <tr data-role="waiter">
+                            <td class="perm-role-name">Phục vụ</td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="waiter" data-perm="cancel_received_item" title="Hủy món đã nhận">
+                                <input type="checkbox" data-role="waiter" data-perm="edit_item_price" title="Sửa giá">
+                            </td>
+                            <td class="perm-cell-dual">
+                                <input type="checkbox" data-role="waiter" data-perm="edit_delete_invoice" title="Sửa xóa hóa đơn">
+                                <input type="checkbox" data-role="waiter" data-perm="reprint_invoice" title="In lại hóa đơn">
+                            </td>
+                            <td><input type="checkbox" data-role="waiter" data-perm="view_sales_report"></td>
+                            <td><input type="checkbox" data-role="waiter" data-perm="manage_inventory"></td>
+                            <td><input type="checkbox" data-role="waiter" data-perm="manage_cashbook"></td>
+                            <td><input type="checkbox" data-role="waiter" data-perm="manage_staff_shift"></td>
+                            <td><input type="checkbox" data-role="waiter" data-perm="manage_customers"></td>
+                            <td><input type="checkbox" data-role="waiter" data-perm="business_settings"></td>
+                            <td><input type="checkbox" data-role="waiter" data-perm="system_settings"></td>
+                            <td><input type="checkbox" data-role="waiter" data-perm="super_admin"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bottom Section: Extra Options & Action Buttons -->
+            <div class="role-permission-footer">
+                <div class="role-permission-extra-options">
+                    <div class="perm-extra-row">
+                        <span class="perm-extra-label">Với Tablet/Smartphone:</span>
+                        <label class="perm-extra-check">
+                            <input type="checkbox" data-extra-opt="tablet_lock_transfer_split">
+                            <span>Khóa chuyển tách</span>
+                        </label>
+                        <label class="perm-extra-check">
+                            <input type="checkbox" data-extra-opt="tablet_lock_receive_print">
+                            <span>Khóa nhận/in món</span>
+                        </label>
+                        <label class="perm-extra-check">
+                            <input type="checkbox" data-extra-opt="tablet_lock_payment">
+                            <span>Khóa thanh toán</span>
+                        </label>
+                        <label class="perm-extra-check">
+                            <input type="checkbox" data-extra-opt="tablet_lock_discount_vip">
+                            <span>Khóa giảm giá, thẻ vip, tiếp khách</span>
+                        </label>
+                    </div>
+                    <div class="perm-extra-row">
+                        <label class="perm-extra-check">
+                            <input type="checkbox" data-extra-opt="lock_edit_price_all_roles">
+                            <span>Khóa sửa giá món bất chấp cấp bậc người dùng</span>
+                        </label>
+                        <label class="perm-extra-check" style="margin-left: 28px;">
+                            <input type="checkbox" data-extra-opt="hide_shift_close_numbers">
+                            <span>Ẩn số tiền và số hóa đơn kết ca</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="role-permission-actions">
+                    <button type="button" class="btn-perm-confirm" id="pos-perm-btn-save">Xác nhận</button>
+                    <button type="button" class="btn-perm-cancel" id="pos-perm-btn-cancel">Bỏ qua</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Yêu cầu quyền hạn (Đồng bộ chuẩn giao diện MixFood POS 2026 & Ảnh 2) -->
+<div class="menu-modal-backdrop" id="pos-permission-request-modal" style="z-index: 3200;" hidden>
+    <div class="menu-modal-dialog permission-request-modal-container" role="dialog" aria-modal="true" aria-labelledby="pos-perm-req-modal-title">
+        <!-- Modal Header -->
+        <div class="menu-modal-header permission-request-modal-header">
+            <div class="modal-title-wrap" style="color: #ffffff;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <h3 id="pos-perm-req-modal-title" style="color: #ffffff !important;">Yêu cầu quyền hạn</h3>
+            </div>
+            <button type="button" class="dialog-close" id="pos-perm-req-modal-close" aria-label="Đóng">&times;</button>
+        </div>
+
+        <!-- Alert Banner -->
+        <div id="pos-perm-req-alert" class="menu-alert-banner" style="margin: 10px 18px 0;" hidden></div>
+
+        <!-- Modal Body -->
+        <form id="pos-perm-req-form" class="permission-request-modal-body" autocomplete="off">
+            <div class="perm-req-feature-hint" id="pos-perm-req-feature-hint" hidden></div>
+
+            <div class="perm-req-field-row">
+                <label for="pos-perm-req-username">Tên truy cập</label>
+                <input type="text" id="pos-perm-req-username" class="perm-req-input" placeholder="" autocomplete="off" required>
+            </div>
+
+            <div class="perm-req-field-row">
+                <label for="pos-perm-req-password">Mật khẩu</label>
+                <input type="password" id="pos-perm-req-password" class="perm-req-input" placeholder="" autocomplete="new-password" required>
+            </div>
+
+            <div class="perm-req-actions">
+                <button type="submit" class="btn-perm-req-submit" id="pos-perm-req-submit">Xác thực</button>
+                <button type="button" class="btn-perm-req-cancel" id="pos-perm-req-cancel">Bỏ qua</button>
+            </div>
+        </form>
+    </div>
+</div>
+

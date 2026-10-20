@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const orderItems = document.querySelector('#order-items');
     const menuTitle = document.querySelector('#menu-title');
     const subtotalElement = document.querySelector('#order-subtotal');
+    const surchargeElement = document.querySelector('#order-surcharge');
+    const discountElement = document.querySelector('#order-discount');
     const totalElement = document.querySelector('#order-total');
     const orderTitle = document.querySelector('#order-title');
     const orderMode = document.querySelector('#order-mode');
@@ -25,6 +27,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const tableToolHintCancel = document.querySelector('#table-tool-hint-cancel');
 
     const tableOrders = new Map();
+    const tableLastPaidMap = new Map();
+    try {
+        const rawLastPaid = JSON.parse(document.querySelector('#pos-table-last-paid-data')?.textContent || '{}');
+        Object.entries(rawLastPaid).forEach(([k, v]) => {
+            if (v && v.invoice_code) {
+                tableLastPaidMap.set(String(k), v);
+            }
+        });
+    } catch (e) {
+        console.warn('Could not parse pos-table-last-paid-data', e);
+    }
+
     let cart = new Map();
     let selectedTableId = null;
     let dialogProduct = null;
@@ -35,18 +49,69 @@ document.addEventListener('DOMContentLoaded', () => {
     let tablePreviewArmed = false;
     let activeTableTool = null;
     let pendingTargetTable = null;
+    let pendingUndoTarget = null;
 
     const dialog = document.querySelector('#order-dialog');
     const menuColumn = document.querySelector('.menu-column');
     const posLayout = document.querySelector('.pos-layout');
     const dialogQuantity = document.querySelector('#dialog-quantity');
     const dialogPrice = document.querySelector('#dialog-price');
+    const dialogDiscount = document.querySelector('#dialog-discount');
     const paymentDialog = document.querySelector('#payment-dialog');
     const paymentTotal = document.querySelector('#payment-total');
     const paymentMethodDialog = document.querySelector('#payment-method-dialog');
     const customerPaid = document.querySelector('#customer-paid');
     const changeAmount = document.querySelector('#change-amount');
     const paymentConfirm = document.querySelector('#payment-confirm');
+
+    const POS_STORAGE_KEY = 'mixfood_pos_table_orders_v1';
+
+    const saveTableOrdersToSession = () => {
+        try {
+            const serialized = {};
+            tableOrders.forEach((tData, tId) => {
+                serialized[String(tId)] = {
+                    items: Array.from(tData.cart.entries()),
+                    itemsSentToKitchen: Boolean(tData.itemsSentToKitchen),
+                    tableName: tData.tableName || '',
+                    area: tData.area || '',
+                    arrivalTime: tData.arrivalTime || '',
+                    combinedWith: tData.combinedWith || null,
+                    surchargeAmount: Number(tData.surchargeAmount) || 0,
+                    orderDiscountAmount: Number(tData.orderDiscountAmount) || 0,
+                };
+            });
+            sessionStorage.setItem(POS_STORAGE_KEY, JSON.stringify(serialized));
+        } catch (err) {
+            // Ignore storage errors
+        }
+    };
+
+    const loadTableOrdersFromSession = () => {
+        try {
+            const raw = sessionStorage.getItem(POS_STORAGE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            Object.entries(parsed).forEach(([tId, data]) => {
+                const btn = document.querySelector(`.table[data-table-id="${tId}"]`);
+                if (!btn) return;
+                const restoredCart = new Map(Array.isArray(data.items) ? data.items : []);
+                const tData = {
+                    cart: restoredCart,
+                    itemsSentToKitchen: Boolean(data.itemsSentToKitchen),
+                    tableName: data.tableName || btn.dataset.tableName,
+                    area: data.area || btn.dataset.area,
+                    arrivalTime: data.arrivalTime || '',
+                    combinedWith: data.combinedWith || null,
+                    surchargeAmount: Number(data.surchargeAmount) || 0,
+                    orderDiscountAmount: Number(data.orderDiscountAmount) || 0,
+                };
+                tableOrders.set(String(tId), tData);
+            });
+        } catch (err) {
+            // Ignore storage errors
+        }
+    };
 
     const getCsrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
 
@@ -66,6 +131,33 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    };
+
+    const updateTableLastPaidBadge = (tableButton) => {
+        if (!tableButton) return;
+        const tId = String(tableButton.dataset.tableId);
+        const isOccupied = tableOrders.has(tId) || tableButton.classList.contains('occupied') || tableButton.classList.contains('table-green') || tableButton.classList.contains('table-red');
+        const lastPaid = tableLastPaidMap.get(tId);
+        let badge = tableButton.querySelector('.table-last-paid-time');
+        const subEl = tableButton.querySelector('.table-card-sub');
+
+        if (!isOccupied && lastPaid && lastPaid.paid_time_short) {
+            if (!badge) {
+                badge = document.createElement('small');
+                badge.className = 'table-last-paid-time';
+                tableButton.appendChild(badge);
+            }
+            badge.textContent = lastPaid.paid_time_short;
+            badge.hidden = false;
+            if (subEl) subEl.hidden = true;
+        } else {
+            if (badge) badge.remove();
+            if (subEl) subEl.hidden = false;
+        }
+    };
+
+    const updateAllTableLastPaidBadges = () => {
+        document.querySelectorAll('.table').forEach((btn) => updateTableLastPaidBadge(btn));
     };
 
     const prependActivityLogRow = (log) => {
@@ -254,6 +346,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.table').forEach((button) => button.classList.remove('selected', 'preview'));
         tableButton.classList.add('preview');
 
+        const tId = String(tableButton.dataset.tableId);
+        const lastPaid = tableLastPaidMap.get(tId);
         const isReserved = tableButton.classList.contains('reserved');
         if (orderTitle) orderTitle.textContent = `Bàn ${tableButton.dataset.tableName} - ${tableButton.dataset.area}`;
         if (selectedTable) selectedTable.textContent = tableButton.dataset.tableName;
@@ -266,9 +360,37 @@ document.addEventListener('DOMContentLoaded', () => {
         if (orderRequestedBy && orderColumn) orderRequestedBy.textContent = orderColumn.dataset.currentUser;
         if (orderMode) orderMode.textContent = isReserved ? 'Đã đặt trước' : 'Chưa gọi món';
         if (orderItems) {
-            orderItems.innerHTML = `<p class="empty-order">${isReserved ? 'Bàn đã được đặt trước. Nhấn Mở bàn hoặc Gọi món khi khách vào.' : 'Bàn đang trống. Nhấn Mở bàn, Gọi món hoặc Đặt chỗ.'}</p>`;
+            let recentHtml = '';
+            if (lastPaid && lastPaid.invoice_code) {
+                recentHtml = `
+                    <div class="last-served-info-box" id="btn-trigger-undo-last-served" role="button" tabindex="0" title="Nhấn để hoàn tác thanh toán cho bàn ${escapeHtml(tableButton.dataset.tableName)} (HĐ số ${escapeHtml(lastPaid.invoice_code)})">
+                        <div class="last-served-title">Thời điểm phục vụ gần nhất</div>
+                        <div class="last-served-detail">
+                            <span class="last-served-datetime">${escapeHtml(lastPaid.paid_datetime_full || '')}</span>
+                            <strong class="last-served-amount">${escapeHtml(lastPaid.total_formatted || `${Number(lastPaid.total_amount || 0).toLocaleString('vi-VN')} đ`)}</strong>
+                        </div>
+                    </div>
+                `;
+            }
+            orderItems.innerHTML = `
+                ${recentHtml}
+                <p class="empty-order">${isReserved ? 'Bàn đã được đặt trước. Nhấn Mở bàn hoặc Gọi món khi khách vào.' : 'Bàn đang trống. Nhấn Mở bàn, Gọi món hoặc Đặt chỗ.'}</p>
+            `;
+            const recentBox = orderItems.querySelector('#btn-trigger-undo-last-served');
+            if (recentBox && lastPaid) {
+                recentBox.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openUndoPaymentDialog({
+                        invoice_code: lastPaid.invoice_code,
+                        table_id: tId,
+                        table_name: tableButton.dataset.tableName,
+                    });
+                });
+            }
         }
         if (subtotalElement) subtotalElement.textContent = '0 đ';
+        if (surchargeElement) surchargeElement.textContent = '0 đ';
+        if (discountElement) discountElement.textContent = '0 đ';
         if (totalElement) totalElement.textContent = '0 đ';
         if (selectionPrimaryAction) selectionPrimaryAction.textContent = 'Mở bàn';
         if (selectionActions) selectionActions.hidden = false;
@@ -305,9 +427,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const cancelingTableId = selectedTableId;
         if (selectedTableId) {
             tableOrders.delete(selectedTableId);
+            saveTableOrdersToSession();
         }
         if (activeTable) {
             activeTable.classList.remove('selected', 'preview', 'table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied', 'reserved');
+            updateTableLastPaidBadge(activeTable);
         }
         if (cancelingTableId) {
             postTableAction({ action: 'cancel_open', source_table_id: cancelingTableId });
@@ -336,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableButton.classList.remove('reserved', 'available');
         if (!tableData) {
             tableButton.classList.remove('table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied');
+            updateTableLastPaidBadge(tableButton);
             return;
         }
         if (tableData.itemsSentToKitchen) {
@@ -345,12 +470,14 @@ document.addEventListener('DOMContentLoaded', () => {
             tableButton.classList.add('table-opening', 'table-red', 'occupied');
             tableButton.classList.remove('kitchen-sent', 'table-green');
         }
+        updateTableLastPaidBadge(tableButton);
     };
 
-    const openSelectedTable = (tableButton) => {
+    const openSelectedTable = (tableButton, options = {}) => {
         if (!tableButton) return;
+        const shouldUnlockMenu = options.unlockMenu !== undefined ? Boolean(options.unlockMenu) : true;
         cancelActiveTableTool();
-        selectedTableId = tableButton.dataset.tableId;
+        selectedTableId = String(tableButton.dataset.tableId);
         previewedTable = tableButton;
 
         document.querySelectorAll('.table').forEach((button) => button.classList.remove('selected', 'preview'));
@@ -367,6 +494,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 area: tableButton.dataset.area,
                 arrivalTime: getArrivalTime(),
                 combinedWith: null,
+                surchargeAmount: 0,
+                orderDiscountAmount: 0,
             };
             tableOrders.set(selectedTableId, tableData);
         }
@@ -375,14 +504,15 @@ document.addEventListener('DOMContentLoaded', () => {
         itemsSentToKitchen = tableData.itemsSentToKitchen;
 
         applyTableVisualState(tableButton, tableData);
-        if (isNewlyOpened) {
+        saveTableOrdersToSession();
+        if (isNewlyOpened && !options.skipLog) {
             postTableAction({ action: 'open', source_table_id: selectedTableId });
         }
 
         showSelectedTable(tableButton);
         if (selectionPrimaryAction) selectionPrimaryAction.textContent = 'Hủy bàn';
         setSecondaryActions(false, tableButton);
-        setMenuUnlocked(true);
+        setMenuUnlocked(shouldUnlockMenu);
         renderCart();
     };
 
@@ -517,6 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             tableOrders.set(targetId, targetData);
             tableOrders.delete(sourceId);
+            saveTableOrdersToSession();
 
             applyTableVisualState(sourceButton, null);
             applyTableVisualState(targetButton, targetData);
@@ -546,6 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             tableOrders.set(targetId, targetData);
             tableOrders.delete(sourceId);
+            saveTableOrdersToSession();
 
             applyTableVisualState(sourceButton, null);
             applyTableVisualState(targetButton, targetData);
@@ -575,6 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetData.combinedWith = sName;
             }
             tableOrders.set(targetId, targetData);
+            saveTableOrdersToSession();
 
             applyTableVisualState(sourceButton, sourceData);
             applyTableVisualState(targetButton, targetData);
@@ -741,11 +874,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (cart.size === 0) {
             tableOrders.delete(sourceId);
+            saveTableOrdersToSession();
             applyTableVisualState(sourceButton, null);
             openSelectedTable(targetButton);
         } else {
             const sourceData = tableOrders.get(sourceId);
             if (sourceData) sourceData.cart = cart;
+            saveTableOrdersToSession();
             renderCart();
         }
 
@@ -775,18 +910,55 @@ document.addEventListener('DOMContentLoaded', () => {
         editingCartItemId = null;
     };
 
-    const getCartTotal = () => Array.from(cart.values()).reduce((total, item) => total + (item.price * item.quantity), 0);
+    const getItemGrossTotal = (item) => (Number(item.price) || 0) * (Number(item.quantity) || 0);
+    const getItemDiscountAmount = (item) => {
+        const gross = getItemGrossTotal(item);
+        const pct = Math.min(100, Math.max(0, Number(item.discount_percent) || 0));
+        if (pct > 0) {
+            return Math.round((gross * pct) / 100);
+        }
+        return Math.min(gross, Math.max(0, Number(item.discount_amount) || 0));
+    };
+    const getItemNetTotal = (item) => Math.max(0, getItemGrossTotal(item) - getItemDiscountAmount(item));
+
+    const getCartSummary = () => {
+        let subtotal = 0;
+        let itemDiscounts = 0;
+        cart.forEach((item) => {
+            subtotal += getItemGrossTotal(item);
+            itemDiscounts += getItemDiscountAmount(item);
+        });
+        const tData = selectedTableId ? tableOrders.get(String(selectedTableId)) : null;
+        const surcharge = Number(tData?.surchargeAmount) || 0;
+        const orderDiscount = Number(tData?.orderDiscountAmount) || 0;
+        const totalDiscount = itemDiscounts + orderDiscount;
+        const total = Math.max(0, subtotal + surcharge - totalDiscount);
+        return { subtotal, surcharge, totalDiscount, total };
+    };
+
+    const getCartTotal = () => getCartSummary().total;
+    const cashPaidGroup = document.querySelector('#payment-cash-paid-group');
+    const cashChangeGroup = document.querySelector('#payment-cash-change-group');
+
     const updateChangeAmount = () => {
         const total = getCartTotal();
-        const paid = Number(customerPaid.value) || 0;
+        const isCash = !paymentMethodDialog || paymentMethodDialog.value === 'cash';
+        if (cashPaidGroup) cashPaidGroup.hidden = !isCash;
+        if (cashChangeGroup) cashChangeGroup.hidden = !isCash;
+
+        const rawVal = String(customerPaid.value || '').trim();
+        const paid = rawVal === '' ? total : (Number(rawVal) || 0);
         const change = Math.max(paid - total, 0);
         changeAmount.value = formatMoney(change);
-        paymentConfirm.disabled = paid < total;
+        paymentConfirm.disabled = false;
     };
     const openPaymentDialog = () => {
         const total = getCartTotal();
         paymentDialog.querySelector('#payment-dialog-title').textContent = `Bàn ${selectedTable.textContent} - Thanh toán`;
         paymentTotal.textContent = formatMoney(total);
+        if (paymentMethodDialog) {
+            paymentMethodDialog.value = 'cash';
+        }
         customerPaid.value = total;
         updateChangeAmount();
         paymentDialog.hidden = false;
@@ -795,6 +967,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const closePaymentDialog = () => { paymentDialog.hidden = true; };
     customerPaid.addEventListener('input', updateChangeAmount);
+    paymentMethodDialog?.addEventListener('change', () => {
+        updateChangeAmount();
+        if (paymentMethodDialog.value === 'cash') {
+            customerPaid.focus();
+            customerPaid.select();
+        }
+    });
     document.querySelector('#payment-dialog-close').addEventListener('click', closePaymentDialog);
     document.querySelector('#payment-cancel').addEventListener('click', closePaymentDialog);
     paymentConfirm.addEventListener('click', async () => {
@@ -802,23 +981,40 @@ document.addEventListener('DOMContentLoaded', () => {
         paymentConfirm.disabled = true;
         try {
             const csrfToken = getCsrfToken();
+            const tData = selectedTableId ? tableOrders.get(String(selectedTableId)) : null;
             const response = await fetch(paymentDialog.dataset.checkoutUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify({
-                    items: Array.from(cart.values()).map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
+                    items: Array.from(cart.values()).map((item) => ({
+                        product_id: item.product_id,
+                        quantity: item.quantity,
+                        unit_price: item.price,
+                        discount_percent: item.discount_percent || 0,
+                        discount_amount: getItemDiscountAmount(item),
+                        note: item.note || '',
+                    })),
+                    surcharge_amount: Number(tData?.surchargeAmount) || 0,
+                    discount_amount: Number(tData?.orderDiscountAmount) || 0,
                     payment_method: paymentMethodDialog.value,
                     table_id: selectedTableId,
                     order_type: 'dine_in',
                 }),
             });
-            const result = await response.json();
+            let result = {};
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                result = await response.json();
+            } else if (!response.ok) {
+                throw new Error('Không thể hoàn tất thanh toán (Lỗi phân quyền hoặc phiên đăng nhập).');
+            }
             if (!response.ok) throw new Error(result.error || 'Không thể hoàn tất thanh toán.');
             if (activeTable) {
                 activeTable.classList.remove('selected', 'preview', 'table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied');
             }
             if (selectedTableId) {
-                tableOrders.delete(selectedTableId);
+                tableOrders.delete(String(selectedTableId));
+                saveTableOrdersToSession();
             }
             closePaymentDialog();
             window.location.reload();
@@ -863,30 +1059,144 @@ document.addEventListener('DOMContentLoaded', () => {
     const closingConfirm = document.querySelector('#closing-confirm');
     const passwordDialog = document.querySelector('#password-dialog');
     const passwordDialogBackdrop = document.querySelector('#password-dialog-backdrop');
+    const passwordDialogClose = document.querySelector('#password-dialog-close');
     const passwordChangeForm = document.querySelector('#password-change-form');
     const passwordConfirmButton = document.querySelector('#password-confirm-button');
-    const passwordInputs = Array.from(passwordChangeForm.querySelectorAll('input[type="password"]'));
-    const closePasswordDialog = () => {
-        passwordDialog.hidden = true;
-        passwordDialogBackdrop.hidden = true;
-        passwordChangeForm.reset();
-        passwordConfirmButton.disabled = true;
+    const passwordAlertEl = document.querySelector('#password-change-alert');
+    const passwordMatchHint = document.querySelector('#password-match-hint');
+    const passwordInputs = [
+        document.querySelector('#password-old'),
+        document.querySelector('#password-new'),
+        document.querySelector('#password-confirm'),
+    ].filter(Boolean);
+
+    const hidePasswordAlert = () => {
+        if (!passwordAlertEl) return;
+        passwordAlertEl.hidden = true;
+        passwordAlertEl.textContent = '';
+        passwordAlertEl.className = 'password-feedback-alert';
     };
+
+    const showPasswordAlert = (msg, isSuccess = false) => {
+        if (!passwordAlertEl) return;
+        passwordAlertEl.textContent = msg;
+        passwordAlertEl.className = `password-feedback-alert ${isSuccess ? 'is-success' : 'is-error'}`;
+        passwordAlertEl.hidden = false;
+    };
+
+    const resetPasswordVisibility = () => {
+        passwordInputs.forEach((inp) => { inp.type = 'password'; });
+        passwordChangeForm?.querySelectorAll('.btn-toggle-pwd').forEach((btn) => {
+            btn.classList.remove('active');
+        });
+    };
+
+    const closePasswordDialog = () => {
+        if (passwordDialog) passwordDialog.hidden = true;
+        passwordChangeForm?.reset();
+        resetPasswordVisibility();
+        hidePasswordAlert();
+        if (passwordMatchHint) {
+            passwordMatchHint.hidden = true;
+            passwordMatchHint.textContent = '';
+        }
+        if (passwordConfirmButton) {
+            passwordConfirmButton.disabled = true;
+            passwordConfirmButton.textContent = 'Xác nhận đổi mật khẩu';
+        }
+    };
+
     const updatePasswordButton = () => {
         const [oldPassword, newPassword, confirmation] = passwordInputs.map((input) => input.value);
-        passwordConfirmButton.disabled = !oldPassword || !newPassword || newPassword !== confirmation;
+        hidePasswordAlert();
+        if (passwordMatchHint) {
+            if (!confirmation) {
+                passwordMatchHint.hidden = true;
+            } else if (newPassword === confirmation) {
+                passwordMatchHint.textContent = '✓ Mật khẩu xác nhận khớp';
+                passwordMatchHint.className = 'password-match-hint is-match';
+                passwordMatchHint.hidden = false;
+            } else {
+                passwordMatchHint.textContent = '⚠ Mật khẩu xác nhận chưa khớp';
+                passwordMatchHint.className = 'password-match-hint is-mismatch';
+                passwordMatchHint.hidden = false;
+            }
+        }
+        if (passwordConfirmButton) {
+            passwordConfirmButton.disabled = !oldPassword || !newPassword || newPassword !== confirmation;
+        }
     };
-    document.querySelector('.password-change-action').addEventListener('click', (event) => {
+
+    document.querySelector('.password-change-action')?.addEventListener('click', (event) => {
         event.preventDefault();
-        document.querySelector('.system-menu').classList.remove('open');
-        document.querySelector('.system-menu > button').setAttribute('aria-expanded', 'false');
-        passwordDialog.hidden = false;
-        passwordDialogBackdrop.hidden = false;
-        passwordInputs[0].focus();
+        document.querySelector('.system-menu')?.classList.remove('open');
+        document.querySelector('.system-menu > button')?.setAttribute('aria-expanded', 'false');
+        closePasswordDialog();
+        if (passwordDialog) passwordDialog.hidden = false;
+        window.setTimeout(() => passwordInputs[0]?.focus(), 40);
     });
+
     passwordInputs.forEach((input) => input.addEventListener('input', updatePasswordButton));
-    document.querySelector('#password-cancel-button').addEventListener('click', closePasswordDialog);
-    passwordDialogBackdrop.addEventListener('click', closePasswordDialog);
+    document.querySelector('#password-cancel-button')?.addEventListener('click', closePasswordDialog);
+    passwordDialogClose?.addEventListener('click', closePasswordDialog);
+    passwordDialogBackdrop?.addEventListener('click', closePasswordDialog);
+
+    passwordChangeForm?.querySelectorAll('.btn-toggle-pwd').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            const input = targetId ? document.getElementById(targetId) : null;
+            if (!input) return;
+            const isPwd = input.type === 'password';
+            input.type = isPwd ? 'text' : 'password';
+            btn.classList.toggle('active', isPwd);
+            input.focus();
+        });
+    });
+
+    passwordChangeForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const [oldPassword, newPassword, confirmation] = passwordInputs.map((input) => input.value);
+        if (!oldPassword || !newPassword || newPassword !== confirmation) return;
+
+        if (passwordConfirmButton) {
+            passwordConfirmButton.disabled = true;
+            passwordConfirmButton.textContent = 'Đang xử lý...';
+        }
+        hidePasswordAlert();
+
+        try {
+            const formData = new FormData(passwordChangeForm);
+            const response = await fetch(passwordChangeForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: formData,
+            });
+            const result = await response.json();
+            if (!response.ok || !result.ok) {
+                showPasswordAlert(result.error || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại.', false);
+                if (passwordConfirmButton) {
+                    passwordConfirmButton.disabled = false;
+                    passwordConfirmButton.textContent = 'Xác nhận đổi mật khẩu';
+                }
+                return;
+            }
+            showPasswordAlert(result.message || 'Đã cập nhật mật khẩu mới thành công!', true);
+            showToast(result.message || 'Đã cập nhật mật khẩu mới thành công!');
+            window.setTimeout(() => {
+                closePasswordDialog();
+            }, 650);
+        } catch (err) {
+            showPasswordAlert('Lỗi kết nối máy chủ khi đổi mật khẩu.', false);
+            if (passwordConfirmButton) {
+                passwordConfirmButton.disabled = false;
+                passwordConfirmButton.textContent = 'Xác nhận đổi mật khẩu';
+            }
+        }
+    });
     const closeClosingDialog = () => { closingDialog.hidden = true; };
     const systemMessages = {
         shift: 'Đã mở chức năng đăng thoát / ra ca. Dữ liệu ca được lưu khi kết ca.',
@@ -985,8 +1295,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const row = selectedInvoiceRow;
         const code = getRowInvoiceCode(row);
         closeInvoiceContextMenu();
-        if (code && typeof window.openInvoiceEditor === 'function') {
-            window.openInvoiceEditor(code);
+        if (!code || typeof window.openInvoiceEditor !== 'function') return;
+        const doOpen = () => window.openInvoiceEditor(code);
+        if (typeof window.requirePosPermission === 'function') {
+            window.requirePosPermission('edit_delete_invoice', doOpen, 'Sửa hóa đơn');
+        } else {
+            doOpen();
         }
     };
 
@@ -1058,19 +1372,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!row || !invoiceDeleteDialog) return;
         targetInvoiceRowForAction = row;
         const invoiceCode = getRowInvoiceCode(row);
-        const titleEl = document.querySelector('#invoice-delete-title');
-        if (titleEl) titleEl.textContent = `Lý do xóa hóa đơn`;
-        if (invoiceDeleteReason) {
-            invoiceDeleteReason.value = '';
-            invoiceDeleteReason.placeholder = `Nhập lý do xóa hóa đơn #${invoiceCode}...`;
-        }
-        if (invoiceDeleteConfirm) {
-            invoiceDeleteConfirm.disabled = true;
-            invoiceDeleteConfirm.textContent = 'Xác nhận';
-        }
         closeInvoiceContextMenu();
-        invoiceDeleteDialog.hidden = false;
-        window.setTimeout(() => invoiceDeleteReason?.focus(), 40);
+
+        const doOpenDelete = () => {
+            const titleEl = document.querySelector('#invoice-delete-title');
+            if (titleEl) titleEl.textContent = `Lý do xóa hóa đơn`;
+            if (invoiceDeleteReason) {
+                invoiceDeleteReason.value = '';
+                invoiceDeleteReason.placeholder = `Nhập lý do xóa hóa đơn #${invoiceCode}...`;
+            }
+            if (invoiceDeleteConfirm) {
+                invoiceDeleteConfirm.disabled = true;
+                invoiceDeleteConfirm.textContent = 'Xác nhận';
+            }
+            invoiceDeleteDialog.hidden = false;
+            window.setTimeout(() => invoiceDeleteReason?.focus(), 40);
+        };
+
+        if (typeof window.requirePosPermission === 'function') {
+            window.requirePosPermission('edit_delete_invoice', doOpenDelete, 'Xóa hóa đơn');
+        } else {
+            doOpenDelete();
+        }
     };
 
     const closeInvoiceDeleteDialog = () => {
@@ -1111,6 +1434,173 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- HOÀN TÁC THANH TOÁN (UNDO PAYMENT) ---
+    const undoPaymentDialog = document.querySelector('#undo-payment-confirm-dialog');
+    const undoPaymentMsgEl = document.querySelector('#undo-payment-confirm-msg');
+    const undoPaymentYesBtn = document.querySelector('#undo-payment-confirm-yes');
+    const undoPaymentNoBtn = document.querySelector('#undo-payment-confirm-no');
+    const undoPaymentCloseBtn = document.querySelector('#undo-payment-confirm-close');
+
+    const closeUndoPaymentDialog = () => {
+        if (undoPaymentDialog) undoPaymentDialog.hidden = true;
+        pendingUndoTarget = null;
+        if (undoPaymentYesBtn) {
+            undoPaymentYesBtn.disabled = false;
+            undoPaymentYesBtn.textContent = 'Có';
+        }
+    };
+
+    const openUndoPaymentDialog = (targetInfo) => {
+        if (!targetInfo || !targetInfo.invoice_code || !undoPaymentDialog) return;
+        closeInvoiceContextMenu();
+        const invoiceCode = String(targetInfo.invoice_code).replace(/^#/, '');
+        let tableName = targetInfo.table_name || '';
+        let tableId = targetInfo.table_id ? String(targetInfo.table_id) : '';
+
+        if (!tableName && tableId) {
+            const btn = document.querySelector(`.table[data-table-id="${tableId}"]`);
+            if (btn) tableName = btn.dataset.tableName || '';
+        }
+        if (!tableId && tableName) {
+            const btn = Array.from(document.querySelectorAll('.table')).find(
+                (b) => (b.dataset.tableName || '').toLowerCase() === tableName.toLowerCase()
+            );
+            if (btn) tableId = String(btn.dataset.tableId);
+        }
+
+        pendingUndoTarget = {
+            invoice_code: invoiceCode,
+            table_id: tableId,
+            table_name: tableName || 'Mang về',
+        };
+
+        if (undoPaymentMsgEl) {
+            undoPaymentMsgEl.textContent = `Hoàn tác thanh toán cho bàn ${pendingUndoTarget.table_name} (Hóa đơn số ${invoiceCode})`;
+        }
+        if (undoPaymentYesBtn) {
+            undoPaymentYesBtn.disabled = false;
+            undoPaymentYesBtn.textContent = 'Có';
+        }
+        undoPaymentDialog.hidden = false;
+    };
+    window.openUndoPaymentDialog = openUndoPaymentDialog;
+
+    undoPaymentNoBtn?.addEventListener('click', closeUndoPaymentDialog);
+    undoPaymentCloseBtn?.addEventListener('click', closeUndoPaymentDialog);
+
+    undoPaymentYesBtn?.addEventListener('click', async () => {
+        if (!pendingUndoTarget || !pendingUndoTarget.invoice_code) {
+            closeUndoPaymentDialog();
+            return;
+        }
+        const target = { ...pendingUndoTarget };
+        const undoUrl = orderColumn?.dataset.undoPaymentUrl || invoiceContextMenu?.dataset.undoUrl || '/sales/invoices/undo/';
+
+        undoPaymentYesBtn.disabled = true;
+        undoPaymentYesBtn.textContent = 'Đang xử lý...';
+
+        try {
+            const response = await fetch(undoUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    invoice_code: target.invoice_code,
+                    table_id: target.table_id || null,
+                }),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.ok) {
+                showToast(result.error || 'Không thể hoàn tác thanh toán.');
+                undoPaymentYesBtn.disabled = false;
+                undoPaymentYesBtn.textContent = 'Có';
+                return;
+            }
+
+            closeUndoPaymentDialog();
+
+            // 1. Xóa dòng hóa đơn vừa hoàn tác khỏi bảng hóa đơn đã thanh toán
+            const invRow = document.querySelector(`.invoice-table tbody tr[data-invoice-code="${target.invoice_code}"]`);
+            if (invRow) {
+                invRow.remove();
+            }
+
+            // 2. Khôi phục dữ liệu bàn và danh sách món
+            const restored = result.restored_order || {};
+            const restoredTableId = String(restored.table_id || target.table_id || '');
+            let targetTableBtn = restoredTableId
+                ? document.querySelector(`.table[data-table-id="${restoredTableId}"]`)
+                : null;
+            if (!targetTableBtn && (restored.table_name || target.table_name)) {
+                const searchName = (restored.table_name || target.table_name).toLowerCase();
+                targetTableBtn = Array.from(document.querySelectorAll('.table')).find(
+                    (b) => (b.dataset.tableName || '').toLowerCase() === searchName
+                );
+            }
+
+            const finalTableId = targetTableBtn ? String(targetTableBtn.dataset.tableId) : restoredTableId;
+
+            if (finalTableId) {
+                if (result.previous_last_paid && result.previous_last_paid.invoice_code) {
+                    tableLastPaidMap.set(finalTableId, result.previous_last_paid);
+                } else {
+                    tableLastPaidMap.delete(finalTableId);
+                }
+            }
+
+            if (targetTableBtn && finalTableId) {
+                const restoredCart = new Map();
+                (restored.items || []).forEach((item, idx) => {
+                    const key = String(item.product_id || `item_${idx}`);
+                    const existing = restoredCart.get(key);
+                    if (existing) {
+                        existing.quantity += Number(item.quantity) || 1;
+                    } else {
+                        restoredCart.set(key, {
+                            product_id: Number(item.product_id),
+                            name: item.name,
+                            unit: item.unit || 'Phần',
+                            price: Number(item.price) || 0,
+                            base_price: Number(item.base_price) || Number(item.price) || 0,
+                            discount_percent: Number(item.discount_percent) || 0,
+                            discount_amount: Number(item.discount_amount) || 0,
+                            quantity: Number(item.quantity) || 1,
+                            note: item.note || '',
+                        });
+                    }
+                });
+
+                const restoredTableData = {
+                    cart: restoredCart,
+                    itemsSentToKitchen: true,
+                    tableName: targetTableBtn.dataset.tableName,
+                    area: targetTableBtn.dataset.area,
+                    arrivalTime: restored.arrival_time || getArrivalTime(),
+                    combinedWith: null,
+                    surchargeAmount: Number(restored.surcharge_amount) || 0,
+                    orderDiscountAmount: Number(restored.discount_amount) || 0,
+                };
+                tableOrders.set(finalTableId, restoredTableData);
+                saveTableOrdersToSession();
+
+                // Mở bàn vừa hoàn tác ở trạng thái Đang phục vụ (màu xanh lá, đóng cột menu để thấy rõ cột Hóa đơn & Nhật ký)
+                openSelectedTable(targetTableBtn, { unlockMenu: false, skipLog: true });
+                showTableSpeechBubble(targetTableBtn, 'Đã hoàn tác việc thanh toán!');
+            }
+
+            // 3. Thêm dòng nhật ký hoạt động trực tiếp
+            if (result.activity_log) {
+                prependActivityLogRow(result.activity_log);
+            }
+        } catch (err) {
+            showToast(err.message || 'Lỗi kết nối khi hoàn tác thanh toán.');
+            undoPaymentYesBtn.disabled = false;
+            undoPaymentYesBtn.textContent = 'Có';
+        }
+    });
+
     if (invoiceContextMenu) {
         invoiceContextMenu.querySelectorAll('button[data-invoice-action]').forEach((actionButton) => {
             actionButton.addEventListener('click', () => {
@@ -1121,6 +1611,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     openInvoiceDeleteDialog();
                 } else if (action === 'change') {
                     openInvoiceChangeDialog();
+                } else if (action === 'undo_payment') {
+                    const row = selectedInvoiceRow;
+                    if (!row) return;
+                    const code = getRowInvoiceCode(row);
+                    const tId = row.dataset.tableId || '';
+                    const tName = row.dataset.tableName || row.children[2]?.textContent?.trim() || '';
+                    openUndoPaymentDialog({
+                        invoice_code: code,
+                        table_id: tId,
+                        table_name: tName,
+                    });
+                } else if (action === 'print') {
+                    closeInvoiceContextMenu();
+                    const doPrint = () => showToast(invoiceActionMessages.print || 'Đang in lại hóa đơn.');
+                    if (typeof window.requirePosPermission === 'function') {
+                        window.requirePosPermission('reprint_invoice', doPrint, 'In lại hóa đơn');
+                    } else {
+                        doPrint();
+                    }
                 } else if (!actionButton.disabled) {
                     showToast(invoiceActionMessages[action] || 'Đã thực hiện thao tác.');
                     closeInvoiceContextMenu();
@@ -1181,8 +1690,10 @@ document.addEventListener('DOMContentLoaded', () => {
             closeInvoiceContextMenu();
             closeInvoiceDeleteDialog();
             closeInvoiceChangeDialog();
+            closeUndoPaymentDialog();
             closeTableConfirmDialog();
             closeTableSplitDialog();
+            closePasswordDialog();
             cancelActiveTableTool();
         }
     });
@@ -1236,25 +1747,34 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('#dialog-product-name').textContent = item.name;
         dialogQuantity.value = item.quantity;
         dialogPrice.value = Number(item.price).toLocaleString('vi-VN');
+        if (typeof window.posHasPermission === 'function') {
+            dialogPrice.readOnly = !window.posHasPermission('edit_item_price');
+        }
+        if (dialogDiscount) {
+            dialogDiscount.value = String(item.discount_percent || 0);
+        }
         document.querySelector('#dialog-note').value = item.note || '';
         dialog.hidden = false;
     };
 
     const renderCart = () => {
         orderItems.innerHTML = '';
-        let subtotal = 0;
         cart.forEach((item, productId) => {
-            subtotal += item.price * item.quantity;
+            const netItemTotal = getItemNetTotal(item);
+            const discountPct = Number(item.discount_percent) || 0;
+            const discountBadgeHtml = discountPct > 0
+                ? ` <span class="order-item-discount-tag">(-${discountPct}%)</span>`
+                : '';
             const row = document.createElement('div');
             row.className = 'order-item new-item';
             row.dataset.productId = productId;
             row.innerHTML = `
                 <div class="order-item-header">
-                    <span class="order-item-title" title="${item.name}">${item.name}</span>
-                    <span class="order-item-price-total">${formatMoney(item.price * item.quantity)}</span>
+                    <span class="order-item-title" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+                    <span class="order-item-price-total">${formatMoney(netItemTotal)}</span>
                 </div>
                 <div class="order-item-meta-row">
-                    <span class="order-item-unit-price" title="Bấm để sửa món / ghi chú">${formatMoney(item.price)} / ${item.unit}</span>
+                    <span class="order-item-unit-price" title="Bấm để sửa món / ghi chú">${formatMoney(item.price)} / ${escapeHtml(item.unit)}${discountBadgeHtml}</span>
                     <div class="order-qty-pill">
                         <button type="button" class="btn-qty-minus" data-id="${productId}" title="Giảm số lượng">-</button>
                         <span class="order-qty-val">${item.quantity}</span>
@@ -1270,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${item.note ? `
                     <div class="order-item-note" title="Bấm để sửa ghi chú">
                         <span class="note-bullet">📝</span>
-                        <span class="note-content">${item.note}</span>
+                        <span class="note-content">${escapeHtml(item.note)}</span>
                     </div>
                 ` : ''}
             `;
@@ -1296,10 +1816,18 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = btn.dataset.id;
-                cart.delete(id);
-                const tableData = tableOrders.get(selectedTableId);
-                if (tableData) tableData.cart = cart;
-                renderCart();
+                const doRemove = () => {
+                    cart.delete(id);
+                    const tableData = tableOrders.get(selectedTableId);
+                    if (tableData) tableData.cart = cart;
+                    saveTableOrdersToSession();
+                    renderCart();
+                };
+                if (itemsSentToKitchen && typeof window.requirePosPermission === 'function') {
+                    window.requirePosPermission('cancel_received_item', doRemove, 'Hủy món đã nhận');
+                } else {
+                    doRemove();
+                }
             });
         });
 
@@ -1308,7 +1836,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation();
                 const id = btn.dataset.id;
                 const item = cart.get(id);
-                if (item) {
+                if (!item) return;
+                const doDecrease = () => {
                     if (item.quantity > 1) {
                         item.quantity -= 1;
                     } else {
@@ -1316,7 +1845,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     const tableData = tableOrders.get(selectedTableId);
                     if (tableData) tableData.cart = cart;
+                    saveTableOrdersToSession();
                     renderCart();
+                };
+                if (itemsSentToKitchen && typeof window.requirePosPermission === 'function') {
+                    window.requirePosPermission('cancel_received_item', doDecrease, 'Hủy món đã nhận');
+                } else {
+                    doDecrease();
                 }
             });
         });
@@ -1330,6 +1865,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.quantity += 1;
                     const tableData = tableOrders.get(selectedTableId);
                     if (tableData) tableData.cart = cart;
+                    saveTableOrdersToSession();
                     renderCart();
                 }
             });
@@ -1338,18 +1874,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!cart.size) {
             orderItems.innerHTML = selectedTableId ? '<p class="empty-order">Bàn chưa có món nào. Chọn món bên phải để gọi.</p>' : '<p class="empty-order">Chọn bàn để bắt đầu.</p>';
         }
-        subtotalElement.textContent = formatMoney(subtotal);
-        totalElement.textContent = formatMoney(subtotal);
+        const summary = getCartSummary();
+        if (subtotalElement) subtotalElement.textContent = formatMoney(summary.subtotal);
+        if (surchargeElement) surchargeElement.textContent = formatMoney(summary.surcharge);
+        if (discountElement) discountElement.textContent = summary.totalDiscount > 0 ? `-${formatMoney(summary.totalDiscount)}` : '0 đ';
+        if (totalElement) totalElement.textContent = formatMoney(summary.total);
         renderOpenAction();
     };
 
     document.querySelectorAll('.table').forEach((tableButton) => {
         tableButton.addEventListener('click', () => {
-            const clickedId = tableButton.dataset.tableId;
+            const clickedId = String(tableButton.dataset.tableId);
 
             // Nếu đang trong chế độ Chuyển / Nhập / Ghép / Tách bàn và người dùng nhấn vào bàn đích
             if (activeTableTool && selectedTableId) {
-                if (clickedId === selectedTableId) {
+                if (clickedId === String(selectedTableId)) {
                     showToast('Vui lòng chọn một bàn khác với bàn hiện tại.');
                     return;
                 }
@@ -1363,7 +1902,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Nếu bàn đã được mở trước đó (đang gọi món / đang phục vụ), chuyển thẳng vào bàn đó
             if (tableOrders.has(clickedId)) {
-                openSelectedTable(tableButton);
+                const tData = tableOrders.get(clickedId);
+                openSelectedTable(tableButton, { unlockMenu: !tData?.itemsSentToKitchen });
                 return;
             }
 
@@ -1405,10 +1945,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tableData) {
                 tableData.itemsSentToKitchen = true;
             }
+            saveTableOrdersToSession();
             const activeTable = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
             if (activeTable) {
                 activeTable.classList.remove('table-opening', 'table-red');
                 activeTable.classList.add('kitchen-sent', 'table-green', 'occupied');
+                updateTableLastPaidBadge(activeTable);
             }
             orderStatus.textContent = 'Đang phục vụ món';
             orderStatus.classList.add('pending');
@@ -1628,6 +2170,21 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMenuFiltering();
     }
 
+    dialogPrice?.addEventListener('click', () => {
+        if (!dialogPrice.readOnly) return;
+        if (typeof window.posGetExtraOption === 'function' && window.posGetExtraOption('lock_edit_price_all_roles')) {
+            showToast('Hệ thống đang khóa chức năng sửa giá món đối với mọi cấp bậc người dùng.');
+            return;
+        }
+        if (typeof window.requirePosPermission === 'function') {
+            window.requirePosPermission('edit_item_price', () => {
+                dialogPrice.readOnly = false;
+                dialogPrice.focus();
+                dialogPrice.select();
+            }, 'Sửa giá món');
+        }
+    });
+
     document.querySelectorAll('.dish').forEach((dishButton) => {
         dishButton.addEventListener('click', () => {
             if (!menuUnlocked || !selectedTableId) return;
@@ -1637,6 +2194,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('#dialog-product-name').textContent = dishButton.dataset.dish;
             dialogQuantity.value = '1';
             dialogPrice.value = Number(dishButton.dataset.price).toLocaleString('vi-VN');
+            if (typeof window.posHasPermission === 'function') {
+                dialogPrice.readOnly = !window.posHasPermission('edit_item_price');
+            }
+            if (dialogDiscount) {
+                dialogDiscount.value = '0';
+            }
             document.querySelector('#dialog-note').value = '';
             dialog.hidden = false;
         });
@@ -1660,13 +2223,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const existing = cart.get(productId);
         const quantity = Number(dialogQuantity.value) || 1;
         const note = (document.querySelector('#dialog-note').value || '').trim();
+        const customPrice = parseMoneyText(dialogPrice?.value) || Number(dialogProduct.dataset.price);
+        const discountPct = Math.min(100, Math.max(0, Number(dialogDiscount?.value) || 0));
 
         if (editingCartItemId === productId) {
             cart.set(productId, {
                 product_id: Number(productId),
                 name: dialogProduct.dataset.dish,
                 unit: dialogProduct.dataset.unit,
-                price: Number(dialogProduct.dataset.price),
+                price: customPrice,
+                discount_percent: discountPct,
                 quantity: quantity,
                 note: note,
             });
@@ -1675,7 +2241,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 product_id: Number(productId),
                 name: dialogProduct.dataset.dish,
                 unit: dialogProduct.dataset.unit,
-                price: Number(dialogProduct.dataset.price),
+                price: customPrice,
+                discount_percent: discountPct || (existing ? existing.discount_percent || 0 : 0),
                 quantity: existing ? existing.quantity + quantity : quantity,
                 note: note || (existing ? existing.note : ''),
             });
@@ -1684,6 +2251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tableData) {
             tableData.cart = cart;
         }
+        saveTableOrdersToSession();
         editingCartItemId = null;
         renderCart();
         closeDialog();
@@ -1698,13 +2266,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Khôi phục các bàn đang mở / vừa hoàn tác từ sessionStorage và hiển thị thời điểm phục vụ gần nhất
+    loadTableOrdersFromSession();
+    tableOrders.forEach((tData, tId) => {
+        const btn = document.querySelector(`.table[data-table-id="${tId}"]`);
+        if (btn) {
+            applyTableVisualState(btn, tData);
+        }
+    });
+    updateAllTableLastPaidBadges();
+
     setMenuUnlocked(false);
     renderCart();
     const firstTakeawayTable = Array.from(document.querySelectorAll('.table')).find((button) =>
         button.dataset.area.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() === 'mang ve'
     );
     if (firstTakeawayTable) {
-        showTablePreview(firstTakeawayTable);
-        tablePreviewArmed = false;
+        const tId = String(firstTakeawayTable.dataset.tableId);
+        if (tableOrders.has(tId)) {
+            openSelectedTable(firstTakeawayTable, { unlockMenu: false, skipLog: true });
+        } else {
+            showTablePreview(firstTakeawayTable);
+            tablePreviewArmed = false;
+        }
     }
 });

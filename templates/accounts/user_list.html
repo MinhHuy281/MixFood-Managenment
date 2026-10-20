@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% block title %}Người dùng - Admin | MixFood POS{% endblock %}
+
+{% block content %}
+<div class="activity-page-container" style="max-width: 1080px;">
+    <div class="list-header activity-page-header">
+        <div class="header-titles">
+            <h1>Người dùng - {{ request.user.get_full_name|default:request.user.username|default:"Admin" }}</h1>
+            <p class="muted">Quản lý tài khoản truy cập, phân quyền bộ phận và khu vực phụ trách trên hệ thống POS.</p>
+        </div>
+        <div class="header-actions">
+            <a class="secondary-button" href="{% url 'dashboard:home' %}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Về màn hình POS
+            </a>
+        </div>
+    </div>
+
+    <div class="user-admin-modal-container" style="width: 100%; max-width: 100%; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;">
+        <div id="page-user-modal-alert" class="menu-alert-banner" style="margin: 12px 18px 0;" hidden></div>
+
+        <div class="user-admin-modal-body">
+            <div class="user-admin-table-wrap">
+                <table class="user-admin-table" id="page-user-admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">Mã</th>
+                            <th style="width: 155px;">Tên truy cập</th>
+                            <th style="width: 115px;">Mật khẩu</th>
+                            <th style="width: 185px;">Họ tên</th>
+                            <th style="width: 145px;">Số điện thoại</th>
+                            <th style="width: 150px;">Bộ phận</th>
+                            <th>Khu vực / Mã</th>
+                        </tr>
+                    </thead>
+                    <tbody id="page-user-admin-tbody">
+                        {% for u in users_data %}
+                        <tr class="user-admin-row" data-id="{{ u.id }}">
+                            <td class="text-center"><strong>{{ u.code }}</strong></td>
+                            <td><strong>{{ u.username }}</strong></td>
+                            <td class="text-muted">######</td>
+                            <td>{{ u.full_name }}</td>
+                            <td>{{ u.phone }}</td>
+                            <td><span class="user-dept-badge dept-{{ u.department }}">{{ u.department_display }}</span></td>
+                            <td><code>{{ u.area_code }}</code></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="user-admin-bottom-split">
+                <div class="user-admin-left-panel">
+                    <div class="user-admin-crud-buttons">
+                        <button type="button" class="btn-user-crud btn-user-add" id="page-user-btn-add">+ Thêm</button>
+                        <button type="button" class="btn-user-crud btn-user-edit" id="page-user-btn-edit" disabled>Sửa</button>
+                        <button type="button" class="btn-user-crud btn-user-del" id="page-user-btn-delete" disabled>Xóa</button>
+                    </div>
+
+                    <div class="user-admin-selected-hint" id="page-user-selected-hint">
+                        Nhấp chọn 1 dòng trên bảng để <strong>Sửa</strong> hoặc <strong>Xóa</strong>, hoặc nhấn <strong>Thêm</strong> để tạo người dùng mới.
+                    </div>
+
+                    <label class="user-admin-pin-checkbox">
+                        <input type="checkbox" id="page-user-allow-pin-only" {% if allow_numeric_password_only %}checked{% endif %}>
+                        <span>Cho phép chỉ cần nhập mật khẩu (dạng số) để truy cập</span>
+                    </label>
+                </div>
+
+                <div class="user-admin-form-box" id="page-user-form-card">
+                    <div class="user-admin-form-header">
+                        <span id="page-user-form-title">Thêm người dùng</span>
+                        <span class="user-form-mode-badge" id="page-user-form-badge">Tạo mới</span>
+                    </div>
+                    <form id="page-user-admin-form" class="user-admin-form-body" autocomplete="off">
+                        {% csrf_token %}
+                        <input type="hidden" id="page-user-id" value="">
+
+                        <div class="user-form-row">
+                            <label for="page-user-username">Tên truy cập</label>
+                            <input type="text" id="page-user-username" class="user-form-input" placeholder="Ví dụ: thungan3" required>
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="page-user-password">Mật khẩu</label>
+                            <input type="password" id="page-user-password" class="user-form-input" placeholder="Nhập mật khẩu...">
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="page-user-fullname">Họ tên</label>
+                            <input type="text" id="page-user-fullname" class="user-form-input" placeholder="Ví dụ: Thu Ngân 3">
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="page-user-phone">Số điện thoại</label>
+                            <input type="text" id="page-user-phone" class="user-form-input" placeholder="Ví dụ: 0905123456">
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="page-user-department">Bộ phận</label>
+                            <select id="page-user-department" class="user-form-select">
+                                {% for val, label in departments %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="user-form-row">
+                            <label for="page-user-area">Khu vực / Mã</label>
+                            <div class="user-area-input-group">
+                                <input type="text" id="page-user-area" class="user-form-input" value="ALL">
+                                <button type="button" class="btn-user-area-help" id="page-user-area-help-btn" title="Chọn nhanh Khu vực / Mã">?</button>
+                            </div>
+                        </div>
+
+                        <div class="user-area-picker-popover" id="page-user-area-popover" hidden>
+                            <div class="area-popover-title">Chọn nhanh Khu vực phụ trách:</div>
+                            <div class="area-popover-chips" id="page-user-area-chips">
+                                <button type="button" class="area-pick-chip active" data-area="ALL">ALL (Tất cả)</button>
+                                {% for area_name in areas %}
+                                <button type="button" class="area-pick-chip" data-area="{{ area_name }}">{{ area_name }}</button>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="user-form-actions">
+                            <button type="submit" class="btn-user-submit" id="page-user-btn-submit">Đồng ý</button>
+                            <button type="button" class="btn-user-cancel" id="page-user-btn-cancel">Bỏ qua</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tbody = document.getElementById('page-user-admin-tbody');
+    const alertBanner = document.getElementById('page-user-modal-alert');
+    const btnAdd = document.getElementById('page-user-btn-add');
+    const btnEdit = document.getElementById('page-user-btn-edit');
+    const btnDel = document.getElementById('page-user-btn-delete');
+    const pinCheckbox = document.getElementById('page-user-allow-pin-only');
+    const selectedHint = document.getElementById('page-user-selected-hint');
+
+    const form = document.getElementById('page-user-admin-form');
+    const formTitle = document.getElementById('page-user-form-title');
+    const formBadge = document.getElementById('page-user-form-badge');
+    const idInput = document.getElementById('page-user-id');
+    const usernameInput = document.getElementById('page-user-username');
+    const passwordInput = document.getElementById('page-user-password');
+    const fullnameInput = document.getElementById('page-user-fullname');
+    const phoneInput = document.getElementById('page-user-phone');
+    const deptSelect = document.getElementById('page-user-department');
+    const areaInput = document.getElementById('page-user-area');
+    const areaHelpBtn = document.getElementById('page-user-area-help-btn');
+    const areaPopover = document.getElementById('page-user-area-popover');
+    const areaChips = document.getElementById('page-user-area-chips');
+    const btnCancel = document.getElementById('page-user-btn-cancel');
+
+    let usersList = [];
+    let selectedUserId = null;
+
+    const csrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+    const showAlert = (msg, type = 'success') => {
+        if (!alertBanner) return;
+        alertBanner.className = `menu-alert-banner ${type}`;
+        alertBanner.textContent = msg;
+        alertBanner.hidden = false;
+        setTimeout(() => { alertBanner.hidden = true; }, 4000);
+    };
+
+    const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const resetFormToAdd = (focusInput = false) => {
+        idInput.value = '';
+        usernameInput.value = '';
+        passwordInput.value = '';
+        passwordInput.placeholder = 'Nhập mật khẩu...';
+        fullnameInput.value = '';
+        phoneInput.value = '';
+        deptSelect.value = 'undefined';
+        areaInput.value = 'ALL';
+        formTitle.textContent = 'Thêm người dùng';
+        formBadge.textContent = 'Tạo mới';
+        formBadge.classList.remove('mode-edit');
+        if (focusInput) usernameInput.focus();
+    };
+
+    const populateFormForEdit = (u) => {
+        if (!u) return;
+        idInput.value = u.id;
+        usernameInput.value = u.username;
+        passwordInput.value = '######';
+        passwordInput.placeholder = 'Để ###### nếu giữ nguyên mật khẩu';
+        fullnameInput.value = u.full_name || '';
+        phoneInput.value = u.phone || '';
+        deptSelect.value = u.department || 'undefined';
+        areaInput.value = u.area_code || 'ALL';
+        formTitle.textContent = 'Sửa người dùng';
+        formBadge.textContent = `Đang sửa #${u.code}`;
+        formBadge.classList.add('mode-edit');
+    };
+
+    const renderTable = () => {
+        if (!tbody) return;
+        if (!usersList.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="activity-empty-notice">Chưa có người dùng nào.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = usersList.map(u => `
+            <tr class="user-admin-row ${selectedUserId === u.id ? 'selected' : ''}" data-id="${u.id}">
+                <td class="text-center"><strong>${u.code}</strong></td>
+                <td><strong>${escapeHtml(u.username)}</strong></td>
+                <td class="text-muted">######</td>
+                <td>${escapeHtml(u.full_name)}</td>
+                <td>${escapeHtml(u.phone)}</td>
+                <td><span class="user-dept-badge dept-${escapeHtml(u.department)}">${escapeHtml(u.department_display)}</span></td>
+                <td><code>${escapeHtml(u.area_code)}</code></td>
+            </tr>
+        `).join('');
+
+        tbody.querySelectorAll('.user-admin-row').forEach(tr => {
+            tr.addEventListener('click', () => {
+                selectedUserId = Number(tr.dataset.id);
+                tbody.querySelectorAll('.user-admin-row').forEach(r => r.classList.remove('selected'));
+                tr.classList.add('selected');
+                const u = usersList.find(x => x.id === selectedUserId);
+                btnEdit.disabled = !u;
+                btnDel.disabled = !u;
+                if (u && selectedHint) {
+                    selectedHint.innerHTML = `Đang chọn: <strong>${escapeHtml(u.username)}</strong> (${escapeHtml(u.full_name)} - ${escapeHtml(u.department_display)})`;
+                }
+            });
+            tr.addEventListener('dblclick', () => {
+                selectedUserId = Number(tr.dataset.id);
+                const u = usersList.find(x => x.id === selectedUserId);
+                if (u) populateFormForEdit(u);
+            });
+        });
+    };
+
+    const loadUsers = async () => {
+        const resp = await fetch('/accounts/api/users/');
+        const data = await resp.json();
+        usersList = data.users || [];
+        if (pinCheckbox) pinCheckbox.checked = Boolean(data.allow_numeric_password_only);
+        renderTable();
+    };
+
+    btnAdd?.addEventListener('click', () => resetFormToAdd(true));
+    btnEdit?.addEventListener('click', () => {
+        const u = usersList.find(x => x.id === selectedUserId);
+        if (!u) return showAlert('Vui lòng chọn 1 người dùng trên bảng để sửa.', 'error');
+        populateFormForEdit(u);
+        fullnameInput.focus();
+    });
+    btnCancel?.addEventListener('click', () => resetFormToAdd(false));
+
+    btnDel?.addEventListener('click', async () => {
+        const u = usersList.find(x => x.id === selectedUserId);
+        if (!u) return;
+        if (!confirm(`Bạn có chắc chắn muốn xóa người dùng "${u.username}" (${u.full_name})?`)) return;
+        const resp = await fetch(`/accounts/api/users/delete/${u.id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken() },
+        });
+        const res = await resp.json();
+        if (!resp.ok) return showAlert(res.error || 'Không thể xóa người dùng.', 'error');
+        selectedUserId = null;
+        btnEdit.disabled = true;
+        btnDel.disabled = true;
+        resetFormToAdd(false);
+        showAlert(res.message);
+        await loadUsers();
+    });
+
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            id: idInput.value || undefined,
+            username: usernameInput.value.trim(),
+            password: passwordInput.value.trim(),
+            full_name: fullnameInput.value.trim(),
+            phone: phoneInput.value.trim(),
+            department: deptSelect.value,
+            area_code: areaInput.value.trim() || 'ALL',
+        };
+        const resp = await fetch('/accounts/api/users/save/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+            body: JSON.stringify(payload),
+        });
+        const res = await resp.json();
+        if (!resp.ok) return showAlert(res.error || 'Lỗi lưu người dùng.', 'error');
+        selectedUserId = res.user?.id || null;
+        resetFormToAdd(false);
+        showAlert(res.message);
+        await loadUsers();
+    });
+
+    pinCheckbox?.addEventListener('change', async () => {
+        const resp = await fetch('/accounts/api/users/config/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+            body: JSON.stringify({ allow_numeric_password_only: pinCheckbox.checked }),
+        });
+        const res = await resp.json();
+        if (resp.ok) showAlert(res.message);
+    });
+
+    areaHelpBtn?.addEventListener('click', () => {
+        if (areaPopover) areaPopover.hidden = !areaPopover.hidden;
+    });
+    areaChips?.querySelectorAll('.area-pick-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            areaInput.value = chip.dataset.area;
+            areaPopover.hidden = true;
+        });
+    });
+
+    loadUsers();
+});
+</script>
+{% endblock %}
+

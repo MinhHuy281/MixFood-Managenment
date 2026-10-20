@@ -61,7 +61,7 @@
                     <button type="button" class="dropdown-action system-action" data-action="maintenance">
                         <span class="dropdown-icon">🛠️</span> Bảo trì dữ liệu
                     </button>
-                    <a href="{% url 'admin:index' %}" role="menuitem">
+                    <a href="{% url 'accounts:user_list' %}" role="menuitem" id="open-user-permission-menu" class="dropdown-action">
                         <span class="dropdown-icon">🛡️</span> Phân quyền sử dụng
                     </a>
                     <a href="{% url 'audit:activity' %}" role="menuitem" id="open-activity-admin-menu" class="dropdown-action">
@@ -118,7 +118,7 @@
                     <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
                 <div class="pos-dropdown" role="menu">
-                    <a href="{% url 'admin:auth_user_changelist' %}" role="menuitem">
+                    <a href="{% url 'accounts:user_list' %}" role="menuitem" id="open-user-admin-menu" class="dropdown-action">
                         <span class="dropdown-icon">👤</span> Người dùng hệ thống
                     </a>
                     <button type="button" class="dropdown-action management-action" data-management="customers">
@@ -251,7 +251,7 @@
         </aside>
 
         <!-- COLUMN 2: CURRENT ORDER TICKET / CART -->
-        <section class="order-column" id="order-column" data-current-user="{{ user.get_full_name|default:user.get_username }}" data-table-action-url="{% url 'sales:table_action_api' %}">
+        <section class="order-column" id="order-column" data-current-user="{{ user.get_full_name|default:user.get_username }}" data-table-action-url="{% url 'sales:table_action_api' %}" data-undo-payment-url="{% url 'sales:undo_payment' %}">
             <!-- Ticket Header -->
             <div class="order-heading">
                 <div class="order-heading-main">
@@ -302,8 +302,8 @@
             <div class="order-total-card">
                 <div class="order-total-lines">
                     <div class="calc-row"><span>Tiền món</span><b id="order-subtotal">0 đ</b></div>
-                    <div class="calc-row"><span>Phụ thu</span><b>0 đ</b></div>
-                    <div class="calc-row"><span>Giảm giá</span><b>0 đ</b></div>
+                    <div class="calc-row"><span>Phụ thu</span><b id="order-surcharge">0 đ</b></div>
+                    <div class="calc-row"><span>Giảm giá</span><b id="order-discount">0 đ</b></div>
                 </div>
                 <div class="order-total-divider"></div>
                 <div class="order-total-main">
@@ -461,7 +461,7 @@
                     <tbody>
                         {% for invoice in invoices %}
                         {% with first_item=invoice.order.items.all|first %}
-                        <tr data-invoice-code="{{ invoice.invoice_code }}" data-total-amount="{{ invoice.total_amount }}" data-item-name="{{ first_item.product_name|default:'Chi tiết hóa đơn' }}" data-item-price="{{ first_item.unit_price|default:invoice.subtotal }}" data-item-quantity="{{ first_item.quantity|default:1 }}" title="Nhấn chuột phải hoặc nhấp đúp để sửa hóa đơn #{{ invoice.invoice_code }}">
+                        <tr data-invoice-code="{{ invoice.invoice_code }}" data-table-id="{% if invoice.order.table %}{{ invoice.order.table.id }}{% endif %}" data-table-name="{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}Mang về{% endif %}" data-total-amount="{{ invoice.total_amount }}" data-item-name="{{ first_item.product_name|default:'Chi tiết hóa đơn' }}" data-item-price="{{ first_item.unit_price|default:invoice.subtotal }}" data-item-quantity="{{ first_item.quantity|default:1 }}" title="Nhấn chuột phải hoặc nhấp đúp để sửa hóa đơn #{{ invoice.invoice_code }}">
                             <td><strong class="invoice-badge-code">#{{ invoice.invoice_code }}</strong></td>
                             <td><span class="table-pill">{% if invoice.order.table %}{{ invoice.order.table.name }}{% else %}Mang về{% endif %}</span></td>
                             <td class="text-muted">{{ invoice.paid_at|date:'H:i' }}</td>
@@ -561,11 +561,14 @@
 <!-- SYSTEM TOAST NOTIFICATIONS -->
 <div class="system-notice" id="system-notice" role="status" aria-live="polite" hidden></div>
 
+<script id="pos-table-last-paid-data" type="application/json">{{ table_last_paid_json|default:"{}"|safe }}</script>
+
 <!-- CONTEXT MENU FOR INVOICE TABLE -->
-<div class="invoice-context-menu" id="invoice-context-menu" data-edit-url="{% url 'sales:edit_invoice' %}" data-delete-url="{% url 'sales:delete_invoice' %}" role="menu" hidden>
+<div class="invoice-context-menu" id="invoice-context-menu" data-edit-url="{% url 'sales:edit_invoice' %}" data-delete-url="{% url 'sales:delete_invoice' %}" data-undo-url="{% url 'sales:undo_payment' %}" role="menu" hidden>
     <button type="button" data-invoice-action="print"><span class="menu-icon">🖨️</span> In lại hóa đơn</button>
     <button type="button" data-invoice-action="change"><span class="menu-icon">🔄</span> Tính lại tiền thừa</button>
     <span class="dropdown-separator"></span>
+    <button type="button" data-invoice-action="undo_payment"><span class="menu-icon">↩️</span> Hoàn tác thanh toán</button>
     <button type="button" data-invoice-action="complete"><span class="menu-icon">✅</span> Hoàn tất thanh toán</button>
     <span class="dropdown-separator"></span>
     <button type="button" data-invoice-action="edit"><span class="menu-icon">✏️</span> Sửa hóa đơn</button>
@@ -657,12 +660,12 @@
                 </select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="payment-cash-paid-group">
                 <label for="customer-paid">Số tiền khách đưa</label>
                 <input id="customer-paid" type="number" min="0" step="1000" value="0" class="modern-input-large">
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="payment-cash-change-group">
                 <label for="change-amount">Số tiền thối lại cho khách</label>
                 <input id="change-amount" type="text" value="0 đ" readonly class="modern-input-change">
             </div>
@@ -806,6 +809,35 @@
     </div>
 </div>
 
+<!-- MODAL: XÁC NHẬN HOÀN TÁC THANH TOÁN (UNDO PAYMENT) -->
+<div class="menu-modal-backdrop sub-modal reason-sub-modal" id="undo-payment-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="undo-payment-confirm-title" hidden>
+    <div class="menu-modal-dialog inv-reason-popup-dialog undo-payment-popup-dialog">
+        <div class="menu-modal-header inv-reason-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                <h3 id="undo-payment-confirm-title">Hoàn tác thanh toán</h3>
+            </div>
+            <button type="button" class="dialog-close" id="undo-payment-confirm-close" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="inv-reason-popup-body undo-payment-popup-body">
+            <div class="undo-payment-question-row">
+                <div class="undo-payment-question-icon" aria-hidden="true">?</div>
+                <div class="undo-payment-question-text">
+                    <p id="undo-payment-confirm-msg">Hoàn tác thanh toán cho bàn V1 (Hóa đơn số 0001)</p>
+                    <p class="undo-payment-submsg">Bạn có xác nhận không?</p>
+                </div>
+            </div>
+            <div class="inv-reason-popup-actions undo-payment-popup-actions">
+                <button type="button" id="undo-payment-confirm-yes" class="btn-reason-confirm">Có</button>
+                <button type="button" id="undo-payment-confirm-no" class="btn-reason-cancel">Không</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL: SHIFT CLOSING -->
 <div class="legacy-order-dialog closing-dialog" id="closing-dialog" data-close-url="{% url 'dashboard:close_shift' %}" role="dialog" aria-modal="true" aria-labelledby="closing-dialog-title" hidden>
     <div class="modern-dialog-backdrop"></div>
@@ -861,28 +893,70 @@
 <form method="post" action="{% url 'accounts:logout' %}" id="closing-logout-form" hidden>{% csrf_token %}</form>
 
 <!-- MODAL: PASSWORD CHANGE -->
-<div class="password-dialog-backdrop" id="password-dialog-backdrop" hidden></div>
 <div class="legacy-order-dialog password-dialog" id="password-dialog" role="dialog" aria-modal="true" aria-labelledby="password-dialog-title" hidden>
-    <div class="password-dialog-title" id="password-dialog-title">Đổi mật khẩu - {{ user.get_full_name|default:user.get_username }}</div>
-    <form method="post" action="{% url 'accounts:change_password' %}" id="password-change-form" class="password-dialog-body">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="password-old">Mật khẩu hiện tại</label>
-            <input id="password-old" name="old_password" type="password" autocomplete="current-password" class="modern-input">
+    <div class="modern-dialog-backdrop" id="password-dialog-backdrop"></div>
+    <div class="modern-dialog-container password-dialog-container">
+        <div class="legacy-dialog-title password-dialog-title">
+            <div class="dialog-title-text">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span id="password-dialog-title">Đổi mật khẩu - {{ user.get_full_name|default:user.get_username }}</span>
+            </div>
+            <button type="button" class="dialog-close" id="password-dialog-close" aria-label="Đóng">&times;</button>
         </div>
-        <div class="form-group">
-            <label for="password-new">Mật khẩu mới</label>
-            <input id="password-new" name="new_password1" type="password" autocomplete="new-password" class="modern-input">
-        </div>
-        <div class="form-group">
-            <label for="password-confirm">Nhắc lại mật khẩu mới</label>
-            <input id="password-confirm" name="new_password2" type="password" autocomplete="new-password" class="modern-input">
-        </div>
-        <div class="password-dialog-actions">
-            <button type="submit" id="password-confirm-button" class="btn-dialog-primary" disabled>Xác nhận</button>
-            <button type="button" id="password-cancel-button" class="btn-dialog-secondary">Bỏ qua</button>
-        </div>
-    </form>
+
+        <form method="post" action="{% url 'accounts:change_password' %}" id="password-change-form" class="password-dialog-body" novalidate>
+            {% csrf_token %}
+            <div class="password-user-banner">
+                <div class="password-user-avatar">{{ user.get_username|slice:":1"|upper }}</div>
+                <div class="password-user-info">
+                    <strong>{{ user.get_full_name|default:user.get_username }}</strong>
+                    <span>Tài khoản: <code>{{ user.get_username }}</code></span>
+                </div>
+                <span class="password-security-badge">Bảo mật POS</span>
+            </div>
+
+            <div class="password-feedback-alert" id="password-change-alert" role="alert" hidden></div>
+
+            <div class="form-group">
+                <label for="password-old">Mật khẩu hiện tại <span class="req-star">*</span></label>
+                <div class="password-input-wrap">
+                    <input id="password-old" name="old_password" type="password" autocomplete="current-password" class="modern-input" placeholder="Nhập mật khẩu đang sử dụng...">
+                    <button type="button" class="btn-toggle-pwd" data-target="password-old" tabindex="-1" aria-label="Hiện/ẩn mật khẩu">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password-new">Mật khẩu mới <span class="req-star">*</span></label>
+                <div class="password-input-wrap">
+                    <input id="password-new" name="new_password1" type="password" autocomplete="new-password" class="modern-input" placeholder="Nhập mật khẩu mới...">
+                    <button type="button" class="btn-toggle-pwd" data-target="password-new" tabindex="-1" aria-label="Hiện/ẩn mật khẩu">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password-confirm">Nhắc lại mật khẩu mới <span class="req-star">*</span></label>
+                <div class="password-input-wrap">
+                    <input id="password-confirm" name="new_password2" type="password" autocomplete="new-password" class="modern-input" placeholder="Nhập lại mật khẩu mới để xác nhận...">
+                    <button type="button" class="btn-toggle-pwd" data-target="password-confirm" tabindex="-1" aria-label="Hiện/ẩn mật khẩu">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+                <small class="password-match-hint" id="password-match-hint" hidden></small>
+            </div>
+
+            <div class="dialog-actions password-dialog-actions">
+                <button type="submit" id="password-confirm-button" class="btn-dialog-primary" disabled>Xác nhận đổi mật khẩu</button>
+                <button type="button" id="password-cancel-button" class="btn-dialog-secondary">Bỏ qua</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- MODAL: HÓA ĐƠN THANH TOÁN (FULL INVOICE REPORT MODAL AS SHOWN IN PHOTO) -->
@@ -3593,8 +3667,779 @@
         }
     })();
 </script>
+
+{% include 'accounts/user_modal.html' %}
+
+<script>
+    // =========================================================================
+    // POS USER ADMIN MODAL CONTROLLER (NGƯỜI DÙNG - ADMIN TRÊN POS)
+    // =========================================================================
+    (() => {
+        const modal = document.getElementById('pos-user-admin-modal');
+        const openBtn1 = document.getElementById('open-user-admin-menu');
+        const openBtn2 = document.getElementById('open-user-permission-menu');
+        const closeBtn = document.getElementById('pos-user-modal-close');
+        const alertBanner = document.getElementById('pos-user-modal-alert');
+
+        const tbody = document.getElementById('pos-user-admin-tbody');
+        const btnAdd = document.getElementById('pos-user-btn-add');
+        const btnEdit = document.getElementById('pos-user-btn-edit');
+        const btnDel = document.getElementById('pos-user-btn-delete');
+        const pinCheckbox = document.getElementById('pos-user-allow-pin-only');
+        const selectedHint = document.getElementById('pos-user-selected-hint');
+
+        const form = document.getElementById('pos-user-admin-form');
+        const formTitle = document.getElementById('pos-user-form-title');
+        const formBadge = document.getElementById('pos-user-form-badge');
+        const idInput = document.getElementById('pos-user-id');
+        const usernameInput = document.getElementById('pos-user-username');
+        const passwordInput = document.getElementById('pos-user-password');
+        const fullnameInput = document.getElementById('pos-user-fullname');
+        const phoneInput = document.getElementById('pos-user-phone');
+        const deptSelect = document.getElementById('pos-user-department');
+        const areaInput = document.getElementById('pos-user-area');
+        const areaHelpBtn = document.getElementById('pos-user-area-help-btn');
+        const areaPopover = document.getElementById('pos-user-area-popover');
+        const areaChips = document.getElementById('pos-user-area-chips');
+        const btnCancel = document.getElementById('pos-user-btn-cancel');
+
+        let usersData = [];
+        let areasData = [];
+        let selectedUserId = null;
+
+        const csrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+
+        const escapeHtml = (str) => {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        };
+
+        const showAlert = (msg, type = 'success') => {
+            if (!alertBanner) return;
+            alertBanner.className = `menu-alert-banner ${type}`;
+            alertBanner.textContent = msg;
+            alertBanner.hidden = false;
+            setTimeout(() => { alertBanner.hidden = true; }, 4000);
+        };
+
+        const appendLiveActivity = (log) => {
+            if (!log) return;
+            const scrollContainer = document.getElementById('pos-live-activity-scroll');
+            if (!scrollContainer) return;
+            const emptyRow = scrollContainer.querySelector('.empty-row');
+            if (emptyRow) emptyRow.remove();
+            const color = log.action_color || '#0284c7';
+            const rowEl = document.createElement('div');
+            rowEl.className = 'activity-row';
+            rowEl.title = log.description || '';
+            rowEl.innerHTML = `
+                <time class="activity-time" style="font-weight: 600; color: ${color}; font-size: 11.5px;">${escapeHtml(log.time || '')}</time>
+                <div>
+                    <span class="activity-event-chip" style="background: ${color}18; color: ${color}; border: 1px solid ${color}40;">${escapeHtml(log.action_display || 'Hệ thống')}</span>
+                </div>
+                <span class="activity-detail" style="color: ${color}; font-weight: 500;">${escapeHtml(log.description || '')}</span>
+                <strong class="activity-actor" style="color: ${color};">${escapeHtml(log.actor_name || '')}</strong>
+            `;
+            scrollContainer.prepend(rowEl);
+        };
+
+        const resetFormToAdd = (focusInput = false) => {
+            if (!form) return;
+            idInput.value = '';
+            usernameInput.value = '';
+            passwordInput.value = '';
+            passwordInput.placeholder = 'Nhập mật khẩu...';
+            fullnameInput.value = '';
+            phoneInput.value = '';
+            deptSelect.value = 'undefined';
+            areaInput.value = 'ALL';
+            if (formTitle) formTitle.textContent = 'Thêm người dùng';
+            if (formBadge) {
+                formBadge.textContent = 'Tạo mới';
+                formBadge.classList.remove('mode-edit');
+            }
+            if (focusInput) usernameInput?.focus();
+        };
+
+        const populateFormForEdit = (u) => {
+            if (!u) return;
+            idInput.value = u.id;
+            usernameInput.value = u.username;
+            passwordInput.value = '######';
+            passwordInput.placeholder = 'Để ###### nếu giữ nguyên mật khẩu';
+            fullnameInput.value = u.full_name || '';
+            phoneInput.value = u.phone || '';
+            deptSelect.value = u.department || 'undefined';
+            areaInput.value = u.area_code || 'ALL';
+            if (formTitle) formTitle.textContent = 'Sửa người dùng';
+            if (formBadge) {
+                formBadge.textContent = `Đang sửa #${u.code}`;
+                formBadge.classList.add('mode-edit');
+            }
+        };
+
+        const renderAreaChips = () => {
+            if (!areaChips) return;
+            const list = ['ALL', ...areasData.filter(a => a && a.toUpperCase() !== 'ALL')];
+            areaChips.innerHTML = list.map(a => `
+                <button type="button" class="area-pick-chip ${(areaInput?.value || 'ALL') === a ? 'active' : ''}" data-area="${escapeHtml(a)}">
+                    ${a === 'ALL' ? 'ALL (Tất cả khu vực)' : escapeHtml(a)}
+                </button>
+            `).join('');
+
+            areaChips.querySelectorAll('.area-pick-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    if (areaInput) areaInput.value = chip.dataset.area;
+                    areaChips.querySelectorAll('.area-pick-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    if (areaPopover) areaPopover.hidden = true;
+                });
+            });
+        };
+
+        const renderUsersTable = () => {
+            if (!tbody) return;
+            if (!usersData.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="activity-empty-notice">Chưa có người dùng nào trong hệ thống.</td></tr>';
+                if (btnEdit) btnEdit.disabled = true;
+                if (btnDel) btnDel.disabled = true;
+                return;
+            }
+
+            tbody.innerHTML = usersData.map(u => `
+                <tr class="user-admin-row ${selectedUserId === u.id ? 'selected' : ''}" data-id="${u.id}">
+                    <td class="text-center"><strong>${u.code}</strong></td>
+                    <td><strong>${escapeHtml(u.username)}</strong></td>
+                    <td class="text-muted" style="letter-spacing: 1px;">######</td>
+                    <td>${escapeHtml(u.full_name)}</td>
+                    <td>${escapeHtml(u.phone)}</td>
+                    <td><span class="user-dept-badge dept-${escapeHtml(u.department)}">${escapeHtml(u.department_display)}</span></td>
+                    <td><code>${escapeHtml(u.area_code)}</code></td>
+                </tr>
+            `).join('');
+
+            const selectedUser = usersData.find(x => x.id === selectedUserId);
+            if (btnEdit) btnEdit.disabled = !selectedUser;
+            if (btnDel) btnDel.disabled = !selectedUser;
+
+            tbody.querySelectorAll('.user-admin-row').forEach(tr => {
+                tr.addEventListener('click', () => {
+                    selectedUserId = Number(tr.dataset.id);
+                    tbody.querySelectorAll('.user-admin-row').forEach(r => r.classList.remove('selected'));
+                    tr.classList.add('selected');
+                    const u = usersData.find(x => x.id === selectedUserId);
+                    if (btnEdit) btnEdit.disabled = !u;
+                    if (btnDel) btnDel.disabled = !u;
+                    if (u && selectedHint) {
+                        selectedHint.innerHTML = `Đang chọn: <strong>${escapeHtml(u.username)}</strong> (${escapeHtml(u.full_name)} • ${escapeHtml(u.department_display)})`;
+                    }
+                });
+                tr.addEventListener('dblclick', () => {
+                    selectedUserId = Number(tr.dataset.id);
+                    const u = usersData.find(x => x.id === selectedUserId);
+                    if (u) {
+                        populateFormForEdit(u);
+                        fullnameInput?.focus();
+                    }
+                });
+            });
+        };
+
+        const loadUsersData = async () => {
+            try {
+                const resp = await fetch('/accounts/api/users/');
+                if (!resp.ok) throw new Error('Không thể tải danh sách người dùng.');
+                const data = await resp.json();
+                usersData = data.users || [];
+                areasData = data.areas || [];
+                if (pinCheckbox) {
+                    pinCheckbox.checked = Boolean(data.allow_numeric_password_only);
+                }
+                if (!selectedUserId && usersData.length > 0) {
+                    selectedUserId = usersData[0].id;
+                }
+                renderUsersTable();
+                renderAreaChips();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        };
+
+        const openUserAdminModal = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            document.querySelectorAll('.pos-menu-item').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.nav-menu-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
+            if (modal) {
+                modal.hidden = false;
+                resetFormToAdd(false);
+                loadUsersData();
+            }
+        };
+
+        openBtn1?.addEventListener('click', openUserAdminModal);
+
+        closeBtn?.addEventListener('click', () => {
+            if (modal) modal.hidden = true;
+        });
+        modal?.addEventListener('click', (e) => {
+            if (e.target === modal) modal.hidden = true;
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal && !modal.hidden) {
+                modal.hidden = true;
+            }
+        });
+
+        btnAdd?.addEventListener('click', () => {
+            resetFormToAdd(true);
+        });
+
+        btnEdit?.addEventListener('click', () => {
+            const u = usersData.find(x => x.id === selectedUserId);
+            if (!u) {
+                showAlert('Vui lòng chọn một người dùng trong bảng để sửa.', 'error');
+                return;
+            }
+            populateFormForEdit(u);
+            fullnameInput?.focus();
+        });
+
+        btnCancel?.addEventListener('click', () => {
+            resetFormToAdd(false);
+        });
+
+        btnDel?.addEventListener('click', async () => {
+            const u = usersData.find(x => x.id === selectedUserId);
+            if (!u) {
+                showAlert('Vui lòng chọn người dùng cần xóa.', 'error');
+                return;
+            }
+            if (!confirm(`Bạn có chắc chắn muốn xóa người dùng "${u.username}" (${u.full_name})?`)) return;
+
+            try {
+                const resp = await fetch(`/accounts/api/users/delete/${u.id}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken() },
+                });
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.error || 'Không thể xóa người dùng.');
+
+                selectedUserId = null;
+                resetFormToAdd(false);
+                showAlert(res.message);
+                if (res.activity_log) appendLiveActivity(res.activity_log);
+                await loadUsersData();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        });
+
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                id: idInput.value || undefined,
+                username: usernameInput.value.trim(),
+                password: passwordInput.value.trim(),
+                full_name: fullnameInput.value.trim(),
+                phone: phoneInput.value.trim(),
+                department: deptSelect.value,
+                area_code: areaInput.value.trim() || 'ALL',
+            };
+
+            try {
+                const resp = await fetch('/accounts/api/users/save/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+                    body: JSON.stringify(payload),
+                });
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.error || 'Không thể lưu người dùng.');
+
+                selectedUserId = res.user?.id || null;
+                resetFormToAdd(false);
+                showAlert(res.message);
+                if (res.activity_log) appendLiveActivity(res.activity_log);
+                await loadUsersData();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        });
+
+        pinCheckbox?.addEventListener('change', async () => {
+            try {
+                const resp = await fetch('/accounts/api/users/config/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+                    body: JSON.stringify({ allow_numeric_password_only: pinCheckbox.checked }),
+                });
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.error || 'Lỗi lưu cấu hình.');
+                showAlert(res.message);
+                if (res.activity_log) appendLiveActivity(res.activity_log);
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        });
+
+        areaHelpBtn?.addEventListener('click', () => {
+            if (!areaPopover) return;
+            renderAreaChips();
+            areaPopover.hidden = !areaPopover.hidden;
+        });
+    })();
+</script>
+
+{% include 'accounts/permission_modal.html' %}
+
+<script>
+    // =========================================================================
+    // POS ROLE PERMISSION & PERMISSION REQUEST (YÊU CẦU QUYỀN HẠN) CONTROLLER
+    // =========================================================================
+    (() => {
+        let userPermissions = {};
+        let extraOptions = {};
+        try {
+            userPermissions = JSON.parse('{{ pos_user_permissions_json|default:"{}"|escapejs }}');
+        } catch (e) {
+            userPermissions = {};
+        }
+        try {
+            extraOptions = JSON.parse('{{ pos_extra_options_json|default:"{}"|escapejs }}');
+        } catch (e) {
+            extraOptions = {};
+        }
+
+        const permModal = document.getElementById('pos-role-permission-modal');
+        const permOpenBtn = document.getElementById('open-user-permission-menu');
+        const permCloseBtn = document.getElementById('pos-role-perm-modal-close');
+        const permSaveBtn = document.getElementById('pos-perm-btn-save');
+        const permCancelBtn = document.getElementById('pos-perm-btn-cancel');
+        const permAlert = document.getElementById('pos-role-perm-modal-alert');
+        const permTable = document.getElementById('pos-role-permission-table');
+
+        const reqModal = document.getElementById('pos-permission-request-modal');
+        const reqCloseBtn = document.getElementById('pos-perm-req-modal-close');
+        const reqCancelBtn = document.getElementById('pos-perm-req-cancel');
+        const reqForm = document.getElementById('pos-perm-req-form');
+        const reqUsernameInput = document.getElementById('pos-perm-req-username');
+        const reqPasswordInput = document.getElementById('pos-perm-req-password');
+        const reqSubmitBtn = document.getElementById('pos-perm-req-submit');
+        const reqAlert = document.getElementById('pos-perm-req-alert');
+        const reqHint = document.getElementById('pos-perm-req-feature-hint');
+
+        let pendingCallback = null;
+        let pendingPermissionKey = '';
+        let pendingFeatureLabel = '';
+        let isTemporarilyElevated = false;
+
+        const csrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+
+        const showPermAlert = (el, msg, type = 'error') => {
+            if (!el) return;
+            el.className = `menu-alert-banner ${type}`;
+            el.textContent = msg;
+            el.hidden = false;
+            setTimeout(() => { el.hidden = true; }, 4200);
+        };
+
+        const applyExtraOptionsToUI = () => {
+            const closingDialog = document.getElementById('closing-dialog');
+            if (closingDialog) {
+                closingDialog.classList.toggle('hide-closing-numbers', Boolean(extraOptions.hide_shift_close_numbers));
+            }
+            const dialogPrice = document.getElementById('dialog-price');
+            if (dialogPrice) {
+                const canEditPrice = Boolean(userPermissions.edit_item_price) && !Boolean(extraOptions.lock_edit_price_all_roles);
+                dialogPrice.readOnly = !canEditPrice;
+                dialogPrice.title = canEditPrice
+                    ? 'Nhập giá món tùy chỉnh'
+                    : (extraOptions.lock_edit_price_all_roles ? 'Đã khóa sửa giá món cho mọi cấp bậc' : 'Nhấp để xác thực quyền sửa giá món');
+            }
+        };
+
+        applyExtraOptionsToUI();
+
+        window.posHasPermission = (permKey) => {
+            if (!permKey) return true;
+            if (permKey === 'edit_item_price' && extraOptions.lock_edit_price_all_roles) {
+                return false;
+            }
+            return Boolean(userPermissions[permKey]);
+        };
+
+        window.posGetExtraOption = (optKey) => Boolean(extraOptions[optKey]);
+
+        const clearServerElevation = async () => {
+            if (!isTemporarilyElevated) return;
+            isTemporarilyElevated = false;
+            try {
+                await fetch('/accounts/api/permissions/clear-elevation/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken() },
+                });
+            } catch (err) {
+                // Ignore network error on cleanup
+            }
+        };
+        window.clearPosElevation = clearServerElevation;
+
+        // Open "Yêu cầu quyền hạn" dialog
+        const openPermissionRequestModal = (permKey, callback, featureLabel = '') => {
+            pendingPermissionKey = permKey || '';
+            pendingCallback = typeof callback === 'function' ? callback : null;
+            pendingFeatureLabel = featureLabel || '';
+
+            if (reqAlert) reqAlert.hidden = true;
+            if (reqHint) {
+                if (featureLabel) {
+                    reqHint.textContent = `Chức năng: ${featureLabel}`;
+                    reqHint.hidden = false;
+                } else {
+                    reqHint.textContent = '';
+                    reqHint.hidden = true;
+                }
+            }
+            if (reqUsernameInput) reqUsernameInput.value = '';
+            if (reqPasswordInput) reqPasswordInput.value = '';
+            if (reqSubmitBtn) {
+                reqSubmitBtn.disabled = false;
+                reqSubmitBtn.textContent = 'Xác thực';
+            }
+            if (reqModal) {
+                reqModal.hidden = false;
+                setTimeout(() => reqUsernameInput?.focus(), 40);
+            }
+        };
+
+        const closePermissionRequestModal = () => {
+            if (reqModal) reqModal.hidden = true;
+            pendingCallback = null;
+            pendingPermissionKey = '';
+            pendingFeatureLabel = '';
+        };
+
+        window.requirePosPermission = (permKey, callback, featureLabel = '') => {
+            if (window.posHasPermission(permKey)) {
+                if (typeof callback === 'function') callback();
+                return true;
+            }
+            openPermissionRequestModal(permKey, callback, featureLabel);
+            return false;
+        };
+
+        reqCloseBtn?.addEventListener('click', closePermissionRequestModal);
+        reqCancelBtn?.addEventListener('click', closePermissionRequestModal);
+        reqModal?.addEventListener('click', (e) => {
+            if (e.target === reqModal) closePermissionRequestModal();
+        });
+
+        reqForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = (reqUsernameInput?.value || '').trim();
+            const password = (reqPasswordInput?.value || '').trim();
+            if (!username || !password) {
+                showPermAlert(reqAlert, 'Vui lòng nhập đầy đủ Tên truy cập và Mật khẩu.', 'error');
+                return;
+            }
+
+            if (reqSubmitBtn) {
+                reqSubmitBtn.disabled = true;
+                reqSubmitBtn.textContent = 'Đang xác thực...';
+            }
+
+            try {
+                const resp = await fetch('/accounts/api/permissions/verify/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken(),
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        required_permission: pendingPermissionKey,
+                        feature_label: pendingFeatureLabel,
+                    }),
+                });
+                const res = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(res.error || 'Xác thực không thành công.');
+                }
+
+                isTemporarilyElevated = true;
+                if (res.activity_log && typeof window.prependPosLiveActivityLog === 'function') {
+                    window.prependPosLiveActivityLog(res.activity_log);
+                }
+
+                const cb = pendingCallback;
+                closePermissionRequestModal();
+                if (typeof cb === 'function') {
+                    cb();
+                }
+            } catch (err) {
+                showPermAlert(reqAlert, err.message, 'error');
+                if (reqSubmitBtn) {
+                    reqSubmitBtn.disabled = false;
+                    reqSubmitBtn.textContent = 'Xác thực';
+                }
+                reqPasswordInput?.select();
+            }
+        });
+
+        // =====================================================================
+        // PHÂN QUYỀN SỬ DỤNG - ADMIN MODAL LOGIC
+        // =====================================================================
+        const populatePermissionMatrixUI = (matrix, extra) => {
+            if (permTable && matrix) {
+                permTable.querySelectorAll('input[type="checkbox"][data-role][data-perm]').forEach((cb) => {
+                    const role = cb.dataset.role;
+                    const perm = cb.dataset.perm;
+                    if (role === 'admin') {
+                        cb.checked = true;
+                        cb.disabled = true;
+                    } else {
+                        cb.checked = Boolean(matrix[role]?.[perm]);
+                    }
+                });
+            }
+            if (permModal && extra) {
+                permModal.querySelectorAll('input[type="checkbox"][data-extra-opt]').forEach((cb) => {
+                    const optKey = cb.dataset.extraOpt;
+                    cb.checked = Boolean(extra[optKey]);
+                });
+            }
+        };
+
+        const loadPermissionsConfig = async () => {
+            try {
+                const resp = await fetch('/accounts/api/permissions/');
+                if (!resp.ok) throw new Error('Không thể tải thiết lập phân quyền.');
+                const data = await resp.json();
+                populatePermissionMatrixUI(data.permission_matrix, data.extra_options);
+                if (data.current_user?.permissions) {
+                    userPermissions = data.current_user.permissions;
+                }
+                if (data.extra_options) {
+                    extraOptions = data.extra_options;
+                }
+                applyExtraOptionsToUI();
+            } catch (err) {
+                showPermAlert(permAlert, err.message, 'error');
+            }
+        };
+
+        const openRolePermissionModal = () => {
+            document.querySelectorAll('.pos-menu-item').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.nav-menu-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
+            if (permAlert) permAlert.hidden = true;
+            if (permModal) {
+                permModal.hidden = false;
+                loadPermissionsConfig();
+            }
+        };
+
+        const closeRolePermissionModal = () => {
+            if (permModal) permModal.hidden = true;
+        };
+
+        permOpenBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            document.querySelectorAll('.pos-menu-item').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.nav-menu-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
+            window.requirePosPermission('super_admin', openRolePermissionModal, 'Phân quyền sử dụng');
+        });
+
+        permCloseBtn?.addEventListener('click', closeRolePermissionModal);
+        permCancelBtn?.addEventListener('click', closeRolePermissionModal);
+        permModal?.addEventListener('click', (e) => {
+            if (e.target === permModal) closeRolePermissionModal();
+        });
+
+        permSaveBtn?.addEventListener('click', async () => {
+            const matrixPayload = {};
+            permTable?.querySelectorAll('input[type="checkbox"][data-role][data-perm]').forEach((cb) => {
+                const role = cb.dataset.role;
+                const perm = cb.dataset.perm;
+                if (!matrixPayload[role]) matrixPayload[role] = {};
+                matrixPayload[role][perm] = role === 'admin' ? true : Boolean(cb.checked);
+            });
+
+            const extraPayload = {};
+            permModal?.querySelectorAll('input[type="checkbox"][data-extra-opt]').forEach((cb) => {
+                extraPayload[cb.dataset.extraOpt] = Boolean(cb.checked);
+            });
+
+            permSaveBtn.disabled = true;
+            try {
+                const resp = await fetch('/accounts/api/permissions/save/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken(),
+                    },
+                    body: JSON.stringify({
+                        permission_matrix: matrixPayload,
+                        extra_options: extraPayload,
+                    }),
+                });
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.error || 'Không thể lưu phân quyền.');
+
+                if (res.current_user_permissions) {
+                    userPermissions = res.current_user_permissions;
+                }
+                if (res.extra_options) {
+                    extraOptions = res.extra_options;
+                }
+                applyExtraOptionsToUI();
+                if (res.activity_log && typeof window.prependPosLiveActivityLog === 'function') {
+                    window.prependPosLiveActivityLog(res.activity_log);
+                }
+                closeRolePermissionModal();
+                const sysNotice = document.getElementById('system-notice');
+                if (sysNotice) {
+                    sysNotice.textContent = res.message || 'Đã lưu thiết lập phân quyền sử dụng.';
+                    sysNotice.hidden = false;
+                    setTimeout(() => { sysNotice.hidden = true; }, 3800);
+                }
+            } catch (err) {
+                showPermAlert(permAlert, err.message, 'error');
+            } finally {
+                permSaveBtn.disabled = false;
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (reqModal && !reqModal.hidden) {
+                    closePermissionRequestModal();
+                } else if (permModal && !permModal.hidden) {
+                    closeRolePermissionModal();
+                }
+            }
+        });
+
+        // =====================================================================
+        // GUARD RESTRICTED TOP-BAR MENUS & ACTIONS IN CAPTURE PHASE
+        // =====================================================================
+        const guardElementWithPermission = (selector, permKey, labelText) => {
+            document.querySelectorAll(selector).forEach((el) => {
+                el.addEventListener('click', (e) => {
+                    if (el.dataset.elevatedOnce === '1') {
+                        delete el.dataset.elevatedOnce;
+                        return;
+                    }
+                    if (window.posHasPermission(permKey)) {
+                        return;
+                    }
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+
+                    document.querySelectorAll('.pos-menu-item').forEach(m => m.classList.remove('open'));
+                    document.querySelectorAll('.nav-menu-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
+
+                    const featureName = labelText || (el.textContent || '').trim();
+                    openPermissionRequestModal(permKey, () => {
+                        el.dataset.elevatedOnce = '1';
+                        el.click();
+                    }, featureName);
+                }, true);
+            });
+        };
+
+        // 1. Quản trị cao cấp (super_admin)
+        guardElementWithPermission('#open-user-admin-menu', 'super_admin', 'Người dùng hệ thống');
+
+        // 2. Thiết lập hệ thống (system_settings)
+        guardElementWithPermission('#open-activity-admin-menu', 'system_settings', 'Nhật ký hoạt động');
+        guardElementWithPermission('.system-action[data-action="maintenance"]', 'system_settings', 'Bảo trì dữ liệu');
+        guardElementWithPermission('.system-action[data-action="device"]', 'system_settings', 'Thiết bị POS');
+
+        // 3. Cài đặt kinh doanh (business_settings)
+        guardElementWithPermission('#open-dining-admin-menu', 'business_settings', 'Khu vực - Điểm bán');
+        guardElementWithPermission('.empty-sidebar-panel .btn-setup', 'business_settings', 'Thiết lập khu vực');
+        guardElementWithPermission('#open-menu-admin-menu', 'business_settings', 'Thực đơn (món bán → khách)');
+        guardElementWithPermission('.settings-action[data-setting="price-policy"]', 'business_settings', 'Chính sách giá & Sự kiện');
+        guardElementWithPermission('.settings-action[data-setting="coupon"]', 'business_settings', 'Mã giảm giá & Coupon');
+        guardElementWithPermission('.settings-action[data-setting="options"]', 'business_settings', 'Các tùy chọn POS');
+
+        // 4. Quản lý kho, nguyên liệu (manage_inventory)
+        guardElementWithPermission('#open-ingredient-admin-menu', 'manage_inventory', 'Mặt hàng - Admin');
+        guardElementWithPermission('#open-recipe-admin-menu', 'manage_inventory', 'Định lượng nguyên liệu');
+        guardElementWithPermission('.management-menu a[href*="inventory"]', 'manage_inventory', 'Quản lý kho hàng');
+        guardElementWithPermission('.reports-menu a[href*="inventory"]', 'manage_inventory', 'Xuất nhập tồn kho');
+        guardElementWithPermission('.report-action[data-report="purchases"]', 'manage_inventory', 'Hoạt động mua hàng');
+
+        // 5. Quản lý thu chi, tiền mặt (manage_cashbook)
+        guardElementWithPermission('.management-action[data-management="cashbook"]', 'manage_cashbook', 'Sổ thu chi tiền mặt');
+        guardElementWithPermission('.management-action[data-management="debt"]', 'manage_cashbook', 'Quản lý công nợ');
+        guardElementWithPermission('.report-action[data-report="cash"]', 'manage_cashbook', 'Thống kê các khoản tiền');
+
+        // 6. Quản lý nhân viên, ca (manage_staff_shift)
+        guardElementWithPermission('.management-menu a[href*="dining"]', 'manage_staff_shift', 'Phân công bàn ca');
+        guardElementWithPermission('.management-menu a[href*="invoices"]', 'manage_staff_shift', 'Sổ hóa đơn kết ca');
+
+        // 7. Quản lý khách hàng (manage_customers)
+        guardElementWithPermission('.management-action[data-management="customers"]', 'manage_customers', 'Danh sách khách hàng');
+        guardElementWithPermission('.report-action[data-report="customer-revenue"]', 'manage_customers', 'Doanh thu theo khách');
+        guardElementWithPermission('.report-action[data-report="guest-count"]', 'manage_customers', 'Lượng khách hôm nay');
+
+        // 8. Xem báo cáo bán hàng (view_sales_report)
+        guardElementWithPermission('#open-invoice-report-menu', 'view_sales_report', 'Hóa đơn thanh toán');
+        guardElementWithPermission('#open-invoice-report-menu-detail', 'view_sales_report', 'Hàng bán chi tiết');
+        guardElementWithPermission('#open-sales-stats-menu', 'view_sales_report', 'Thống kê bán hàng');
+        guardElementWithPermission('.reports-menu a[href*="reports"]', 'view_sales_report', 'Báo cáo doanh thu');
+
+        // 9. Tự động thu hồi quyền nâng cấp tạm thời khi đóng các modal chức năng
+        // (Đảm bảo sau khi dùng xong chức năng và thoát ra, phiên làm việc vẫn là tài khoản ban đầu)
+        const trackedModalIds = [
+            'pos-role-permission-modal',
+            'pos-user-admin-modal',
+            'pos-activity-admin-modal',
+            'pos-dining-admin-modal',
+            'pos-menu-admin-modal',
+            'pos-ingredient-admin-modal',
+            'pos-recipe-admin-modal',
+            'invoice-report-dialog',
+            'sales-stats-modal',
+            'invoice-edit-modal',
+            'invoice-delete-dialog',
+        ];
+
+        const areAllTrackedModalsHidden = () => {
+            return trackedModalIds.every((id) => {
+                const el = document.getElementById(id);
+                return !el || el.hidden;
+            });
+        };
+
+        const modalObserver = new MutationObserver(() => {
+            if (isTemporarilyElevated && areAllTrackedModalsHidden()) {
+                clearServerElevation();
+            }
+        });
+
+        trackedModalIds.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                modalObserver.observe(el, { attributes: true, attributeFilter: ['hidden'] });
+            }
+        });
+    })();
+</script>
 <script src="{% static 'js/invoice_editor.js' %}?v={% now 'U' %}"></script>
 <script src="{% static 'js/sales_statistics.js' %}?v={% now 'U' %}"></script>
 {% endblock %}
+
 
 
