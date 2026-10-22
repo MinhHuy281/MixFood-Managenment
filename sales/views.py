@@ -86,10 +86,11 @@ def checkout(request):
 		subtotal += line_gross
 		item_discounts_sum += line_disc
 
+	surcharge_amount_pre = _money(payload.get('surcharge_amount'))
 	explicit_discount = _money(payload.get('discount_amount'))
 	discount_amount = explicit_discount if explicit_discount > 0 else item_discounts_sum
-	if discount_amount > subtotal:
-		return JsonResponse({'error': 'Giảm giá không được lớn hơn tiền món.'}, status=400)
+	if discount_amount > (subtotal + surcharge_amount_pre):
+		discount_amount = subtotal + surcharge_amount_pre
 
 	table = None
 	if table_id:
@@ -108,12 +109,16 @@ def checkout(request):
 				if table.status == DiningTable.Status.MAINTENANCE:
 					return JsonResponse({'error': 'Bàn đang bảo trì.'}, status=400)
 
+			coupon_code = str(payload.get('coupon_code', '') or '').strip().upper()[:30]
+			raw_order_note = str(payload.get('note', '') or '').strip()
+			if coupon_code:
+				raw_order_note = f'[COUPON:{coupon_code}] {raw_order_note}'.strip()
 			order = Order.objects.create(
 				order_code=f'ORD-{timezone.now():%Y%m%d%H%M%S}-{uuid4().hex[:4].upper()}',
 				table=table,
 				order_type=order_type,
 				status=Order.Status.CONFIRMED,
-				note=str(payload.get('note', ''))[:500],
+				note=raw_order_note[:500],
 				created_by=request.user,
 			)
 			for p_item in parsed_items:
@@ -393,7 +398,7 @@ def invoice_list(request):
 			'no_paginate': no_paginate,
 		}
 	}
-	return render(request, 'sales/invoice_list.html', context)
+	return render(request, 'sales/pages/invoice_list.html', context)
 
 
 @login_required
@@ -920,7 +925,7 @@ def sales_statistics_print(request):
 	start_dt = parse_datetime_param(from_str, is_end_of_day=False)
 	end_dt = parse_datetime_param(to_str, is_end_of_day=True)
 	stats = get_sales_statistics_data(start_dt, end_dt)
-	return render(request, 'sales/sales_statistics_print.html', {
+	return render(request, 'sales/prints/sales_statistics_print.html', {
 		'stats': stats,
 		'current_user': request.user,
 		'printed_at': timezone.localtime(),
@@ -1482,6 +1487,7 @@ def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
 	}
 
 	discount_invoice_count = 0
+	coupon_invoice_count = 0
 	discount_total_amount = Decimal('0')
 	item_price_or_discount_changes = 0
 	cancelled_order_items_count = 0
@@ -1491,6 +1497,8 @@ def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
 		if inv.discount_amount and inv.discount_amount > 0:
 			discount_invoice_count += 1
 			discount_total_amount += inv.discount_amount
+			if inv.order and '[COUPON:' in (inv.order.note or ''):
+				coupon_invoice_count += 1
 
 		payments = list(inv.payments.all())
 		if payments:
@@ -1573,7 +1581,7 @@ def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
 		'payment_rows': payment_rows,
 		'payments_by_key': {r['key']: r for r in payment_rows},
 		'discount_invoice_count': discount_invoice_count,
-		'coupon_count': 0,
+		'coupon_count': coupon_invoice_count,
 		'vip_count': 0,
 		'gift_count': 0,
 		'discount_total_amount': float(discount_total_amount),
@@ -1639,7 +1647,7 @@ def end_of_day_report_print(request):
 		end_dt = timezone.make_aware(datetime.combine(target_date, time(23, 59, 59)))
 		stats = get_sales_statistics_data(start_dt, end_dt)
 
-	return render(request, 'sales/end_of_day_print.html', {
+	return render(request, 'sales/prints/end_of_day_print.html', {
 		'eod': eod,
 		'mode': mode,
 		'is_detailed': is_detailed,
@@ -1647,4 +1655,193 @@ def end_of_day_report_print(request):
 		'stats': stats,
 		'current_user': request.user,
 		'printed_at': timezone.localtime(),
+	})
+
+
+
+DEFAULT_SYSTEM_COUPONS = [
+	{'code': 'GIAM5', 'type': 'percent', 'value': 5, 'description': 'Giảm 5% tổng hóa đơn', 'is_active': True},
+	{'code': 'GIAM10', 'type': 'percent', 'value': 10, 'description': 'Giảm 10% tổng hóa đơn', 'is_active': True},
+	{'code': 'GIAM15', 'type': 'percent', 'value': 15, 'description': 'Giảm 15% tổng hóa đơn', 'is_active': True},
+	{'code': 'GIAM20', 'type': 'percent', 'value': 20, 'description': 'Giảm 20% tổng hóa đơn', 'is_active': True},
+	{'code': 'GIAM25', 'type': 'percent', 'value': 25, 'description': 'Giảm 25% tổng hóa đơn', 'is_active': True},
+	{'code': 'GIAM30', 'type': 'percent', 'value': 30, 'description': 'Giảm 30% tổng hóa đơn', 'is_active': True},
+	{'code': 'GIAM50', 'type': 'percent', 'value': 50, 'description': 'Giảm 50% tổng hóa đơn', 'is_active': True},
+	{'code': 'VIP10', 'type': 'percent', 'value': 10, 'description': 'Khách hàng VIP giảm 10%', 'is_active': True},
+	{'code': 'VIP20', 'type': 'percent', 'value': 20, 'description': 'Khách hàng VIP giảm 20%', 'is_active': True},
+	{'code': 'MIXFOOD', 'type': 'percent', 'value': 10, 'description': 'Ưu đãi MixFood giảm 10%', 'is_active': True},
+	{'code': 'GIAM10K', 'type': 'fixed', 'value': 10000, 'description': 'Voucher giảm 10.000 đ', 'is_active': True},
+	{'code': 'GIAM20K', 'type': 'fixed', 'value': 20000, 'description': 'Voucher giảm 20.000 đ', 'is_active': True},
+	{'code': 'GIAM30K', 'type': 'fixed', 'value': 30000, 'description': 'Voucher giảm 30.000 đ', 'is_active': True},
+	{'code': 'GIAM50K', 'type': 'fixed', 'value': 50000, 'description': 'Voucher giảm 50.000 đ', 'is_active': True},
+	{'code': 'GIAM100K', 'type': 'fixed', 'value': 100000, 'description': 'Voucher giảm 100.000 đ', 'is_active': True},
+]
+
+
+def _get_system_coupons():
+	from accounts.models import UserSystemConfig
+	cfg = UserSystemConfig.get_solo()
+	extra = dict(cfg.extra_options or {})
+	coupons = extra.get('coupons')
+	if not isinstance(coupons, list) or not coupons:
+		coupons = [dict(c) for c in DEFAULT_SYSTEM_COUPONS]
+		extra['coupons'] = coupons
+		cfg.extra_options = extra
+		cfg.save(update_fields=('extra_options', 'updated_at'))
+	return coupons
+
+
+def _save_system_coupons(coupons):
+	from accounts.models import UserSystemConfig
+	cfg = UserSystemConfig.get_solo()
+	extra = dict(cfg.extra_options or {})
+	extra['coupons'] = coupons
+	cfg.extra_options = extra
+	cfg.save(update_fields=('extra_options', 'updated_at'))
+
+
+def _resolve_coupon_code(raw_code):
+	"""
+	Tìm mã giảm giá trong danh sách cấu hình hoặc suy luận thông minh theo mẫu mã:
+	- Khớp danh sách cấu hình (ví dụ: GIAM10, GIAM20, VIP20, GIAM50K...)
+	- Hoặc mẫu động: GIAM<N>%, KM<N>%, VIP<N>, GIAM<N>K, VOUCHER<N>K
+	"""
+	import re
+	code = str(raw_code or '').strip().upper()
+	if not code:
+		return None
+
+	coupons = _get_system_coupons()
+	for c in coupons:
+		if str(c.get('code', '')).strip().upper() == code:
+			if not c.get('is_active', True):
+				return {'error': f'Mã giảm giá "{code}" hiện đang tạm ngưng áp dụng.'}
+			return {
+				'code': code,
+				'type': c.get('type', 'percent'),
+				'value': float(c.get('value', 0)),
+				'description': c.get('description', ''),
+			}
+
+	# Hỗ trợ nhận diện thông minh nếu mã kết thúc bằng K (ví dụ KM15K, VOUCHER25K)
+	m_k = re.match(r'^[A-Z0-9_-]*?(\d+)K$', code)
+	if m_k:
+		val = int(m_k.group(1)) * 1000
+		if val > 0:
+			return {
+				'code': code,
+				'type': 'fixed',
+				'value': float(val),
+				'description': f'Mã giảm trực tiếp {_fmt_dot(val)} đ',
+			}
+
+	# Hỗ trợ nhận diện mã có hậu tố % hoặc tiền tố GIAM/KM/VIP/SALE kèm số <= 100
+	m_pct = re.match(r'^(?:GIAM|KM|VIP|SALE|UUDAI|OFF)[_-]?(\d{1,3})%?$', code)
+	if m_pct:
+		pct = int(m_pct.group(1))
+		if 0 < pct <= 100:
+			return {
+				'code': code,
+				'type': 'percent',
+				'value': float(pct),
+				'description': f'Mã giảm {pct}% hóa đơn',
+			}
+
+	return {'error': f'Mã giảm giá "{code}" không tồn tại hoặc không hợp lệ.'}
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+def coupons_api(request):
+	"""API lấy danh sách hoặc thêm/sửa/xóa Mã giảm giá & Coupon."""
+	if request.method == 'GET':
+		coupons = _get_system_coupons()
+		return JsonResponse({'ok': True, 'coupons': coupons})
+
+	if request.method != 'POST':
+		return JsonResponse({'ok': False, 'error': 'Phương thức không hợp lệ.'}, status=405)
+
+	try:
+		payload = json.loads(request.body or '{}')
+	except json.JSONDecodeError:
+		return JsonResponse({'ok': False, 'error': 'Dữ liệu không hợp lệ.'}, status=400)
+
+	action = str(payload.get('action', 'save')).strip().lower()
+	coupons = _get_system_coupons()
+
+	if action == 'delete':
+		code_del = str(payload.get('code', '')).strip().upper()
+		coupons = [c for c in coupons if str(c.get('code', '')).strip().upper() != code_del]
+		_save_system_coupons(coupons)
+		return JsonResponse({'ok': True, 'message': f'Đã xóa mã giảm giá {code_del}.', 'coupons': coupons})
+
+	code = str(payload.get('code', '')).strip().upper()
+	if not code:
+		return JsonResponse({'ok': False, 'error': 'Vui lòng nhập mã giảm giá.'}, status=400)
+
+	ctype = str(payload.get('type', 'percent')).strip().lower()
+	if ctype not in ('percent', 'fixed'):
+		ctype = 'percent'
+
+	try:
+		cval = float(payload.get('value', 0) or 0)
+	except (TypeError, ValueError):
+		cval = 0
+
+	if cval <= 0:
+		return JsonResponse({'ok': False, 'error': 'Giá trị giảm phải lớn hơn 0.'}, status=400)
+	if ctype == 'percent' and cval > 100:
+		return JsonResponse({'ok': False, 'error': 'Phần trăm giảm giá không được vượt quá 100%.'}, status=400)
+
+	desc = str(payload.get('description', '')).strip() or (
+		f'Giảm {int(cval)}%' if ctype == 'percent' else f'Giảm {_fmt_dot(cval)} đ'
+	)
+	is_active = bool(payload.get('is_active', True))
+
+	updated = False
+	for c in coupons:
+		if str(c.get('code', '')).strip().upper() == code:
+			c['type'] = ctype
+			c['value'] = int(cval) if cval.is_integer() else cval
+			c['description'] = desc
+			c['is_active'] = is_active
+			updated = True
+			break
+
+	if not updated:
+		coupons.insert(0, {
+			'code': code,
+			'type': ctype,
+			'value': int(cval) if cval.is_integer() else cval,
+			'description': desc,
+			'is_active': is_active,
+		})
+
+	_save_system_coupons(coupons)
+	return JsonResponse({
+		'ok': True,
+		'message': f'Đã lưu mã giảm giá {code}.',
+		'coupons': coupons,
+	})
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+@require_GET
+def validate_coupon_api(request):
+	"""API kiểm tra và tính toán giá trị Mã giảm giá trên màn hình POS."""
+	code = str(request.GET.get('code', '') or '').strip().upper()
+	if not code:
+		return JsonResponse({'ok': True, 'empty': True})
+
+	resolved = _resolve_coupon_code(code)
+	if not resolved or 'error' in resolved:
+		return JsonResponse({
+			'ok': False,
+			'error': (resolved or {}).get('error', 'Mã giảm giá không hợp lệ.'),
+		}, status=400)
+
+	return JsonResponse({
+		'ok': True,
+		'coupon': resolved,
 	})

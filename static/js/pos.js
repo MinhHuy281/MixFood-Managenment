@@ -5,6 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const subtotalElement = document.querySelector('#order-subtotal');
     const surchargeElement = document.querySelector('#order-surcharge');
     const discountElement = document.querySelector('#order-discount');
+    const vatElement = document.querySelector('#order-vat');
+    const vatRowElement = document.querySelector('#order-calc-row-vat');
+    const surchargeLabelElement = document.querySelector('#order-surcharge-label');
+    const discountLabelElement = document.querySelector('#order-discount-label');
+    const vatLabelElement = document.querySelector('#order-vat-label');
     const totalElement = document.querySelector('#order-total');
     const orderTitle = document.querySelector('#order-title');
     const orderMode = document.querySelector('#order-mode');
@@ -79,6 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     combinedWith: tData.combinedWith || null,
                     surchargeAmount: Number(tData.surchargeAmount) || 0,
                     orderDiscountAmount: Number(tData.orderDiscountAmount) || 0,
+                    taxAmount: Number(tData.taxAmount) || 0,
+                    surchargeRaw: tData.surchargeRaw !== undefined ? String(tData.surchargeRaw) : String(Number(tData.surchargeAmount) || 0),
+                    discountRaw: tData.discountRaw !== undefined ? String(tData.discountRaw) : String(Number(tData.orderDiscountAmount) || 0),
+                    vatRaw: tData.vatRaw !== undefined ? String(tData.vatRaw) : '0',
+                    couponCode: tData.couponCode ? String(tData.couponCode) : '',
                 };
             });
             sessionStorage.setItem(POS_STORAGE_KEY, JSON.stringify(serialized));
@@ -105,6 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     combinedWith: data.combinedWith || null,
                     surchargeAmount: Number(data.surchargeAmount) || 0,
                     orderDiscountAmount: Number(data.orderDiscountAmount) || 0,
+                    taxAmount: Number(data.taxAmount) || 0,
+                    surchargeRaw: data.surchargeRaw !== undefined ? String(data.surchargeRaw) : String(Number(data.surchargeAmount) || 0),
+                    discountRaw: data.discountRaw !== undefined ? String(data.discountRaw) : String(Number(data.orderDiscountAmount) || 0),
+                    vatRaw: data.vatRaw !== undefined ? String(data.vatRaw) : '0',
+                    couponCode: data.couponCode ? String(data.couponCode) : '',
                 };
                 tableOrders.set(String(tId), tData);
             });
@@ -391,6 +406,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (subtotalElement) subtotalElement.textContent = '0 đ';
         if (surchargeElement) surchargeElement.textContent = '0 đ';
         if (discountElement) discountElement.textContent = '0 đ';
+        if (vatElement) vatElement.textContent = '0 đ';
+        if (vatRowElement) vatRowElement.hidden = true;
+        if (surchargeLabelElement) surchargeLabelElement.textContent = 'Phụ thu';
+        if (discountLabelElement) discountLabelElement.textContent = 'Giảm giá';
+        if (vatLabelElement) vatLabelElement.textContent = 'VAT';
         if (totalElement) totalElement.textContent = '0 đ';
         if (selectionPrimaryAction) selectionPrimaryAction.textContent = 'Mở bàn';
         if (selectionActions) selectionActions.hidden = false;
@@ -496,6 +516,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 combinedWith: null,
                 surchargeAmount: 0,
                 orderDiscountAmount: 0,
+                taxAmount: 0,
+                surchargeRaw: '0',
+                discountRaw: '0',
+                vatRaw: '0',
+                couponCode: '',
             };
             tableOrders.set(selectedTableId, tableData);
         }
@@ -921,6 +946,46 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const getItemNetTotal = (item) => Math.max(0, getItemGrossTotal(item) - getItemDiscountAmount(item));
 
+    const parsePercentOrAmount = (rawInput, baseAmount) => {
+        const str = String(rawInput ?? '0').trim();
+        if (!str || str === '0') {
+            return { amount: 0, percent: 0, label: '', rawFormatted: '0' };
+        }
+        const isExplicitPct = str.endsWith('%');
+        const cleaned = str.replace(/%/g, '').trim();
+        // Check if formatted with thousand dots like 10.000 or 20,000
+        const hasThousandGrouping = /^\d{1,3}([.,]\d{3})+$/.test(cleaned);
+        let numericVal = 0;
+        if (hasThousandGrouping) {
+            numericVal = Number(cleaned.replace(/[.,]/g, '')) || 0;
+        } else if (/^\d+(\.\d+)?[kK]$/.test(cleaned)) {
+            numericVal = Math.round(( parseFloat(cleaned) || 0 ) * 1000);
+        } else {
+            const normalized = cleaned.replace(/,/g, '');
+            numericVal = Number(normalized) || 0;
+        }
+        if (numericVal <= 0) {
+            return { amount: 0, percent: 0, label: '', rawFormatted: '0' };
+        }
+        if (isExplicitPct || (!hasThousandGrouping && numericVal > 0 && numericVal <= 100)) {
+            const pct = Math.min(100, Math.max(0, numericVal));
+            const amount = Math.round(((Number(baseAmount) || 0) * pct) / 100);
+            return {
+                amount,
+                percent: pct,
+                label: `${pct}%`,
+                rawFormatted: `${pct}`,
+            };
+        }
+        const fixedAmount = Math.round(numericVal);
+        return {
+            amount: fixedAmount,
+            percent: 0,
+            label: '',
+            rawFormatted: fixedAmount.toLocaleString('vi-VN'),
+        };
+    };
+
     const getCartSummary = () => {
         let subtotal = 0;
         let itemDiscounts = 0;
@@ -929,11 +994,43 @@ document.addEventListener('DOMContentLoaded', () => {
             itemDiscounts += getItemDiscountAmount(item);
         });
         const tData = selectedTableId ? tableOrders.get(String(selectedTableId)) : null;
-        const surcharge = Number(tData?.surchargeAmount) || 0;
-        const orderDiscount = Number(tData?.orderDiscountAmount) || 0;
+        const surchargeRaw = tData?.surchargeRaw !== undefined ? tData.surchargeRaw : (tData?.surchargeAmount || 0);
+        const discountRaw = tData?.discountRaw !== undefined ? tData.discountRaw : (tData?.orderDiscountAmount || 0);
+        const vatRaw = tData?.vatRaw !== undefined ? tData.vatRaw : '0';
+        const couponCode = (tData?.couponCode || '').trim().toUpperCase();
+
+        const netAfterItemDiscount = Math.max(0, subtotal - itemDiscounts);
+        const surchargeInfo = parsePercentOrAmount(surchargeRaw, subtotal);
+        const discountInfo = parsePercentOrAmount(discountRaw, netAfterItemDiscount);
+
+        const surcharge = surchargeInfo.amount;
+        const orderDiscount = Math.min(netAfterItemDiscount + surcharge, discountInfo.amount);
         const totalDiscount = itemDiscounts + orderDiscount;
-        const total = Math.max(0, subtotal + surcharge - totalDiscount);
-        return { subtotal, surcharge, totalDiscount, total };
+        const taxableBase = Math.max(0, subtotal + surcharge - totalDiscount);
+
+        const vatPct = Math.min(100, Math.max(0, Number(String(vatRaw).replace(/[^0-9.]/g, '')) || 0));
+        const tax = vatPct > 0 ? Math.round((taxableBase * vatPct) / 100) : (Number(tData?.taxAmount) || 0);
+
+        if (tData) {
+            tData.surchargeAmount = surcharge;
+            tData.orderDiscountAmount = orderDiscount;
+            tData.taxAmount = tax;
+        }
+
+        const total = Math.max(0, taxableBase + tax);
+        return {
+            subtotal,
+            surcharge,
+            surchargeLabel: surchargeInfo.label,
+            itemDiscounts,
+            orderDiscount,
+            discountLabel: discountInfo.label,
+            totalDiscount,
+            tax,
+            vatPct,
+            couponCode,
+            total,
+        };
     };
 
     const getCartTotal = () => getCartSummary().total;
@@ -994,8 +1091,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         discount_amount: getItemDiscountAmount(item),
                         note: item.note || '',
                     })),
-                    surcharge_amount: Number(tData?.surchargeAmount) || 0,
-                    discount_amount: Number(tData?.orderDiscountAmount) || 0,
+                    surcharge_amount: getCartSummary().surcharge,
+                    discount_amount: getCartSummary().orderDiscount,
+                    tax_amount: getCartSummary().tax,
+                    coupon_code: getCartSummary().couponCode,
                     payment_method: paymentMethodDialog.value,
                     table_id: selectedTableId,
                     order_type: 'dine_in',
@@ -1247,8 +1346,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.settings-action').forEach((actionButton) => {
         actionButton.addEventListener('click', () => {
             const menu = actionButton.closest('.pos-menu-item');
-            menu.classList.remove('open');
-            menu.querySelector(':scope > button').setAttribute('aria-expanded', 'false');
+            if (menu) {
+                menu.classList.remove('open');
+                menu.querySelector(':scope > button')?.setAttribute('aria-expanded', 'false');
+            }
+            if (actionButton.dataset.setting === 'coupon') {
+                if (typeof window.openPosCouponManagerModal === 'function') {
+                    window.openPosCouponManagerModal();
+                }
+                return;
+            }
             showToast(settingMessages[actionButton.dataset.setting]);
         });
     });
@@ -1694,6 +1801,8 @@ document.addEventListener('DOMContentLoaded', () => {
             closeTableConfirmDialog();
             closeTableSplitDialog();
             closePasswordDialog();
+            if (typeof closeBillAdjustDialog === "function") closeBillAdjustDialog();
+            if (typeof closeCouponManagerModal === "function") closeCouponManagerModal();
             cancelActiveTableTool();
         }
     });
@@ -1902,7 +2011,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const summary = getCartSummary();
         if (subtotalElement) subtotalElement.textContent = formatMoney(summary.subtotal);
         if (surchargeElement) surchargeElement.textContent = formatMoney(summary.surcharge);
-        if (discountElement) discountElement.textContent = summary.totalDiscount > 0 ? `-${formatMoney(summary.totalDiscount)}` : '0 đ';
+        if (surchargeLabelElement) {
+            surchargeLabelElement.innerHTML = summary.surchargeLabel
+                ? `Phụ thu <span class="calc-row-badge">+${escapeHtml(summary.surchargeLabel)}</span>`
+                : 'Phụ thu';
+        }
+        if (discountElement) {
+            discountElement.textContent = summary.totalDiscount > 0 ? `-${formatMoney(summary.totalDiscount)}` : '0 đ';
+        }
+        if (discountLabelElement) {
+            const badgeParts = [];
+            if (summary.discountLabel) badgeParts.push(`-${summary.discountLabel}`);
+            if (summary.couponCode) badgeParts.push(summary.couponCode);
+            discountLabelElement.innerHTML = badgeParts.length
+                ? `Giảm giá <span class="calc-row-badge">${escapeHtml(badgeParts.join(' • '))}</span>`
+                : 'Giảm giá';
+        }
+        if (vatRowElement) {
+            vatRowElement.hidden = !(summary.tax > 0 || summary.vatPct > 0);
+        }
+        if (vatElement) {
+            vatElement.textContent = formatMoney(summary.tax);
+        }
+        if (vatLabelElement) {
+            vatLabelElement.innerHTML = summary.vatPct > 0
+                ? `VAT <span class="calc-row-badge">${escapeHtml(String(summary.vatPct))}%</span>`
+                : 'VAT';
+        }
         if (totalElement) totalElement.textContent = formatMoney(summary.total);
         renderOpenAction();
     };
@@ -2318,4 +2453,519 @@ document.addEventListener('DOMContentLoaded', () => {
             tablePreviewArmed = false;
         }
     }
+
+    // =========================================================================
+    // GIẢM GIÁ / PHỤ PHÍ / VAT / MÃ GIẢM GIÁ (MODAL BILL ADJUST & COUPON MANAGER)
+    // =========================================================================
+    const billAdjustModal = document.querySelector('#modal-bill-adjust');
+    const billAdjustTitle = document.querySelector('#bill-adjust-title');
+    const billAdjustClose = document.querySelector('#bill-adjust-close');
+    const billAdjustCancel = document.querySelector('#bill-adjust-cancel');
+    const billAdjustConfirm = document.querySelector('#bill-adjust-confirm');
+    const billAdjustSurchargeInput = document.querySelector('#bill-adjust-surcharge');
+    const billAdjustDiscountInput = document.querySelector('#bill-adjust-discount');
+    const billAdjustVatInput = document.querySelector('#bill-adjust-vat');
+    const billAdjustCouponInput = document.querySelector('#bill-adjust-coupon');
+    const billAdjustCouponDropdown = document.querySelector('#bill-adjust-coupon-dropdown');
+    const billAdjustCouponHint = document.querySelector('#bill-adjust-coupon-hint');
+
+    let cachedActiveCoupons = [];
+
+    const closeAllBillAdjustDropdowns = () => {
+        if (!billAdjustModal) return;
+        billAdjustModal.querySelectorAll('.pos-combo-dropdown').forEach((dd) => {
+            dd.hidden = true;
+        });
+    };
+
+    const formatComboDisplayValue = (rawVal) => {
+        const str = String(rawVal ?? '0').trim();
+        if (!str || str === '0') return '0';
+        if (str.endsWith('%')) return str.replace(/%/g, '').trim();
+        const cleaned = str.replace(/[.,]/g, '');
+        const num = Number(cleaned);
+        if (!Number.isNaN(num) && num > 100) {
+            return Math.round(num).toLocaleString('vi-VN');
+        }
+        return str;
+    };
+
+    const setCouponHint = (message, isSuccess = true) => {
+        if (!billAdjustCouponHint) return;
+        if (!message) {
+            billAdjustCouponHint.hidden = true;
+            billAdjustCouponHint.textContent = '';
+            billAdjustCouponHint.classList.remove('is-success', 'is-error');
+            return;
+        }
+        billAdjustCouponHint.hidden = false;
+        billAdjustCouponHint.textContent = message;
+        billAdjustCouponHint.classList.toggle('is-success', Boolean(isSuccess));
+        billAdjustCouponHint.classList.toggle('is-error', !isSuccess);
+    };
+
+    const populateCouponPresetDropdown = (coupons) => {
+        if (!billAdjustCouponDropdown) return;
+        const activeList = (Array.isArray(coupons) ? coupons : []).filter((c) => c && c.is_active !== false);
+        if (!activeList.length) {
+            billAdjustCouponDropdown.innerHTML = '<div class="pos-combo-item" data-value="">Không có mã giảm giá khả dụng</div>';
+            return;
+        }
+        let html = '<div class="pos-combo-item" data-value="">-- Không dùng mã giảm giá --</div>';
+        activeList.forEach((c) => {
+            const valLabel = c.type === 'percent'
+                ? `Giảm ${c.value}%`
+                : `Giảm ${Number(c.value || 0).toLocaleString('vi-VN')} đ`;
+            const minOrderLabel = Number(c.min_order || 0) > 0
+                ? ` (Đơn từ ${Number(c.min_order).toLocaleString('vi-VN')}đ)`
+                : '';
+            html += `
+                <div class="pos-combo-item" data-value="${escapeHtml(c.code)}" data-type="${escapeHtml(c.type)}" data-raw-val="${escapeHtml(String(c.value))}">
+                    <strong>${escapeHtml(c.code)}</strong> — ${escapeHtml(valLabel)}${escapeHtml(minOrderLabel)}
+                </div>
+            `;
+        });
+        billAdjustCouponDropdown.innerHTML = html;
+        billAdjustCouponDropdown.querySelectorAll('.pos-combo-item').forEach((itemEl) => {
+            itemEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const pickedCode = (itemEl.dataset.value || '').trim();
+                if (billAdjustCouponInput) {
+                    billAdjustCouponInput.value = pickedCode;
+                }
+                billAdjustCouponDropdown.hidden = true;
+                if (pickedCode) {
+                    validateAndApplyCouponInDialog(pickedCode);
+                } else {
+                    setCouponHint('', true);
+                }
+            });
+        });
+    };
+
+    const fetchActiveCouponsQuietly = async () => {
+        const couponModal = document.querySelector('#modal-coupon-manager');
+        const apiUrl = couponModal?.dataset.apiUrl || '/sales/coupons/api/';
+        try {
+            const resp = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data && Array.isArray(data.coupons)) {
+                cachedActiveCoupons = data.coupons;
+                populateCouponPresetDropdown(cachedActiveCoupons);
+            }
+        } catch (err) {
+            // Ignore background fetch error
+        }
+    };
+
+    const validateAndApplyCouponInDialog = async (codeRaw) => {
+        const code = String(codeRaw || '').trim().toUpperCase();
+        if (!code) {
+            setCouponHint('', true);
+            return null;
+        }
+        const validateUrl = billAdjustModal?.dataset.validateCouponUrl || '/sales/coupons/validate/';
+        const summary = getCartSummary();
+        try {
+            const resp = await fetch(validateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    code,
+                    subtotal: summary.subtotal,
+                }),
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) {
+                setCouponHint(data.error || `Mã "${code}" không hợp lệ.`, false);
+                return null;
+            }
+            const coupon = data.coupon || {};
+            if (billAdjustDiscountInput) {
+                if (coupon.type === 'percent') {
+                    billAdjustDiscountInput.value = String(coupon.value);
+                } else {
+                    billAdjustDiscountInput.value = Number(coupon.value || 0).toLocaleString('vi-VN');
+                }
+            }
+            setCouponHint(data.message || `Đã áp dụng mã ${code}.`, true);
+            return coupon;
+        } catch (err) {
+            setCouponHint('Không thể kiểm tra mã giảm giá lúc này.', false);
+            return null;
+        }
+    };
+
+    const openBillAdjustDialog = (focusField = 'discount') => {
+        if (!selectedTableId && previewedTable) {
+            openSelectedTable(previewedTable, { unlockMenu: false });
+        }
+        if (!selectedTableId) {
+            showToast('Vui lòng chọn bàn trước khi nhập Giảm giá / Phụ phí.');
+            return;
+        }
+        if (!billAdjustModal) return;
+
+        const doOpen = () => {
+            const tData = tableOrders.get(String(selectedTableId));
+            const tName = selectedTable?.textContent || tData?.tableName || '-';
+            if (billAdjustTitle) {
+                billAdjustTitle.textContent = `Bàn ${tName} - Giảm giá / Phụ phí`;
+            }
+            if (billAdjustSurchargeInput) {
+                billAdjustSurchargeInput.value = formatComboDisplayValue(tData?.surchargeRaw ?? tData?.surchargeAmount ?? '0');
+            }
+            if (billAdjustDiscountInput) {
+                billAdjustDiscountInput.value = formatComboDisplayValue(tData?.discountRaw ?? tData?.orderDiscountAmount ?? '0');
+            }
+            if (billAdjustVatInput) {
+                billAdjustVatInput.value = String(tData?.vatRaw ?? '0').replace(/%/g, '').trim() || '0';
+            }
+            if (billAdjustCouponInput) {
+                billAdjustCouponInput.value = tData?.couponCode || '';
+            }
+            setCouponHint(tData?.couponCode ? `Đang áp dụng mã: ${tData.couponCode}` : '', true);
+            closeAllBillAdjustDropdowns();
+            fetchActiveCouponsQuietly();
+
+            billAdjustModal.hidden = false;
+            window.setTimeout(() => {
+                let targetInput = billAdjustDiscountInput;
+                if (focusField === 'surcharge') targetInput = billAdjustSurchargeInput;
+                else if (focusField === 'vat') targetInput = billAdjustVatInput;
+                else if (focusField === 'subtotal') targetInput = billAdjustSurchargeInput;
+                if (targetInput) {
+                    targetInput.focus();
+                    targetInput.select();
+                }
+            }, 30);
+        };
+
+        if (typeof window.requirePosPermission === 'function') {
+            window.requirePosPermission('edit_item_price', doOpen, 'Giảm giá / Phụ phí hóa đơn');
+        } else {
+            doOpen();
+        }
+    };
+
+    const closeBillAdjustDialog = () => {
+        if (!billAdjustModal) return;
+        closeAllBillAdjustDropdowns();
+        billAdjustModal.hidden = true;
+    };
+
+    // Click on Tiền món / Phụ thu / Giảm giá / VAT rows in .order-total-lines
+    document.querySelectorAll('.order-total-lines .calc-row').forEach((rowEl) => {
+        const triggerOpen = () => {
+            const field = rowEl.dataset.adjustField || 'discount';
+            openBillAdjustDialog(field);
+        };
+        rowEl.addEventListener('click', triggerOpen);
+        rowEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerOpen();
+            }
+        });
+    });
+
+    // Combobox dropdown toggles inside #modal-bill-adjust
+    if (billAdjustModal) {
+        billAdjustModal.querySelectorAll('.pos-combo-arrow').forEach((arrowBtn) => {
+            arrowBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const combo = arrowBtn.closest('.pos-editable-combo');
+                const dropdown = combo?.querySelector('.pos-combo-dropdown');
+                if (!dropdown) return;
+                const wasHidden = dropdown.hidden;
+                closeAllBillAdjustDropdowns();
+                dropdown.hidden = !wasHidden;
+            });
+        });
+
+        billAdjustModal.querySelectorAll('.pos-editable-combo').forEach((combo) => {
+            const fieldName = combo.dataset.combo;
+            if (fieldName === 'coupon') return; // Handled dynamically in populateCouponPresetDropdown
+            const inputEl = combo.querySelector('.pos-combo-input');
+            const dropdown = combo.querySelector('.pos-combo-dropdown');
+            if (!inputEl || !dropdown) return;
+
+            dropdown.querySelectorAll('.pos-combo-item').forEach((itemEl) => {
+                itemEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    inputEl.value = itemEl.dataset.value || '0';
+                    dropdown.hidden = true;
+                    inputEl.focus();
+                });
+            });
+        });
+
+        billAdjustModal.addEventListener('click', (e) => {
+            if (e.target === billAdjustModal) {
+                closeBillAdjustDialog();
+                return;
+            }
+            if (!e.target.closest('.pos-editable-combo')) {
+                closeAllBillAdjustDropdowns();
+            }
+        });
+    }
+
+    // Format numbers with thousand separator when typing > 100 in surcharge/discount inputs
+    [billAdjustSurchargeInput, billAdjustDiscountInput].forEach((inputEl) => {
+        if (!inputEl) return;
+        inputEl.addEventListener('blur', () => {
+            inputEl.value = formatComboDisplayValue(inputEl.value);
+        });
+    });
+
+    let couponDebounceTimer = null;
+    billAdjustCouponInput?.addEventListener('input', () => {
+        window.clearTimeout(couponDebounceTimer);
+        const code = (billAdjustCouponInput.value || '').trim().toUpperCase();
+        if (!code) {
+            setCouponHint('', true);
+            return;
+        }
+        couponDebounceTimer = window.setTimeout(() => {
+            validateAndApplyCouponInDialog(code);
+        }, 380);
+    });
+
+    billAdjustConfirm?.addEventListener('click', async () => {
+        if (!selectedTableId) {
+            closeBillAdjustDialog();
+            return;
+        }
+        const tData = tableOrders.get(String(selectedTableId));
+        if (!tData) {
+            closeBillAdjustDialog();
+            return;
+        }
+
+        const enteredCoupon = (billAdjustCouponInput?.value || '').trim().toUpperCase();
+        if (enteredCoupon) {
+            const validCoupon = await validateAndApplyCouponInDialog(enteredCoupon);
+            if (!validCoupon) {
+                billAdjustCouponInput?.focus();
+                return;
+            }
+        }
+
+        const rawSurcharge = (billAdjustSurchargeInput?.value || '0').trim() || '0';
+        const rawDiscount = (billAdjustDiscountInput?.value || '0').trim() || '0';
+        const rawVat = (billAdjustVatInput?.value || '0').replace(/%/g, '').trim() || '0';
+
+        tData.surchargeRaw = rawSurcharge;
+        tData.discountRaw = rawDiscount;
+        tData.vatRaw = rawVat;
+        tData.couponCode = enteredCoupon;
+
+        tableOrders.set(String(selectedTableId), tData);
+        renderCart();
+        saveTableOrdersToSession();
+        closeBillAdjustDialog();
+    });
+
+    billAdjustCancel?.addEventListener('click', closeBillAdjustDialog);
+    billAdjustClose?.addEventListener('click', closeBillAdjustDialog);
+
+    [billAdjustSurchargeInput, billAdjustDiscountInput, billAdjustVatInput, billAdjustCouponInput].forEach((inp) => {
+        inp?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                billAdjustConfirm?.click();
+            }
+        });
+    });
+
+    // =========================================================================
+    // QUẢN LÝ MÃ GIẢM GIÁ & COUPON (CÀI ĐẶT -> MÃ GIẢM GIÁ)
+    // =========================================================================
+    const couponManagerModal = document.querySelector('#modal-coupon-manager');
+    const couponManagerClose = document.querySelector('#coupon-manager-close');
+    const couponManagerDone = document.querySelector('#coupon-manager-done');
+    const couponTableBody = document.querySelector('#coupon-manager-tbody');
+    const couponSaveBtn = document.querySelector('#coupon-form-save-btn');
+    const couponCodeInput = document.querySelector('#coupon-form-code');
+    const couponTypeSelect = document.querySelector('#coupon-form-type');
+    const couponValueInput = document.querySelector('#coupon-form-value');
+    const couponMinOrderInput = document.querySelector('#coupon-form-min-order');
+    const couponDescInput = document.querySelector('#coupon-form-desc');
+
+    const renderCouponManagerTable = (coupons) => {
+        if (!couponTableBody) return;
+        if (!Array.isArray(coupons) || !coupons.length) {
+            couponTableBody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 18px; color: #64748b;">Chưa có mã giảm giá nào.</td></tr>';
+            return;
+        }
+        couponTableBody.innerHTML = coupons.map((c) => {
+            const isPct = c.type === 'percent';
+            const valFmt = isPct
+                ? `${Number(c.value || 0)}%`
+                : `${Number(c.value || 0).toLocaleString('vi-VN')} đ`;
+            const minFmt = Number(c.min_order || 0) > 0
+                ? `${Number(c.min_order).toLocaleString('vi-VN')} đ`
+                : '0 đ';
+            return `
+                <tr>
+                    <td><span class="coupon-code-pill">${escapeHtml(c.code)}</span></td>
+                    <td><span class="coupon-type-badge ${isPct ? 'percent' : 'amount'}">${isPct ? 'Theo %' : 'Số tiền (đ)'}</span></td>
+                    <td class="text-right"><strong>${escapeHtml(valFmt)}</strong></td>
+                    <td class="text-right">${escapeHtml(minFmt)}</td>
+                    <td>${escapeHtml(c.description || '-')}</td>
+                    <td class="text-center">
+                        <div class="coupon-row-actions">
+                            <button type="button" class="btn-coupon-apply-now" data-code="${escapeHtml(c.code)}" title="Áp dụng mã này cho bàn đang mở">Áp dụng</button>
+                            <button type="button" class="btn-coupon-delete" data-code="${escapeHtml(c.code)}" title="Xóa mã giảm giá này">Xóa</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        couponTableBody.querySelectorAll('.btn-coupon-apply-now').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const code = btn.dataset.code || '';
+                if (couponManagerModal) couponManagerModal.hidden = true;
+                openBillAdjustDialog('discount');
+                if (billAdjustCouponInput) {
+                    billAdjustCouponInput.value = code;
+                    validateAndApplyCouponInDialog(code);
+                }
+            });
+        });
+
+        couponTableBody.querySelectorAll('.btn-coupon-delete').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const code = btn.dataset.code || '';
+                if (!code) return;
+                const apiUrl = couponManagerModal?.dataset.apiUrl || '/sales/coupons/api/';
+                try {
+                    const resp = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken(),
+                        },
+                        body: JSON.stringify({ action: 'delete_coupon', code }),
+                    });
+                    const data = await resp.json();
+                    if (resp.ok && data.ok) {
+                        cachedActiveCoupons = data.coupons || [];
+                        renderCouponManagerTable(cachedActiveCoupons);
+                        populateCouponPresetDropdown(cachedActiveCoupons);
+                        showToast(data.message || `Đã xóa mã ${code}.`);
+                    } else {
+                        showToast(data.error || 'Không thể xóa mã giảm giá.');
+                    }
+                } catch (err) {
+                    showToast('Lỗi kết nối khi xóa mã giảm giá.');
+                }
+            });
+        });
+    };
+
+    const loadCouponManagerData = async () => {
+        const apiUrl = couponManagerModal?.dataset.apiUrl || '/sales/coupons/api/';
+        try {
+            const resp = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
+            const data = await resp.json();
+            if (resp.ok && data.ok) {
+                cachedActiveCoupons = data.coupons || [];
+                renderCouponManagerTable(cachedActiveCoupons);
+                populateCouponPresetDropdown(cachedActiveCoupons);
+            }
+        } catch (err) {
+            showToast('Không thể tải danh sách mã giảm giá.');
+        }
+    };
+
+    window.openPosCouponManagerModal = () => {
+        if (!couponManagerModal) return;
+        const doOpen = () => {
+            couponManagerModal.hidden = false;
+            loadCouponManagerData();
+        };
+        if (typeof window.requirePosPermission === 'function') {
+            window.requirePosPermission('business_settings', doOpen, 'Quản lý Mã giảm giá & Coupon');
+        } else {
+            doOpen();
+        }
+    };
+
+    const closeCouponManagerModal = () => {
+        if (couponManagerModal) couponManagerModal.hidden = true;
+    };
+
+    couponManagerClose?.addEventListener('click', closeCouponManagerModal);
+    couponManagerDone?.addEventListener('click', closeCouponManagerModal);
+    couponManagerModal?.addEventListener('click', (e) => {
+        if (e.target === couponManagerModal) closeCouponManagerModal();
+    });
+
+    couponSaveBtn?.addEventListener('click', async () => {
+        const code = (couponCodeInput?.value || '').trim().toUpperCase();
+        const cType = couponTypeSelect?.value || 'percent';
+        const valRaw = String(couponValueInput?.value || '').replace(/[.,]/g, '').trim();
+        const minRaw = String(couponMinOrderInput?.value || '0').replace(/[.,]/g, '').trim();
+        const desc = (couponDescInput?.value || '').trim();
+
+        if (!code) {
+            showToast('Vui lòng nhập Mã code giảm giá.');
+            couponCodeInput?.focus();
+            return;
+        }
+        const valNum = Number(valRaw);
+        if (!valNum || valNum <= 0) {
+            showToast('Giá trị giảm giá phải lớn hơn 0.');
+            couponValueInput?.focus();
+            return;
+        }
+
+        const apiUrl = couponManagerModal?.dataset.apiUrl || '/sales/coupons/api/';
+        couponSaveBtn.disabled = true;
+        try {
+            const resp = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    action: 'save_coupon',
+                    coupon: {
+                        code,
+                        type: cType,
+                        value: valNum,
+                        min_order: Number(minRaw) || 0,
+                        description: desc,
+                        is_active: true,
+                    },
+                }),
+            });
+            const data = await resp.json();
+            if (resp.ok && data.ok) {
+                cachedActiveCoupons = data.coupons || [];
+                renderCouponManagerTable(cachedActiveCoupons);
+                populateCouponPresetDropdown(cachedActiveCoupons);
+                if (couponCodeInput) couponCodeInput.value = '';
+                if (couponValueInput) couponValueInput.value = '';
+                if (couponMinOrderInput) couponMinOrderInput.value = '0';
+                if (couponDescInput) couponDescInput.value = '';
+                showToast(data.message || `Đã lưu mã giảm giá ${code}.`);
+            } else {
+                showToast(data.error || 'Không thể lưu mã giảm giá.');
+            }
+        } catch (err) {
+            showToast('Lỗi kết nối khi lưu mã giảm giá.');
+        } finally {
+            couponSaveBtn.disabled = false;
+        }
+    });
+
 });

@@ -292,11 +292,24 @@
             </div>
 
             <!-- Order Bill Summary -->
-            <div class="order-total-card">
-                <div class="order-total-lines">
-                    <div class="calc-row"><span>Tiền món</span><b id="order-subtotal">0 đ</b></div>
-                    <div class="calc-row"><span>Phụ thu</span><b id="order-surcharge">0 đ</b></div>
-                    <div class="calc-row"><span>Giảm giá</span><b id="order-discount">0 đ</b></div>
+            <div class="order-total-card" id="order-total-card">
+                <div class="order-total-lines" id="order-total-lines">
+                    <div class="calc-row calc-row-clickable" data-adjust-field="surcharge" role="button" tabindex="0" title="Nhấn để nhập Phụ thu / Giảm giá / VAT / Mã giảm giá">
+                        <span>Tiền món</span>
+                        <b id="order-subtotal">0 đ</b>
+                    </div>
+                    <div class="calc-row calc-row-clickable" data-adjust-field="surcharge" role="button" tabindex="0" title="Nhấn để nhập Phụ thu (% | đ)">
+                        <span id="order-surcharge-label">Phụ thu</span>
+                        <b id="order-surcharge">0 đ</b>
+                    </div>
+                    <div class="calc-row calc-row-clickable" data-adjust-field="discount" role="button" tabindex="0" title="Nhấn để nhập Giảm giá (% | đ) hoặc Mã giảm giá">
+                        <span id="order-discount-label">Giảm giá</span>
+                        <b id="order-discount">0 đ</b>
+                    </div>
+                    <div class="calc-row calc-row-clickable" id="order-vat-row" data-adjust-field="vat" role="button" tabindex="0" title="Nhấn để nhập VAT (%)" hidden>
+                        <span id="order-vat-label">VAT</span>
+                        <b id="order-vat">0 đ</b>
+                    </div>
                 </div>
                 <div class="order-total-divider"></div>
                 <div class="order-total-main">
@@ -677,19 +690,22 @@
 </div>
 
 <!-- MODAL: EDIT INVOICE -->
-{% include 'sales/invoice_edit_modal.html' %}
+{% include 'sales/modals/invoice_edit_modal.html' %}
 
 <!-- MODAL: SALES STATISTICS -->
-{% include 'sales/sales_statistics_modal.html' %}
+{% include 'sales/modals/sales_statistics_modal.html' %}
 
 <!-- MODAL: DOANH THU (THEO THỜI GIAN) -->
-{% include 'sales/revenue_by_time_modal.html' %}
+{% include 'sales/modals/revenue_by_time_modal.html' %}
 
 <!-- MODAL: LƯỢNG KHÁCH HÔM NAY / CUỐI NGÀY -->
-{% include 'sales/guest_count_today_modal.html' %}
+{% include 'sales/modals/guest_count_today_modal.html' %}
 
 <!-- MODAL: BÁO CÁO CUỐI NGÀY -->
-{% include 'sales/end_of_day_report_modal.html' %}
+{% include 'sales/modals/end_of_day_report_modal.html' %}
+
+<!-- MODAL: BÀN - GIẢM GIÁ / PHỤ PHÍ / VAT / MÃ GIẢM GIÁ -->
+{% include 'sales/modals/bill_adjust_modal.html' %}
 
 <!-- MODAL: TÍNH LẠI TIỀN THỪA (RECALCULATE CHANGE) -->
 <div class="menu-modal-backdrop sub-modal reason-sub-modal" id="invoice-change-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-change-title" hidden>
@@ -2410,7 +2426,7 @@
     })();
 </script>
 
-{% include 'dining/dining_modal.html' %}
+{% include 'dining/modals/dining_modal.html' %}
 
 <script>
     // =========================================================================
@@ -2860,8 +2876,8 @@
     })();
 </script>
 
-{% include 'catalog/ingredient_modal.html' %}
-{% include 'inventory/recipe_modal.html' %}
+{% include 'catalog/modals/ingredient_modal.html' %}
+{% include 'inventory/modals/recipe_modal.html' %}
 
 <script>
     // =========================================================================
@@ -3494,7 +3510,7 @@
     })();
 </script>
 
-{% include 'audit/activity_modal.html' %}
+{% include 'audit/modals/activity_modal.html' %}
 
 <script>
     // =========================================================================
@@ -3670,7 +3686,7 @@
     })();
 </script>
 
-{% include 'accounts/user_modal.html' %}
+{% include 'accounts/modals/user_modal.html' %}
 
 <script>
     // =========================================================================
@@ -3999,7 +4015,7 @@
     })();
 </script>
 
-{% include 'accounts/permission_modal.html' %}
+{% include 'accounts/modals/permission_modal.html' %}
 
 <script>
     // =========================================================================
@@ -4420,6 +4436,7 @@
             'modal-revenue-by-time',
             'modal-guest-count-today',
             'modal-end-of-day-report',
+            'modal-coupon-manager',
             'invoice-edit-modal',
             'invoice-delete-dialog',
         ];

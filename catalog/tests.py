@@ -73,7 +73,7 @@ class MenuAdminTests(TestCase):
 	def test_menu_admin_page_renders(self):
 		response = self.client.get(reverse('catalog:menu_admin'))
 		self.assertEqual(response.status_code, 200)
-		self.assertTemplateUsed(response, 'catalog/menu_admin.html')
+		self.assertTemplateUsed(response, 'catalog/pages/menu_admin.html')
 		self.assertContains(response, 'Thực đơn - Admin')
 		self.assertContains(response, 'Bún Thái Bò')
 		self.assertContains(response, 'BTB')

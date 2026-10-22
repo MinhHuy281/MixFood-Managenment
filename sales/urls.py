@@ -20,4 +20,6 @@ urlpatterns = [
     path('guest-count-today/api/', views.guest_count_today_api, name='guest_count_today_api'),
     path('end-of-day/api/', views.end_of_day_report_api, name='end_of_day_api'),
     path('end-of-day/print/', views.end_of_day_report_print, name='end_of_day_print'),
+    path('coupons/api/', views.coupons_api, name='coupons_api'),
+    path('coupons/validate/', views.validate_coupon_api, name='validate_coupon_api'),
 ]

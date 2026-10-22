@@ -124,7 +124,7 @@ def activity_list(request):
     from_date = parsed_from.strftime('%Y-%m-%d') if parsed_from else today_str
     to_date = parsed_to.strftime('%Y-%m-%d') if parsed_to else today_str
 
-    return render(request, 'audit/activity_list.html', {
+    return render(request, 'audit/pages/activity_list.html', {
         'logs': logs[:500],
         'total_count': logs.count(),
         'actions': DISPLAY_ACTIONS,

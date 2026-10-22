@@ -100,7 +100,7 @@ def _serialize_activity(log):
 
 
 class AccountLoginView(LoginView):
-    template_name = 'accounts/login.html'
+    template_name = 'accounts/pages/login.html'
     redirect_authenticated_user = True
 
     def get_context_data(self, **kwargs):
@@ -161,7 +161,7 @@ class AccountLogoutView(LogoutView):
 
 
 class AccountPasswordChangeView(PasswordChangeView):
-    template_name = 'accounts/password_change.html'
+    template_name = 'accounts/pages/password_change.html'
     success_url = reverse_lazy('dashboard:home')
 
     def post(self, request, *args, **kwargs):
@@ -227,7 +227,7 @@ def user_list_view(request):
     ]
     areas = list(Area.objects.filter(is_active=True).values_list('name', flat=True))
     config = UserSystemConfig.get_solo()
-    return render(request, 'accounts/user_list.html', {
+    return render(request, 'accounts/pages/user_list.html', {
         'users_data': users_data,
         'departments': UserProfile.Department.choices,
         'areas': areas,

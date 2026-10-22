@@ -32,7 +32,7 @@ def update_product_cost_from_recipe(product):
 @login_required
 @role_required('Owner', 'Manager', 'Warehouse')
 def inventory_home(request):
-	return render(request, 'inventory/home.html', {
+	return render(request, 'inventory/pages/home.html', {
 		'ingredients': Ingredient.objects.filter(is_active=True),
 		'transactions': StockTransaction.objects.select_related('ingredient', 'created_by')[:100],
 	})
@@ -45,7 +45,7 @@ def recipe_list(request):
 	products = Product.objects.filter(is_active=True).select_related('category', 'recipe').prefetch_related('recipe__items__ingredient').order_by('category__display_order', 'name')
 	ingredients = Ingredient.objects.filter(is_active=True).order_by('group', 'name')
 
-	return render(request, 'inventory/recipes.html', {
+	return render(request, 'inventory/pages/recipes.html', {
 		'categories': categories,
 		'products': products,
 		'ingredients': ingredients,

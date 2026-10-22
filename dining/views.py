@@ -46,7 +46,7 @@ def dining_home(request):
 			'display_order': t.display_order,
 		})
 
-	return render(request, 'dining/home.html', {
+	return render(request, 'dining/pages/home.html', {
 		'areas': areas_qs,
 		'tables': tables_qs,
 		'areas_json': json.dumps(areas_data, ensure_ascii=False),
@@ -486,7 +486,7 @@ def area_create(request):
 		form.save()
 		messages.success(request, 'Đã thêm khu vực.')
 		return redirect('dining:home')
-	return render(request, 'dining/form.html', {'form': form, 'title': 'Thêm khu vực'})
+	return render(request, 'dining/pages/form.html', {'form': form, 'title': 'Thêm khu vực'})
 
 
 @login_required
@@ -497,7 +497,7 @@ def area_update(request, pk):
 		form.save()
 		messages.success(request, 'Đã cập nhật khu vực.')
 		return redirect('dining:home')
-	return render(request, 'dining/form.html', {'form': form, 'title': 'Sửa khu vực'})
+	return render(request, 'dining/pages/form.html', {'form': form, 'title': 'Sửa khu vực'})
 
 
 @login_required
@@ -517,7 +517,7 @@ def table_create(request):
 		form.save()
 		messages.success(request, 'Đã thêm bàn.')
 		return redirect('dining:home')
-	return render(request, 'dining/form.html', {'form': form, 'title': 'Thêm bàn'})
+	return render(request, 'dining/pages/form.html', {'form': form, 'title': 'Thêm bàn'})
 
 
 @login_required
@@ -528,7 +528,7 @@ def table_update(request, pk):
 		form.save()
 		messages.success(request, 'Đã cập nhật bàn.')
 		return redirect('dining:home')
-	return render(request, 'dining/form.html', {'form': form, 'title': 'Sửa bàn'})
+	return render(request, 'dining/pages/form.html', {'form': form, 'title': 'Sửa bàn'})
 
 
 @login_required

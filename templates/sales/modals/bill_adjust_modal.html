@@ -1,0 +1,176 @@
+<!-- MODAL 1: GIẢM GIÁ / PHỤ PHÍ / VAT / MÃ GIẢM GIÁ CHO BÀN (NHƯ ẢNH 1) -->
+<div class="menu-modal-backdrop sub-modal reason-sub-modal" id="modal-bill-adjust"
+     data-validate-coupon-url="{% url 'sales:validate_coupon_api' %}"
+     data-coupons-url="{% url 'sales:coupons_api' %}"
+     role="dialog" aria-modal="true" aria-labelledby="bill-adjust-title" hidden>
+    <div class="menu-modal-dialog inv-reason-popup-dialog bill-adjust-popup-dialog">
+        <!-- Modal Header -->
+        <div class="menu-modal-header inv-reason-popup-header bill-adjust-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+                <h3 id="bill-adjust-title">Bàn V1 - Giảm giá / Phụ phí</h3>
+            </div>
+            <button type="button" class="dialog-close" id="bill-adjust-close" aria-label="Đóng">&times;</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="inv-reason-popup-body bill-adjust-popup-body">
+            <!-- Row 1: Phụ thu (% | đ) -->
+            <div class="bill-adjust-row">
+                <label for="bill-adjust-surcharge" class="bill-adjust-label">Phụ thu (% | đ)</label>
+                <div class="pos-editable-combo" data-combo="surcharge">
+                    <input type="text" id="bill-adjust-surcharge" class="pos-combo-input" value="0" autocomplete="off" spellcheck="false">
+                    <button type="button" class="pos-combo-arrow" tabindex="-1" aria-label="Chọn mức phụ thu">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <ul class="pos-combo-menu" hidden>
+                        <li data-value="0">0</li>
+                        <li data-value="5">5 (5%)</li>
+                        <li data-value="10">10 (10%)</li>
+                        <li data-value="15">15 (15%)</li>
+                        <li data-value="20">20 (20%)</li>
+                        <li data-value="10.000">10.000 đ</li>
+                        <li data-value="20.000">20.000 đ</li>
+                        <li data-value="30.000">30.000 đ</li>
+                        <li data-value="50.000">50.000 đ</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Row 2: Giảm giá (% | đ) -->
+            <div class="bill-adjust-row">
+                <label for="bill-adjust-discount" class="bill-adjust-label">Giảm giá (% | đ)</label>
+                <div class="pos-editable-combo" data-combo="discount">
+                    <input type="text" id="bill-adjust-discount" class="pos-combo-input" value="0" autocomplete="off" spellcheck="false">
+                    <button type="button" class="pos-combo-arrow" tabindex="-1" aria-label="Chọn mức giảm giá">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <ul class="pos-combo-menu" hidden>
+                        <li data-value="0">0</li>
+                        <li data-value="5">5 (5%)</li>
+                        <li data-value="10">10 (10%)</li>
+                        <li data-value="15">15 (15%)</li>
+                        <li data-value="20">20 (20%)</li>
+                        <li data-value="25">25 (25%)</li>
+                        <li data-value="30">30 (30%)</li>
+                        <li data-value="50">50 (50%)</li>
+                        <li data-value="100">100 (100%)</li>
+                        <li data-value="10.000">10.000 đ</li>
+                        <li data-value="20.000">20.000 đ</li>
+                        <li data-value="50.000">50.000 đ</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Row 3: VAT (%) -->
+            <div class="bill-adjust-row">
+                <label for="bill-adjust-vat" class="bill-adjust-label">VAT (%)</label>
+                <div class="pos-editable-combo" data-combo="vat">
+                    <input type="text" id="bill-adjust-vat" class="pos-combo-input" value="0" autocomplete="off" spellcheck="false">
+                    <button type="button" class="pos-combo-arrow" tabindex="-1" aria-label="Chọn mức VAT">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <ul class="pos-combo-menu" hidden>
+                        <li data-value="0">0</li>
+                        <li data-value="5">5 (5%)</li>
+                        <li data-value="8">8 (8%)</li>
+                        <li data-value="10">10 (10%)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Row 4: Mã giảm giá -->
+            <div class="bill-adjust-coupon-group">
+                <div class="bill-adjust-coupon-header">
+                    <label for="bill-adjust-coupon" class="bill-adjust-label">Mã giảm giá</label>
+                    <span class="bill-adjust-coupon-hint" id="bill-adjust-coupon-hint" hidden></span>
+                </div>
+                <div class="pos-editable-combo bill-coupon-combo" data-combo="coupon">
+                    <input type="text" id="bill-adjust-coupon" class="pos-combo-input bill-coupon-input" placeholder="Nhập mã giảm giá (VD: GIAM10, GIAM20, VIP20, GIAM50K...)" autocomplete="off" spellcheck="false">
+                    <button type="button" class="pos-combo-arrow" id="bill-adjust-coupon-arrow" tabindex="-1" title="Chọn nhanh mã giảm giá">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <ul class="pos-combo-menu bill-coupon-menu" id="bill-adjust-coupon-menu" hidden>
+                        <li data-value="">-- Không dùng mã --</li>
+                        <li data-value="GIAM10" data-type="percent" data-val="10">GIAM10 - Giảm 10%</li>
+                        <li data-value="GIAM15" data-type="percent" data-val="15">GIAM15 - Giảm 15%</li>
+                        <li data-value="GIAM20" data-type="percent" data-val="20">GIAM20 - Giảm 20%</li>
+                        <li data-value="GIAM30" data-type="percent" data-val="30">GIAM30 - Giảm 30%</li>
+                        <li data-value="GIAM50" data-type="percent" data-val="50">GIAM50 - Giảm 50%</li>
+                        <li data-value="VIP10" data-type="percent" data-val="10">VIP10 - Khách VIP 10%</li>
+                        <li data-value="VIP20" data-type="percent" data-val="20">VIP20 - Khách VIP 20%</li>
+                        <li data-value="GIAM10K" data-type="fixed" data-val="10000">GIAM10K - Giảm 10.000 đ</li>
+                        <li data-value="GIAM20K" data-type="fixed" data-val="20000">GIAM20K - Giảm 20.000 đ</li>
+                        <li data-value="GIAM50K" data-type="fixed" data-val="50000">GIAM50K - Giảm 50.000 đ</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Live Preview Summary Box -->
+            <div class="bill-adjust-live-preview" id="bill-adjust-live-preview">
+                <div class="preview-item"><span>Tiền món:</span> <strong id="ba-prev-subtotal">0 đ</strong></div>
+                <div class="preview-item"><span>Thành tiền sau điều chỉnh:</span> <strong id="ba-prev-total" class="preview-total-val">0 đ</strong></div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="inv-reason-popup-actions bill-adjust-actions">
+                <button type="button" id="bill-adjust-confirm" class="btn-reason-confirm">Xác nhận</button>
+                <button type="button" id="bill-adjust-cancel" class="btn-reason-cancel">Bỏ qua</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: QUẢN LÝ MÃ GIẢM GIÁ & COUPON (MỞ TỪ CÀI ĐẶT -> MÃ GIẢM GIÁ & COUPON) -->
+<div class="menu-modal-backdrop sub-modal" id="modal-coupon-manager" hidden>
+    <div class="menu-modal-dialog coupon-manager-dialog">
+        <div class="menu-modal-header inv-reason-popup-header">
+            <div class="modal-title-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+                <h3>Quản lý Mã giảm giá & Coupon</h3>
+            </div>
+            <button type="button" class="dialog-close" id="coupon-manager-close" aria-label="Đóng">&times;</button>
+        </div>
+
+        <div class="coupon-manager-body">
+            <form id="coupon-manager-form" class="coupon-manager-form">
+                <input type="text" id="cm-code-input" placeholder="Mã (VD: GIAM20)" required maxlength="30" class="cm-input cm-code">
+                <select id="cm-type-select" class="cm-select">
+                    <option value="percent">Giảm theo %</option>
+                    <option value="fixed">Giảm số tiền (đ)</option>
+                </select>
+                <input type="number" id="cm-value-input" placeholder="Giá trị (VD: 20 hoặc 50000)" required min="1" class="cm-input cm-val">
+                <input type="text" id="cm-desc-input" placeholder="Mô tả ngắn..." maxlength="120" class="cm-input cm-desc">
+                <button type="submit" class="btn-reason-confirm cm-btn-save">+ Lưu mã</button>
+            </form>
+
+            <div class="coupon-manager-table-wrap">
+                <table class="rev-time-table coupon-manager-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 24%;">Mã giảm giá</th>
+                            <th style="width: 22%;">Mức giảm</th>
+                            <th>Mô tả</th>
+                            <th style="width: 90px;" class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="coupon-manager-tbody">
+                        <tr><td colspan="4" class="rev-time-loading">Đang tải danh sách mã...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="coupon-manager-footer">
+                <span class="text-muted" style="font-size: 12px;">Nhấn vào mã để sửa nhanh hoặc nhập mã này tại hộp thoại Giảm giá / Phụ phí của bàn.</span>
+                <button type="button" class="btn-eod-cancel" id="coupon-manager-done">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+

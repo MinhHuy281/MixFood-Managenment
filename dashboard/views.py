@@ -88,7 +88,7 @@ def home(request):
 				'total_formatted': f'{total_fmt} đ',
 			}
 
-	return render(request, 'dashboard/home.html', {
+	return render(request, 'dashboard/pages/home.html', {
 		'areas': Area.objects.filter(is_active=True).prefetch_related(Prefetch('tables', queryset=DiningTable.objects.filter(is_active=True))),
 		'categories': Category.objects.filter(is_active=True),
 		'menu_categories': Category.objects.filter(is_active=True).order_by('display_order', 'name'),
@@ -178,7 +178,7 @@ def reports(request):
 	product_rows = [{'name': row['product_name'], 'quantity': row['quantity'], 'revenue': row['revenue']} for row in items]
 	categories = list(OrderItem.objects.filter(order__invoice__in=invoices, status=OrderItem.Status.ACTIVE).values('product__category__name').annotate(revenue=Sum('total_amount')).order_by('-revenue'))
 	category_rows = [{'name': row['product__category__name'] or 'Khác', 'revenue': row['revenue']} for row in categories]
-	return render(request, 'dashboard/reports.html', {
+	return render(request, 'dashboard/pages/reports.html', {
 		'from_date': start_date.isoformat(), 'to_date': end_date.isoformat(),
 		'total_revenue': total_revenue, 'invoice_count': invoice_count, 'average_order': average_order,
 		'payment_rows': payment_rows, 'product_rows': product_rows, 'category_rows': category_rows,
