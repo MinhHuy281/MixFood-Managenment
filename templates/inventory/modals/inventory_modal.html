@@ -1,0 +1,538 @@
+<!-- MODAL: QUẢN LÝ KHO HÀNG & XUẤT - NHẬP - TỒN (MIXFOOD POS) -->
+<div class="menu-modal-backdrop inv-modal-backdrop" id="modal-inventory-manager"
+     data-api-dashboard="{% url 'inventory:dashboard_api' %}"
+     data-api-receipts="{% url 'inventory:receipts_api' %}"
+     data-api-issues="{% url 'inventory:issues_api' %}"
+     data-api-adjustments="{% url 'inventory:adjustments_api' %}"
+     data-api-ledger="{% url 'inventory:ledger_api' %}"
+     data-url-export="{% url 'inventory:export_excel' %}"
+     role="dialog" aria-modal="true" aria-labelledby="inv-modal-title" hidden>
+    <div class="menu-modal-dialog inv-manager-dialog">
+        <!-- Modal Topbar -->
+        <div class="menu-modal-header inv-manager-header">
+            <div class="modal-title-wrap">
+                <span class="inv-header-icon">📦</span>
+                <div>
+                    <h3 id="inv-modal-title">Quản lý Kho hàng & Xuất - Nhập - Tồn</h3>
+                    <span class="inv-header-subtitle" id="inv-range-badge">Đang tải dữ liệu kho...</span>
+                </div>
+            </div>
+            <div class="inv-header-actions">
+                <button type="button" class="inv-btn-action btn-receipt-emerald" id="inv-top-btn-receipt" title="Lập phiếu nhập nguyên vật liệu mới">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+                    <span>+ Nhập kho</span>
+                </button>
+                <button type="button" class="inv-btn-action btn-issue-amber" id="inv-top-btn-issue" title="Lập phiếu xuất kho thủ công/hủy/nội bộ">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 12h14"/></svg>
+                    <span>+ Xuất kho</span>
+                </button>
+                <button type="button" class="inv-btn-action btn-adj-blue" id="inv-top-btn-adj" title="Kiểm kê thực tế và cân đối tồn kho">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                    <span>Kiểm kê kho</span>
+                </button>
+                <button type="button" class="inv-btn-action btn-export-excel" id="inv-top-btn-export" title="Xuất báo cáo Xuất Nhập Tồn ra file Excel">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Xuất Excel</span>
+                </button>
+                <button type="button" class="dialog-close" id="inv-modal-close" aria-label="Đóng">&times;</button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="inv-tabs-nav">
+            <button type="button" class="inv-tab-btn active" data-tab="xnt">
+                <span class="inv-tab-icon">📊</span> Báo cáo Xuất - Nhập - Tồn
+            </button>
+            <button type="button" class="inv-tab-btn" data-tab="receipts">
+                <span class="inv-tab-icon">📥</span> Phiếu Nhập kho (<span id="inv-tab-badge-receipts">0</span>)
+            </button>
+            <button type="button" class="inv-tab-btn" data-tab="issues">
+                <span class="inv-tab-icon">📤</span> Phiếu Xuất kho (<span id="inv-tab-badge-issues">0</span>)
+            </button>
+            <button type="button" class="inv-tab-btn" data-tab="adjustments">
+                <span class="inv-tab-icon">⚖️</span> Kiểm kê & Cân đối kho
+            </button>
+            <button type="button" class="inv-tab-btn" data-tab="ledger">
+                <span class="inv-tab-icon">📜</span> Sổ thẻ kho (Biến động)
+            </button>
+        </div>
+
+        <!-- Notification Banner -->
+        <div id="inv-modal-toast" class="inv-toast-banner" hidden></div>
+
+        <!-- Modal Body Content -->
+        <div class="inv-manager-body">
+
+            <!-- =================================================================== -->
+            <!-- TAB 1: BÁO CÁO XUẤT - NHẬP - TỒN                                    -->
+            <!-- =================================================================== -->
+            <div class="inv-tab-panel active" id="inv-panel-xnt">
+                <!-- KPI Overview Cards -->
+                <div class="inv-kpi-grid">
+                    <div class="inv-kpi-card card-val">
+                        <div class="kpi-icon-wrap bg-blue-soft">💰</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Tổng giá trị tồn kho</span>
+                            <strong class="kpi-number text-blue" id="inv-kpi-total-val">0 đ</strong>
+                        </div>
+                    </div>
+                    <div class="inv-kpi-card card-count">
+                        <div class="kpi-icon-wrap bg-indigo-soft">📦</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Tổng mặt hàng quản lý</span>
+                            <strong class="kpi-number text-indigo" id="inv-kpi-total-count">0</strong>
+                        </div>
+                    </div>
+                    <div class="inv-kpi-card card-warning">
+                        <div class="kpi-icon-wrap bg-rose-soft">⚠️</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Cảnh báo tồn thấp</span>
+                            <strong class="kpi-number text-rose" id="inv-kpi-low-stock-count">0</strong>
+                        </div>
+                    </div>
+                    <div class="inv-kpi-card card-receipt">
+                        <div class="kpi-icon-wrap bg-emerald-soft">📥</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Tổng nhập trong kỳ</span>
+                            <strong class="kpi-number text-emerald" id="inv-kpi-receipt-val">0 đ</strong>
+                        </div>
+                    </div>
+                    <div class="inv-kpi-card card-issue">
+                        <div class="kpi-icon-wrap bg-amber-soft">📤</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Tổng xuất trong kỳ</span>
+                            <strong class="kpi-number text-amber" id="inv-kpi-issue-val">0 đ</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters Bar -->
+                <div class="inv-filter-toolbar">
+                    <div class="inv-date-presets">
+                        <button type="button" class="inv-preset-btn" data-preset="today">Hôm nay</button>
+                        <button type="button" class="inv-preset-btn" data-preset="yesterday">Hôm qua</button>
+                        <button type="button" class="inv-preset-btn" data-preset="7days">7 ngày qua</button>
+                        <button type="button" class="inv-preset-btn active" data-preset="this_month">Tháng này</button>
+                        <button type="button" class="inv-preset-btn" data-preset="last_month">Tháng trước</button>
+                    </div>
+
+                    <div class="inv-date-custom-group">
+                        <div class="inv-date-input-wrap">
+                            <label>Từ ngày</label>
+                            <input type="date" id="inv-date-from" class="inv-input-date">
+                        </div>
+                        <div class="inv-date-input-wrap">
+                            <label>Đến ngày</label>
+                            <input type="date" id="inv-date-to" class="inv-input-date">
+                        </div>
+                        <button type="button" class="inv-btn-filter-apply" id="inv-btn-apply-dates">Lọc</button>
+                    </div>
+
+                    <div class="inv-search-group">
+                        <input type="text" id="inv-search-query" class="inv-input-search" placeholder="🔍 Tìm mã, tên mặt hàng...">
+                        <select id="inv-select-group" class="inv-input-select">
+                            <option value="">-- Tất cả nhóm --</option>
+                        </select>
+                        <label class="inv-checkbox-label">
+                            <input type="checkbox" id="inv-chk-low-stock">
+                            <span>Chỉ xem hàng sắp hết</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Main XNT Table -->
+                <div class="inv-table-container">
+                    <table class="inv-data-table" id="inv-xnt-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 45px;">STT</th>
+                                <th style="width: 95px;">Mã hàng</th>
+                                <th>Tên nguyên liệu / mặt hàng</th>
+                                <th style="width: 120px;">Nhóm</th>
+                                <th class="text-center" style="width: 55px;">ĐVT</th>
+                                <th class="text-right" style="width: 95px;">Giá vốn</th>
+                                <th class="text-right" style="width: 80px;">Tồn đầu</th>
+                                <th class="text-right text-emerald" style="width: 80px;">Nhập kỳ</th>
+                                <th class="text-right text-indigo" style="width: 80px;">Xuất bán</th>
+                                <th class="text-right text-amber" style="width: 80px;">Xuất khác</th>
+                                <th class="text-right" style="width: 75px;">Cân đối</th>
+                                <th class="text-right text-bold" style="width: 85px;">Tồn cuối</th>
+                                <th class="text-right text-bold text-blue" style="width: 110px;">Giá trị tồn</th>
+                                <th class="text-right" style="width: 80px;">Tồn TT</th>
+                                <th class="text-center" style="width: 110px;">Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inv-xnt-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                        <tfoot id="inv-xnt-tfoot">
+                            <tr class="inv-tfoot-row">
+                                <td colspan="5" class="text-bold text-center">TỔNG CỘNG</td>
+                                <td class="text-right">-</td>
+                                <td class="text-right" id="inv-foot-open-qty">-</td>
+                                <td class="text-right text-emerald text-bold" id="inv-foot-receipt-qty">-</td>
+                                <td class="text-right text-indigo text-bold" id="inv-foot-sale-qty">-</td>
+                                <td class="text-right text-amber text-bold" id="inv-foot-issue-qty">-</td>
+                                <td class="text-right" id="inv-foot-adj-qty">-</td>
+                                <td class="text-right text-bold" id="inv-foot-close-qty">-</td>
+                                <td class="text-right text-bold text-blue" id="inv-foot-close-val">-</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- =================================================================== -->
+            <!-- TAB 2: QUẢN LÝ PHIẾU NHẬP KHO                                      -->
+            <!-- =================================================================== -->
+            <div class="inv-tab-panel" id="inv-panel-receipts">
+                <div class="inv-panel-sub-header">
+                    <div class="inv-sub-search">
+                        <input type="text" id="inv-receipts-search" class="inv-input-search" placeholder="🔍 Tìm mã phiếu nhập, nhà cung cấp...">
+                    </div>
+                    <button type="button" class="inv-btn-primary btn-receipt-emerald" id="inv-btn-create-receipt">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+                        Lập phiếu nhập kho mới
+                    </button>
+                </div>
+
+                <div class="inv-table-container">
+                    <table class="inv-data-table" id="inv-receipts-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 120px;">Mã phiếu</th>
+                                <th style="width: 140px;">Thời gian</th>
+                                <th>Nhà cung cấp</th>
+                                <th class="text-center" style="width: 100px;">Số mặt hàng</th>
+                                <th class="text-right text-emerald" style="width: 130px;">Tổng tiền (đ)</th>
+                                <th style="width: 140px;">Người lập</th>
+                                <th>Ghi chú</th>
+                                <th class="text-center" style="width: 110px;">Trạng thái</th>
+                                <th class="text-center" style="width: 110px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inv-receipts-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- =================================================================== -->
+            <!-- TAB 3: QUẢN LÝ PHIẾU XUẤT KHO                                      -->
+            <!-- =================================================================== -->
+            <div class="inv-tab-panel" id="inv-panel-issues">
+                <div class="inv-panel-sub-header">
+                    <div class="inv-sub-search">
+                        <input type="text" id="inv-issues-search" class="inv-input-search" placeholder="🔍 Tìm mã phiếu xuất, bộ phận nhận...">
+                        <select id="inv-issues-filter-type" class="inv-input-select">
+                            <option value="">-- Tất cả loại xuất --</option>
+                            <option value="manual">Xuất thủ công</option>
+                            <option value="waste">Xuất hủy / hỏng / hết hạn</option>
+                            <option value="internal">Xuất dùng nội bộ</option>
+                            <option value="return">Xuất trả nhà cung cấp</option>
+                        </select>
+                    </div>
+                    <button type="button" class="inv-btn-primary btn-issue-amber" id="inv-btn-create-issue">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 12h14"/></svg>
+                        Lập phiếu xuất kho mới
+                    </button>
+                </div>
+
+                <div class="inv-table-container">
+                    <table class="inv-data-table" id="inv-issues-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 120px;">Mã phiếu</th>
+                                <th style="width: 140px;">Thời gian</th>
+                                <th style="width: 160px;">Loại xuất</th>
+                                <th>Người / Bộ phận nhận</th>
+                                <th class="text-center" style="width: 100px;">Số mặt hàng</th>
+                                <th class="text-right text-amber" style="width: 130px;">Tổng giá trị (đ)</th>
+                                <th style="width: 140px;">Người lập</th>
+                                <th>Ghi chú</th>
+                                <th class="text-center" style="width: 110px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inv-issues-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- =================================================================== -->
+            <!-- TAB 4: KIỂM KÊ & CÂN ĐỐI KHO                                       -->
+            <!-- =================================================================== -->
+            <div class="inv-tab-panel" id="inv-panel-adjustments">
+                <div class="inv-panel-sub-header inv-adj-header-bar">
+                    <div class="inv-adj-note-wrap">
+                        <label>Ghi chú đợt kiểm kê:</label>
+                        <input type="text" id="inv-adj-note" class="inv-input-text" placeholder="VD: Kiểm kê cuối ngày ca sáng, kiểm kho định kỳ..." value="Kiểm kê cân đối kho định kỳ">
+                    </div>
+                    <div class="inv-adj-actions">
+                        <button type="button" class="inv-btn-secondary" id="inv-btn-reset-adj">Đặt lại số sách</button>
+                        <button type="button" class="inv-btn-primary btn-adj-blue" id="inv-btn-save-adj">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Xác nhận cân đối tồn kho
+                        </button>
+                    </div>
+                </div>
+
+                <div class="inv-adj-tip-banner">
+                    💡 <strong>Hướng dẫn:</strong> Nhập số lượng tồn thực tế vào cột <em>Tồn thực tế</em>. Hệ thống sẽ tự động tính lượng thừa/thiếu và cập nhật thẻ kho ngay khi bạn nhấn <em>Xác nhận cân đối</em>.
+                </div>
+
+                <div class="inv-table-container">
+                    <table class="inv-data-table" id="inv-adj-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 45px;">STT</th>
+                                <th style="width: 100px;">Mã hàng</th>
+                                <th>Tên nguyên liệu / mặt hàng</th>
+                                <th style="width: 120px;">Nhóm</th>
+                                <th class="text-center" style="width: 55px;">ĐVT</th>
+                                <th class="text-right" style="width: 95px;">Đơn giá vốn</th>
+                                <th class="text-right text-bold" style="width: 110px;">Tồn hệ thống</th>
+                                <th class="text-center" style="width: 130px;">Tồn thực tế kiểm kê</th>
+                                <th class="text-right" style="width: 110px;">Chênh lệch</th>
+                                <th class="text-right" style="width: 120px;">Giá trị chênh lệch</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inv-adj-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Lịch sử các lần kiểm kê trước -->
+                <div class="inv-adj-history-section">
+                    <h4 class="inv-section-title">Lịch sử các đợt kiểm kê gần đây</h4>
+                    <div id="inv-adj-history-list" class="inv-history-list">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- =================================================================== -->
+            <!-- TAB 5: SỔ CHI TIẾT THẺ KHO (BIẾN ĐỘNG)                              -->
+            <!-- =================================================================== -->
+            <div class="inv-tab-panel" id="inv-panel-ledger">
+                <div class="inv-filter-toolbar">
+                    <div class="inv-search-group" style="width: 100%;">
+                        <select id="inv-ledger-ingredient" class="inv-input-select" style="min-width: 240px;">
+                            <option value="">-- Tất cả nguyên liệu --</option>
+                        </select>
+                        <select id="inv-ledger-type" class="inv-input-select">
+                            <option value="">-- Tất cả loại biến động --</option>
+                            <option value="receipt">Nhập kho (Phiếu nhập)</option>
+                            <option value="sale">Xuất kho bán hàng (POS)</option>
+                            <option value="issue">Xuất kho thủ công / hủy</option>
+                            <option value="increase">Điều chỉnh tăng (Kiểm kê)</option>
+                            <option value="decrease">Điều chỉnh giảm (Kiểm kê)</option>
+                        </select>
+                        <button type="button" class="inv-btn-filter-apply" id="inv-btn-ledger-filter">Xem sổ thẻ kho</button>
+                    </div>
+                </div>
+
+                <div class="inv-table-container">
+                    <table class="inv-data-table" id="inv-ledger-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Thời gian</th>
+                                <th style="width: 110px;">Mã hàng</th>
+                                <th>Tên nguyên liệu</th>
+                                <th class="text-center" style="width: 60px;">ĐVT</th>
+                                <th style="width: 160px;">Loại biến động</th>
+                                <th class="text-right text-bold" style="width: 110px;">Số lượng</th>
+                                <th class="text-right" style="width: 100px;">Đơn giá vốn</th>
+                                <th class="text-right text-bold text-blue" style="width: 110px;">Tồn sau GD</th>
+                                <th style="width: 140px;">Người thực hiện</th>
+                                <th>Chi tiết / Ghi chú</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inv-ledger-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> <!-- /.inv-manager-body -->
+    </div> <!-- /.inv-manager-dialog -->
+</div> <!-- /#modal-inventory-manager -->
+
+
+<!-- =============================================================================== -->
+<!-- SUB-MODAL: LẬP PHIẾU NHẬP KHO MỚI                                               -->
+<!-- =============================================================================== -->
+<div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-new-receipt" role="dialog" aria-modal="true" hidden>
+    <div class="menu-modal-dialog inv-form-dialog">
+        <div class="menu-modal-header inv-form-header bg-emerald-header">
+            <div class="modal-title-wrap">
+                <span>📥</span>
+                <h3>Lập Phiếu Nhập Kho</h3>
+            </div>
+            <button type="button" class="dialog-close" id="inv-receipt-modal-close">&times;</button>
+        </div>
+        <div class="inv-form-body">
+            <div class="inv-form-meta-row">
+                <div class="inv-field-group">
+                    <label>Nhà cung cấp:</label>
+                    <input type="text" id="inv-rec-supplier" class="inv-input-text" placeholder="Tên nhà cung cấp / đại lý..." list="inv-rec-supplier-list">
+                    <datalist id="inv-rec-supplier-list">
+                        <option value="Cty TNHH Thực phẩm Sạch">
+                        <option value="Nhà phân phối CP">
+                        <option value="Anchor Food">
+                        <option value="Trang trại Ba Huân">
+                        <option value="Vườn rau Đà Lạt">
+                        <option value="Kewpie VN">
+                        <option value="Cholimex Food">
+                        <option value="Calofic VN">
+                        <option value="Cozy Tea">
+                        <option value="Đại lý nước ngọt Kim Phát">
+                    </datalist>
+                </div>
+                <div class="inv-field-group">
+                    <label>Ghi chú nhập kho:</label>
+                    <input type="text" id="inv-rec-note" class="inv-input-text" placeholder="VD: Nhập hàng đầu tuần, thanh toán tiền mặt...">
+                </div>
+            </div>
+
+            <!-- Dynamic Items Table -->
+            <div class="inv-form-items-wrap">
+                <div class="inv-items-toolbar">
+                    <strong style="color: #1e293b; font-size: 13.5px;">Danh sách nguyên vật liệu nhập</strong>
+                    <button type="button" class="inv-btn-secondary" id="inv-rec-btn-add-row">+ Thêm mặt hàng</button>
+                </div>
+                <table class="inv-form-items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%;">Nguyên liệu / Mặt hàng</th>
+                            <th class="text-center" style="width: 10%;">ĐVT</th>
+                            <th class="text-right" style="width: 18%;">Số lượng nhập</th>
+                            <th class="text-right" style="width: 22%;">Đơn giá nhập (đ)</th>
+                            <th class="text-right" style="width: 20%;">Thành tiền (đ)</th>
+                            <th class="text-center" style="width: 5%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="inv-rec-items-tbody">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="inv-form-total-summary">
+                <span class="total-label">Tổng tiền nhập kho:</span>
+                <strong class="total-number text-emerald" id="inv-rec-total-amount">0 đ</strong>
+            </div>
+        </div>
+        <div class="inv-form-footer">
+            <button type="button" class="inv-btn-secondary" id="inv-rec-btn-cancel">Bỏ qua</button>
+            <button type="button" class="inv-btn-primary btn-receipt-emerald" id="inv-rec-btn-submit">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="20 6 9 17 4 12"/></svg>
+                Xác nhận nhập kho
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- =============================================================================== -->
+<!-- SUB-MODAL: LẬP PHIẾU XUẤT KHO MỚI                                               -->
+<!-- =============================================================================== -->
+<div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-new-issue" role="dialog" aria-modal="true" hidden>
+    <div class="menu-modal-dialog inv-form-dialog">
+        <div class="menu-modal-header inv-form-header bg-amber-header">
+            <div class="modal-title-wrap">
+                <span>📤</span>
+                <h3>Lập Phiếu Xuất Kho</h3>
+            </div>
+            <button type="button" class="dialog-close" id="inv-issue-modal-close">&times;</button>
+        </div>
+        <div class="inv-form-body">
+            <div class="inv-form-meta-row">
+                <div class="inv-field-group">
+                    <label>Loại xuất kho:</label>
+                    <select id="inv-iss-type" class="inv-input-select" style="width: 100%;">
+                        <option value="manual">Xuất thủ công</option>
+                        <option value="waste">Xuất hủy / hỏng / hết hạn</option>
+                        <option value="internal">Xuất dùng nội bộ (Quầy / Bếp)</option>
+                        <option value="return">Xuất trả nhà cung cấp</option>
+                    </select>
+                </div>
+                <div class="inv-field-group">
+                    <label>Người / Bộ phận nhận:</label>
+                    <input type="text" id="inv-iss-receiver" class="inv-input-text" placeholder="VD: Bếp chính, Quầy pha chế, NV Kho..." value="Bếp chính">
+                </div>
+                <div class="inv-field-group" style="grid-column: span 2;">
+                    <label>Ghi chú lý do xuất:</label>
+                    <input type="text" id="inv-iss-note" class="inv-input-text" placeholder="VD: Xuất nguyên liệu chuẩn bị ca tối, hủy do hư hỏng...">
+                </div>
+            </div>
+
+            <!-- Dynamic Items Table -->
+            <div class="inv-form-items-wrap">
+                <div class="inv-items-toolbar">
+                    <strong style="color: #1e293b; font-size: 13.5px;">Danh sách nguyên vật liệu xuất</strong>
+                    <button type="button" class="inv-btn-secondary" id="inv-iss-btn-add-row">+ Thêm mặt hàng</button>
+                </div>
+                <table class="inv-form-items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%;">Nguyên liệu / Mặt hàng</th>
+                            <th class="text-center" style="width: 10%;">ĐVT</th>
+                            <th class="text-right" style="width: 15%;">Tồn hiện có</th>
+                            <th class="text-right" style="width: 18%;">Số lượng xuất</th>
+                            <th class="text-right" style="width: 18%;">Đơn giá vốn</th>
+                            <th class="text-right" style="width: 18%;">Thành tiền (đ)</th>
+                            <th class="text-center" style="width: 5%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="inv-iss-items-tbody">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="inv-form-total-summary">
+                <span class="total-label">Tổng giá trị xuất kho:</span>
+                <strong class="total-number text-amber" id="inv-iss-total-amount">0 đ</strong>
+            </div>
+        </div>
+        <div class="inv-form-footer">
+            <button type="button" class="inv-btn-secondary" id="inv-iss-btn-cancel">Bỏ qua</button>
+            <button type="button" class="inv-btn-primary btn-issue-amber" id="inv-iss-btn-submit">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="20 6 9 17 4 12"/></svg>
+                Xác nhận xuất kho
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- =============================================================================== -->
+<!-- SUB-MODAL: XEM CHI TIẾT & IN PHIẾU NHẬP / XUẤT KHO                             -->
+<!-- =============================================================================== -->
+<div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-view-slip" role="dialog" aria-modal="true" hidden>
+    <div class="menu-modal-dialog inv-slip-dialog">
+        <div class="menu-modal-header inv-slip-header">
+            <div class="modal-title-wrap">
+                <span>🧾</span>
+                <h3 id="inv-slip-title">Chi tiết Phiếu Kho</h3>
+            </div>
+            <div class="inv-slip-header-actions">
+                <button type="button" class="inv-btn-action btn-print-slip" id="inv-slip-btn-print">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    In phiếu
+                </button>
+                <button type="button" class="dialog-close" id="inv-slip-modal-close">&times;</button>
+            </div>
+        </div>
+        <div class="inv-slip-body" id="inv-slip-print-area">
+            <!-- Populated via JS for print -->
+        </div>
+    </div>
+</div>
+

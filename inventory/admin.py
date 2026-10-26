@@ -1,6 +1,9 @@
 from django.contrib import admin
 
-from .models import Recipe, RecipeItem, StockReceipt, StockReceiptItem, StockTransaction
+from .models import (
+	Recipe, RecipeItem, StockReceipt, StockReceiptItem,
+	StockTransaction, StockIssue, StockIssueItem, StockAdjustment, StockAdjustmentItem
+)
 
 
 class RecipeItemInline(admin.TabularInline):
@@ -35,3 +38,29 @@ class StockTransactionAdmin(admin.ModelAdmin):
 	list_filter = ('transaction_type', 'created_at')
 	search_fields = ('ingredient__name', 'ingredient__code')
 	readonly_fields = ('created_at',)
+
+class StockIssueItemInline(admin.TabularInline):
+	model = StockIssueItem
+	extra = 1
+
+
+@admin.register(StockIssue)
+class StockIssueAdmin(admin.ModelAdmin):
+	list_display = ('issue_code', 'issue_type', 'receiver', 'total_amount', 'status', 'created_by', 'created_at')
+	list_filter = ('issue_type', 'status', 'created_at')
+	search_fields = ('issue_code', 'receiver', 'note')
+	inlines = (StockIssueItemInline,)
+
+
+class StockAdjustmentItemInline(admin.TabularInline):
+	model = StockAdjustmentItem
+	extra = 0
+
+
+@admin.register(StockAdjustment)
+class StockAdjustmentAdmin(admin.ModelAdmin):
+	list_display = ('adjustment_code', 'total_diff_amount', 'created_by', 'created_at')
+	list_filter = ('created_at',)
+	search_fields = ('adjustment_code', 'note')
+	inlines = (StockAdjustmentItemInline,)
+

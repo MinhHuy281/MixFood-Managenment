@@ -118,7 +118,7 @@
                         <span class="dropdown-icon">👥</span> Danh sách khách hàng
                     </button>
                     <span class="dropdown-separator"></span>
-                    <a href="{% url 'inventory:home' %}" role="menuitem">
+                    <a href="{% url 'inventory:home' %}" role="menuitem" id="open-inventory-manager-menu" class="dropdown-action">
                         <span class="dropdown-icon">📦</span> Quản lý kho hàng
                     </a>
                     <button type="button" class="dropdown-action management-action" data-management="cashbook">
@@ -160,7 +160,7 @@
                         <span class="dropdown-icon">🍱</span> Hàng bán chi tiết
                     </a>
                     <span class="dropdown-separator"></span>
-                    <a href="{% url 'inventory:home' %}" role="menuitem">
+                    <a href="{% url 'inventory:home' %}" role="menuitem" id="open-inventory-report-menu" class="dropdown-action">
                         <span class="dropdown-icon">🔄</span> Xuất nhập tồn kho
                     </a>
                     <button type="button" class="dropdown-action report-action" data-report="purchases">
@@ -706,6 +706,9 @@
 
 <!-- MODAL: BÀN - GIẢM GIÁ / PHỤ PHÍ / VAT / MÃ GIẢM GIÁ -->
 {% include 'sales/modals/bill_adjust_modal.html' %}
+
+<!-- MODAL: QUẢN LÝ KHO HÀNG & XUẤT - NHẬP - TỒN -->
+{% include 'inventory/modals/inventory_modal.html' %}
 
 <!-- MODAL: TÍNH LẠI TIỀN THỪA (RECALCULATE CHANGE) -->
 <div class="menu-modal-backdrop sub-modal reason-sub-modal" id="invoice-change-dialog" role="dialog" aria-modal="true" aria-labelledby="invoice-change-title" hidden>
@@ -4407,6 +4410,9 @@
         guardElementWithPermission('.management-menu a[href*="dining"]', 'manage_staff_shift', 'Phân công bàn ca');
         guardElementWithPermission('.management-menu a[href*="invoices"]', 'manage_staff_shift', 'Sổ hóa đơn kết ca');
 
+        // 6b. Quản lý kho hàng & Xuất Nhập Tồn (manage_inventory)
+        guardElementWithPermission('#open-inventory-manager-menu, #open-inventory-report-menu', 'manage_inventory', 'Quản lý kho hàng & Xuất Nhập Tồn');
+
         // 7. Quản lý khách hàng (manage_customers)
         guardElementWithPermission('.management-action[data-management="customers"]', 'manage_customers', 'Danh sách khách hàng');
         guardElementWithPermission('.report-action[data-report="customer-revenue"]', 'manage_customers', 'Doanh thu theo khách');
@@ -4437,6 +4443,10 @@
             'modal-guest-count-today',
             'modal-end-of-day-report',
             'modal-coupon-manager',
+            'modal-inventory-manager',
+            'modal-inv-new-receipt',
+            'modal-inv-new-issue',
+            'modal-inv-view-slip',
             'invoice-edit-modal',
             'invoice-delete-dialog',
         ];
@@ -4464,6 +4474,7 @@
 </script>
 <script src="{% static 'js/invoice_editor.js' %}?v={% now 'U' %}"></script>
 <script src="{% static 'js/sales_statistics.js' %}?v={% now 'U' %}"></script>
+<script src="{% static 'js/inventory.js' %}?v={% now 'U' %}"></script>
 {% endblock %}
 
 

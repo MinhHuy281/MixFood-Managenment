@@ -91,3 +91,70 @@ class StockTransaction(models.Model):
 		indexes = [models.Index(fields=('ingredient', 'created_at')), models.Index(fields=('transaction_type', 'created_at'))]
 		verbose_name = 'Biến động kho'
 		verbose_name_plural = 'Biến động kho'
+
+class StockIssue(models.Model):
+	class IssueType(models.TextChoices):
+		MANUAL = 'manual', 'Xuất thủ công'
+		WASTE = 'waste', 'Xuất hủy / hỏng / hết hạn'
+		INTERNAL = 'internal', 'Xuất dùng nội bộ'
+		RETURN = 'return', 'Xuất trả nhà cung cấp'
+
+	class Status(models.TextChoices):
+		CONFIRMED = 'confirmed', 'Đã xuất kho'
+		CANCELLED = 'cancelled', 'Đã hủy'
+
+	issue_code = models.CharField('Mã phiếu xuất', max_length=30, unique=True)
+	issue_type = models.CharField('Loại xuất', max_length=20, choices=IssueType.choices, default=IssueType.MANUAL)
+	receiver = models.CharField('Người / Bộ phận nhận', max_length=150, blank=True)
+	total_amount = models.DecimalField('Tổng giá trị xuất', max_digits=12, decimal_places=0, default=0, validators=[MinValueValidator(0)])
+	note = models.TextField('Ghi chú lý do xuất', blank=True)
+	status = models.CharField('Trạng thái', max_length=20, choices=Status.choices, default=Status.CONFIRMED)
+	created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='stock_issues')
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ('-created_at',)
+		verbose_name = 'Phiếu xuất kho'
+		verbose_name_plural = 'Phiếu xuất kho'
+
+	def __str__(self):
+		return f'{self.issue_code} ({self.get_issue_type_display()})'
+
+
+class StockIssueItem(models.Model):
+	issue = models.ForeignKey(StockIssue, on_delete=models.CASCADE, related_name='items')
+	ingredient = models.ForeignKey(Ingredient, on_delete=models.PROTECT, related_name='issue_items')
+	quantity = models.DecimalField('Số lượng', max_digits=12, decimal_places=3, validators=[MinValueValidator(Decimal('0.001'))])
+	unit_cost = models.DecimalField('Đơn giá vốn', max_digits=12, decimal_places=0, validators=[MinValueValidator(0)])
+	total_cost = models.DecimalField('Thành tiền', max_digits=12, decimal_places=0, validators=[MinValueValidator(0)])
+
+	def save(self, *args, **kwargs):
+		self.total_cost = self.quantity * self.unit_cost
+		super().save(*args, **kwargs)
+
+
+class StockAdjustment(models.Model):
+	adjustment_code = models.CharField('Mã kiểm kê', max_length=30, unique=True)
+	note = models.TextField('Ghi chú kiểm kê / lý do cân đối', blank=True)
+	total_diff_amount = models.DecimalField('Tổng giá trị chênh lệch', max_digits=12, decimal_places=0, default=0)
+	created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='stock_adjustments')
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ('-created_at',)
+		verbose_name = 'Phiếu kiểm kê điều chỉnh kho'
+		verbose_name_plural = 'Phiếu kiểm kê điều chỉnh kho'
+
+	def __str__(self):
+		return f'Kiểm kê {self.adjustment_code}'
+
+
+class StockAdjustmentItem(models.Model):
+	adjustment = models.ForeignKey(StockAdjustment, on_delete=models.CASCADE, related_name='items')
+	ingredient = models.ForeignKey(Ingredient, on_delete=models.PROTECT, related_name='adjustment_items')
+	system_stock = models.DecimalField('Tồn hệ thống', max_digits=12, decimal_places=3)
+	actual_stock = models.DecimalField('Tồn thực tế', max_digits=12, decimal_places=3)
+	diff_quantity = models.DecimalField('Chênh lệch số lượng', max_digits=12, decimal_places=3)
+	unit_cost = models.DecimalField('Đơn giá vốn', max_digits=12, decimal_places=0, default=0)
+	diff_amount = models.DecimalField('Giá trị chênh lệch', max_digits=12, decimal_places=0, default=0)
+
