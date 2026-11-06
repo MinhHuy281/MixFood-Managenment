@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }} | MixFood Manager{% endblock %}
+
+{% block content %}
+<div class="ingredient-admin-page-container" style="max-width: 1050px; margin: 0 auto; padding: 20px 16px;">
+    <!-- Page Header & Breadcrumbs -->
+    <div class="ingredient-page-header" style="margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0;">
+        <div class="ingredient-page-title-wrap">
+            <span class="ingredient-page-icon" style="background: #fff7ed; border-color: #ffedd5; font-size: 26px;">🍽️</span>
+            <div>
+                <p class="eyebrow" style="margin-bottom: 2px;">CÀI ĐẶT / THỰC ĐƠN & MẶT HÀNG / {% if is_edit %}CHỈNH SỬA{% else %}THÊM MỚI{% endif %}</p>
+                <h1 class="ingredient-page-title" style="font-size: 22px; font-weight: 800; color: #0f172a;">{{ title }}</h1>
+                <p class="ingredient-page-subtitle">Thiết lập thông tin danh mục, định giá 3 cấp, trạng thái phục vụ và liên kết định lượng nguyên liệu BOM</p>
+            </div>
+        </div>
+        <div class="ingredient-page-top-actions">
+            <a href="{% url back_url %}" class="btn-ing-action" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; font-weight: 600;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Quay lại danh sách
+            </a>
+            {% if is_edit %}
+            <a href="{% url 'inventory:recipes' %}?product_id={{ product.id }}" class="btn-ing-action btn-ing-edit" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 700;">
+                ⚖️ Thiết lập Định lượng (BOM)
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Alert / Validation Errors Banner -->
+    {% if form.errors %}
+    <div class="menu-alert-banner alert-error" style="margin-bottom: 18px; display: block; border-left: 4px solid #ef4444; background: #fef2f2; color: #991b1b; padding: 12px 16px; border-radius: 8px;">
+        <strong>⚠️ Vui lòng kiểm tra lại các trường thông tin:</strong>
+        <ul style="margin: 6px 0 0 20px; font-size: 13.5px;">
+            {% for field in form %}
+                {% for error in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Main Form Form Shell -->
+    <form method="post" enctype="multipart/form-data" id="main-product-form" style="display: flex; flex-direction: column; gap: 20px;">
+        {% csrf_token %}
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start;">
+            <!-- LEFT MAIN COLUMN -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                
+                <!-- Card 1: Thông tin cơ bản -->
+                <div class="ingredient-page-card" style="padding: 22px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+                        <span style="font-size: 18px;">📋</span>
+                        <h3 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0;">Thông tin định danh & Phân loại</h3>
+                    </div>
+
+                    <div class="form-row" style="margin-bottom: 14px;">
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                            Tên mặt hàng / Món ăn <span class="text-danger" style="color: #ef4444;">*</span>
+                        </label>
+                        <input type="text" name="name" id="id_name" class="form-input" style="height: 42px; font-size: 14.5px; font-weight: 600;" value="{{ form.name.value|default:'' }}" required placeholder="Ví dụ: Pad Thái Tôm Sú, Cơm Chiên Dứa Hải Sản...">
+                        <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">Tên hiển thị trên màn hình gọi món POS và in ra hóa đơn khách hàng.</small>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                        <div>
+                            <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                                Danh mục thực đơn <span class="text-danger" style="color: #ef4444;">*</span>
+                            </label>
+                            <select name="category" id="id_category" class="form-input" style="height: 40px; font-weight: 600;" required>
+                                <option value="">-- Chọn danh mục --</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if form.category.value|stringformat:'s' == cat.id|stringformat:'s' %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                                Nhóm con / Phân nhóm
+                            </label>
+                            <input type="text" name="subgroup" id="id_subgroup" class="form-input" list="subgroup-list" style="height: 40px;" value="{{ form.subgroup.value|default:'' }}" placeholder="Ví dụ: Món xào, Món nướng, Món lẩu...">
+                            <datalist id="subgroup-list">
+                                <option value="Món xào">
+                                <option value="Món nướng">
+                                <option value="Món lẩu">
+                                <option value="Món hấp">
+                                <option value="Món canh/súp">
+                                <option value="Tráng miệng">
+                                <option value="Nước ép tươi">
+                                <option value="Cà phê & Trà">
+                            </datalist>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
+                                    Mã mặt hàng (Code) <span class="text-danger" style="color: #ef4444;">*</span>
+                                </label>
+                                <button type="button" id="btn-auto-code" style="background: none; border: none; color: #0284c7; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0;">
+                                    ⚡ Tự sinh mã
+                                </button>
+                            </div>
+                            <input type="text" name="code" id="id_code" class="form-input" style="height: 40px; text-transform: uppercase; font-family: monospace; font-size: 14px; font-weight: 700;" value="{{ form.code.value|default:'' }}" required placeholder="Để trống để tự tạo mã">
+                        </div>
+                        <div>
+                            <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                                Đơn vị tính (ĐVT) <span class="text-danger" style="color: #ef4444;">*</span>
+                            </label>
+                            <input type="text" name="unit" id="id_unit" class="form-input" style="height: 40px;" value="{{ form.unit.value|default:'Phần' }}" required placeholder="Phần, Dĩa, Tô, Ly...">
+                        </div>
+                    </div>
+
+                    <!-- Quick Unit Selector Pills -->
+                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 10px; flex-wrap: wrap;">
+                        <span style="font-size: 11.5px; color: #94a3b8; font-weight: 600;">Chọn nhanh ĐVT:</span>
+                        {% for u in common_units %}
+                        <button type="button" class="btn-quick-unit" data-unit="{{ u }}" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 9px; font-size: 11px; cursor: pointer; color: #475569; font-weight: 600;">{{ u }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Card 2: Bảng giá bán 3 cấp & Ước tính lợi nhuận -->
+                <div class="ingredient-page-card" style="padding: 22px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 18px;">💵</span>
+                            <h3 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0;">Bảng giá bán 3 cấp & Giá vốn</h3>
+                        </div>
+                        <span style="font-size: 12px; color: #64748b;">Đơn vị: Việt Nam Đồng (VNĐ)</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px;">
+                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px;">
+                            <label style="font-size: 12.5px; font-weight: 700; color: #166534; margin-bottom: 4px; display: block;">
+                                Đơn giá bán 1 (Chuẩn) <span class="text-danger" style="color: #ef4444;">*</span>
+                            </label>
+                            <input type="text" name="price" id="id_price" class="form-input price-mask-input" style="height: 38px; font-size: 15px; font-weight: 700; color: #15803d; text-align: right; background: #fff;" value="{{ form.price.value|default:'0' }}" required>
+                            <small style="font-size: 11px; color: #16a34a; margin-top: 4px; display: block;">Giá bán chuẩn phục vụ</small>
+                        </div>
+
+                        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px;">
+                            <label style="font-size: 12.5px; font-weight: 700; color: #1e40af; margin-bottom: 4px; display: block;">
+                                Đơn giá 2 (VIP / Phòng lạnh)
+                            </label>
+                            <input type="text" name="price_2" id="id_price_2" class="form-input price-mask-input" style="height: 38px; font-size: 15px; font-weight: 700; color: #1d4ed8; text-align: right; background: #fff;" value="{{ form.price_2.value|default:'0' }}">
+                            <small style="font-size: 11px; color: #3b82f6; margin-top: 4px; display: block;">Áp dụng khu VIP</small>
+                        </div>
+
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px;">
+                            <label style="font-size: 12.5px; font-weight: 700; color: #92400e; margin-bottom: 4px; display: block;">
+                                Đơn giá 3 (Mang về / Ship)
+                            </label>
+                            <input type="text" name="price_3" id="id_price_3" class="form-input price-mask-input" style="height: 38px; font-size: 15px; font-weight: 700; color: #b45309; text-align: right; background: #fff;" value="{{ form.price_3.value|default:'0' }}">
+                            <small style="font-size: 11px; color: #d97706; margin-top: 4px; display: block;">Áp dụng đơn giao hàng</small>
+                        </div>
+                    </div>
+
+                    <!-- Live KPI Estimated Box -->
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+                        <div>
+                            <span style="font-size: 12px; color: #64748b; font-weight: 600;">Giá vốn định lượng (BOM):</span>
+                            <div id="live-cost-display" style="font-size: 16px; font-weight: 800; color: #d97706; margin-top: 2px;">
+                                {{ cost_price|default:0|floatformat:0 }} đ
+                            </div>
+                            <input type="hidden" name="cost_price" id="id_cost_price" value="{{ form.cost_price.value|default:'0' }}">
+                        </div>
+                        <div>
+                            <span style="font-size: 12px; color: #64748b; font-weight: 600;">Lợi nhuận gộp ước tính:</span>
+                            <div id="live-profit-display" style="font-size: 16px; font-weight: 800; color: #16a34a; margin-top: 2px;">
+                                {{ profit|default:0|floatformat:0 }} đ
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 12px; color: #64748b; font-weight: 600;">Tỷ suất lợi nhuận:</span>
+                            <div id="live-margin-display" style="font-size: 16px; font-weight: 800; color: #0284c7; margin-top: 2px;">
+                                {{ margin_pct|default:0 }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Mô tả & Ghi chú -->
+                <div class="ingredient-page-card" style="padding: 22px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                        <span style="font-size: 18px;">📝</span>
+                        <h3 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0;">Mô tả & Thành phần ghi chú</h3>
+                    </div>
+                    <textarea name="description" id="id_description" class="form-textarea" rows="3" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; font-size: 13.5px;" placeholder="Ghi chú về hương vị, thành phần dị ứng, hoặc khuyến nghị ăn kèm...">{{ form.description.value|default:'' }}</textarea>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDEBAR COLUMN -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                
+                <!-- Action Buttons Card -->
+                <div class="ingredient-page-card" style="padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <button type="submit" class="btn-ing-action" style="width: 100%; height: 46px; background: #f97316; color: #fff; font-size: 15px; font-weight: 800; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Lưu mặt hàng
+                    </button>
+                    
+                    <button type="submit" name="{% if is_edit %}save_and_edit_recipe{% else %}save_and_add_recipe{% endif %}" value="1" class="btn-ing-action" style="width: 100%; height: 40px; margin-top: 10px; background: #0284c7; color: #fff; font-size: 13.5px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        ⚖️ Lưu & Chỉnh định lượng BOM
+                    </button>
+
+                    <a href="{% url back_url %}" class="btn-ing-action" style="width: 100%; height: 38px; margin-top: 10px; background: #f1f5f9; color: #64748b; font-size: 13px; font-weight: 600; border: 1px solid #e2e8f0; border-radius: 8px; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                        Hủy bỏ
+                    </a>
+                </div>
+
+                <!-- Phân loại & Trạng thái bán Card -->
+                <div class="ingredient-page-card" style="padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;">
+                        <span style="font-size: 16px;">⚙️</span>
+                        <h4 style="font-size: 14.5px; font-weight: 700; color: #1e293b; margin: 0;">Trạng thái & Phân loại</h4>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                            Loại mặt hàng
+                        </label>
+                        <select name="product_type" id="id_product_type" class="form-input" style="height: 38px; width: 100%; font-weight: 600;">
+                            {% for code, label in product_types %}
+                            <option value="{{ code }}" {% if form.product_type.value == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+                            <input type="checkbox" name="is_available" id="id_is_available" {% if form.is_available.value or form.is_available.value is None %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #16a34a;">
+                            <div>
+                                <strong style="font-size: 13.5px; color: #166534; display: block;">Đang mở bán phục vụ</strong>
+                                <span style="font-size: 11.5px; color: #15803d;">Hiển thị trực tiếp trên menu POS</span>
+                            </div>
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <input type="checkbox" name="is_active" id="id_is_active" {% if form.is_active.value or form.is_active.value is None %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #0284c7;">
+                            <div>
+                                <strong style="font-size: 13px; color: #334155; display: block;">Kích hoạt sử dụng</strong>
+                                <span style="font-size: 11.5px; color: #64748b;">Mặt hàng tồn tại trong hệ thống</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Recipe / BOM Status Preview Widget (nếu đang sửa) -->
+                {% if is_edit %}
+                <div class="ingredient-page-card" style="padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-size: 14px; font-weight: 700; color: #1e293b;">⚖️ Định lượng (BOM)</span>
+                        {% if has_recipe %}
+                        <span class="dish-item-badge badge-has-recipe">{{ recipe_items_count }} NVL</span>
+                        {% else %}
+                        <span class="dish-item-badge badge-no-recipe">Chưa có BOM</span>
+                        {% endif %}
+                    </div>
+                    
+                    <p style="font-size: 12.5px; color: #64748b; line-height: 1.5; margin-bottom: 14px;">
+                        {% if has_recipe %}
+                        Mặt hàng này đã có công thức định lượng gồm <strong>{{ recipe_items_count }}</strong> nguyên liệu. Khi thanh toán sẽ tự động trừ kho.
+                        {% else %}
+                        Mặt hàng chưa được định lượng nguyên liệu. Khi bán hệ thống sẽ không thể tự động trừ kho.
+                        {% endif %}
+                    </p>
+
+                    <a href="{% url 'inventory:recipes' %}?product_id={{ product.id }}" style="display: block; text-align: center; text-decoration: none; padding: 9px 14px; background: #f8fafc; border: 1px dashed #0284c7; color: #0284c7; font-weight: 700; font-size: 13px; border-radius: 6px;">
+                        👉 Mở trình quản lý Định lượng món
+                    </a>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- JavaScript cho Form Mặt hàng -->
+<script>
+(() => {
+    // 1. Format số tiền khi người dùng gõ
+    const parseNum = val => Number(String(val).replace(/\D/g, '') || 0);
+    const formatNum = val => parseNum(val).toLocaleString('vi-VN');
+
+    const priceInput = document.getElementById('id_price');
+    const price2Input = document.getElementById('id_price_2');
+    const price3Input = document.getElementById('id_price_3');
+    const costInput = document.getElementById('id_cost_price');
+
+    const liveProfit = document.getElementById('live-profit-display');
+    const liveMargin = document.getElementById('live-margin-display');
+
+    function updateKPI() {
+        const p = parseNum(priceInput.value);
+        const c = parseNum(costInput.value);
+        const profit = p - c;
+        const margin = p > 0 ? ((profit / p) * 100).toFixed(1) : 0;
+
+        liveProfit.textContent = `${profit.toLocaleString('vi-VN')} đ`;
+        liveMargin.textContent = `${margin}%`;
+        
+        if (margin >= 50) {
+            liveMargin.style.color = '#16a34a';
+        } else if (margin >= 30) {
+            liveMargin.style.color = '#d97706';
+        } else {
+            liveMargin.style.color = '#dc2626';
+        }
+    }
+
+    [priceInput, price2Input, price3Input].forEach(inp => {
+        if (!inp) return;
+        inp.value = formatNum(inp.value);
+        inp.addEventListener('input', (e) => {
+            const pos = e.target.selectionStart;
+            e.target.value = formatNum(e.target.value);
+            updateKPI();
+        });
+    });
+
+    // 2. Nút chọn nhanh ĐVT
+    document.querySelectorAll('.btn-quick-unit').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('id_unit').value = btn.dataset.unit;
+        });
+    });
+
+    // 3. Tự sinh mã món
+    document.getElementById('btn-auto-code')?.addEventListener('click', () => {
+        const catSelect = document.getElementById('id_category');
+        const catText = catSelect.selectedOptions[0]?.text || '';
+        let prefix = 'M';
+        if (catText) {
+            prefix = catText.split(/\s+/).map(w => w[0]).join('').toUpperCase().substring(0, 3) || 'M';
+        }
+        const rand = Math.floor(Math.random() * 90) + 10;
+        document.getElementById('id_code').value = `${prefix}${rand}`;
+    });
+
+    // Clean giá trị format trước khi submit form chuẩn Django
+    document.getElementById('main-product-form')?.addEventListener('submit', () => {
+        [priceInput, price2Input, price3Input].forEach(inp => {
+            if (inp) inp.value = parseNum(inp.value);
+        });
+    });
+
+    updateKPI();
+})();
+</script>
+{% endblock %}
+

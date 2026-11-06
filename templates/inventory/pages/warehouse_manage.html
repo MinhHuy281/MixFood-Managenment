@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quản lý Kho hàng (Tách Thùng ra Đồ Hộp / Suất chờ bán) | MixFood Manager{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="inv-standalone-container" data-initial-tab="unpack" style="padding: 16px 20px; max-width: 1440px; margin: 0 auto;">
+    <div class="inv-page-top-nav">
+        <a href="{% url 'dashboard:home' %}" class="inv-back-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            ← Về màn hình thu ngân POS
+        </a>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="{% url 'inventory:manage' %}" class="inv-btn-primary" style="text-decoration: none; background: #0f172a; color: #fff;">
+                📦 Quản lý Kho hàng (Tách Thùng ➔ Hộp)
+            </a>
+            <a href="{% url 'inventory:home' %}" class="inv-btn-secondary" style="text-decoration: none;">
+                🔄 Báo cáo Xuất - Nhập - Tồn
+            </a>
+            <a href="{% url 'inventory:recipes' %}" class="inv-btn-secondary" style="text-decoration: none;">
+                ⚖️ Định lượng món (Recipes / BOM)
+            </a>
+            <a href="{% url 'catalog:ingredients' %}" class="inv-btn-secondary" style="text-decoration: none;">
+                🏷️ Quản lý Mặt hàng
+            </a>
+        </div>
+    </div>
+
+    <!-- Inventory Manager Interface -->
+    {% include 'inventory/modals/inventory_modal.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/inventory.js' %}?v={% now 'U' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.querySelector('#modal-inventory-manager');
+        if (modal) {
+            modal.hidden = false;
+            modal.classList.remove('menu-modal-backdrop', 'inv-modal-backdrop');
+            modal.classList.add('inv-embedded-page');
+        }
+        if (typeof window.openPosInventoryModal === 'function') {
+            window.openPosInventoryModal('unpack');
+        }
+    });
+</script>
+{% endblock %}
+

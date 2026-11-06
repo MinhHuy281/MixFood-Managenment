@@ -4,16 +4,23 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from audit.models import ActivityLog, log_activity
 from catalog.models import Ingredient
 
+from .conversions import convert_recipe_to_prep_qty, convert_recipe_to_stock_qty
 from .models import (
-    RecipeItem, StockReceipt, StockReceiptItem, StockTransaction,
+    Recipe, RecipeItem, StockReceipt, StockReceiptItem, StockTransaction,
     StockIssue, StockIssueItem, StockAdjustment, StockAdjustmentItem
 )
 
 
+@transaction.atomic
 def deduct_for_sale(order_items, user, reference_id):
-    """Lock ingredients, validate stock, then deduct all recipe quantities atomically."""
+    """
+    Tự động quét định lượng (BOM), áp dụng quy đổi đơn vị (UoM Conversion)
+    và ưu tiên trừ vào lượng hàng đã tách chờ bán tại Quầy/Bếp (prep_stock),
+    nếu thiếu mới trừ tiếp vào Kho tổng (current_stock).
+    """
     required = {}
     for order_item in order_items:
         recipe_items = RecipeItem.objects.filter(
@@ -21,10 +28,24 @@ def deduct_for_sale(order_items, user, reference_id):
             recipe__is_active=True,
         ).select_related('ingredient')
         for recipe_item in recipe_items:
-            required.setdefault(recipe_item.ingredient_id, {
+            stock_unit_qty = convert_recipe_to_stock_qty(
+                recipe_item.ingredient,
+                recipe_item.quantity,
+                recipe_item.unit
+            )
+            prep_unit_qty = convert_recipe_to_prep_qty(
+                recipe_item.ingredient,
+                recipe_item.quantity,
+                recipe_item.unit
+            )
+            order_qty = Decimal(str(order_item.quantity))
+            entry = required.setdefault(recipe_item.ingredient_id, {
                 'ingredient': recipe_item.ingredient,
                 'quantity': Decimal('0'),
-            })['quantity'] += recipe_item.quantity * order_item.quantity
+                'prep_quantity': Decimal('0'),
+            })
+            entry['quantity'] += stock_unit_qty * order_qty
+            entry['prep_quantity'] += prep_unit_qty * order_qty
 
     if not required:
         return []
@@ -36,26 +57,93 @@ def deduct_for_sale(order_items, user, reference_id):
     }
     for ingredient_id, data in required.items():
         ingredient = locked.get(ingredient_id)
-        if ingredient is None or ingredient.current_stock < data['quantity']:
+        if ingredient is None:
+            raise ValidationError(f"Không tìm thấy nguyên liệu: {data['ingredient'].name}")
+
+        pack_size = ingredient.pack_size if ingredient.pack_size and ingredient.pack_size > 0 else Decimal('1')
+        prep_in_stock_units = (ingredient.prep_stock or Decimal('0')) / pack_size
+        total_available = (ingredient.current_stock or Decimal('0')) + prep_in_stock_units
+
+        if total_available < data['quantity']:
             name = data['ingredient'].name
-            raise ValidationError(f'Không đủ tồn kho nguyên liệu: {name}.')
+            curr = ingredient.current_stock or Decimal('0')
+            prep = ingredient.prep_stock or Decimal('0')
+            unit = ingredient.unit or ''
+            sub_u = ingredient.unpacked_unit or unit
+            req = data['quantity']
+            raise ValidationError(
+                f'Không đủ tồn kho nguyên liệu: {name} '
+                f'(Kho tổng: {curr:.2f} {unit}, Chờ bán: {prep:.2f} {sub_u}, cần: {req:.2f} {unit}).'
+            )
 
     transactions = []
     for ingredient_id, data in required.items():
         ingredient = locked[ingredient_id]
-        ingredient.current_stock -= data['quantity']
-        ingredient.save(update_fields=('current_stock', 'updated_at'))
-        transactions.append(StockTransaction.objects.create(
-            ingredient=ingredient,
-            transaction_type=StockTransaction.TransactionType.SALE,
-            quantity=-data['quantity'],
-            unit_cost=ingredient.average_cost,
-            balance_after=ingredient.current_stock,
-            reference_type='order',
-            reference_id=reference_id,
-            note='Tự động xuất kho theo thanh toán',
-            created_by=user,
-        ))
+        pack_size = ingredient.pack_size if ingredient.pack_size and ingredient.pack_size > 0 else Decimal('1')
+        req_stock = data['quantity']
+        req_prep = data['prep_quantity']
+        curr_prep = ingredient.prep_stock or Decimal('0')
+
+        if curr_prep >= req_prep and curr_prep > 0:
+            # Trừ hoàn toàn từ lượng đã xuất ra chờ bán (prep_stock)
+            ingredient.prep_stock = curr_prep - req_prep
+            ingredient.save(update_fields=('prep_stock', 'updated_at'))
+            transactions.append(StockTransaction.objects.create(
+                ingredient=ingredient,
+                transaction_type=StockTransaction.TransactionType.SALE,
+                quantity=-req_stock,
+                unit_cost=ingredient.average_cost,
+                balance_after=ingredient.current_stock,
+                reference_type='order_prep',
+                reference_id=reference_id,
+                note=f'Tự động xuất bán đơn #{reference_id} (Trừ {req_prep:.2f} {ingredient.unpacked_unit} chờ bán)',
+                created_by=user,
+            ))
+        elif curr_prep > 0:
+            # Trừ hết phần chờ bán (prep_stock), phần còn thiếu trừ vào kho tổng (current_stock)
+            used_prep = curr_prep
+            used_stock_from_prep = used_prep / pack_size
+            rem_stock = req_stock - used_stock_from_prep
+            ingredient.prep_stock = Decimal('0')
+            ingredient.current_stock -= rem_stock
+            ingredient.save(update_fields=('current_stock', 'prep_stock', 'updated_at'))
+            transactions.append(StockTransaction.objects.create(
+                ingredient=ingredient,
+                transaction_type=StockTransaction.TransactionType.SALE,
+                quantity=-used_stock_from_prep,
+                unit_cost=ingredient.average_cost,
+                balance_after=ingredient.current_stock,
+                reference_type='order_prep',
+                reference_id=reference_id,
+                note=f'Tự động xuất bán đơn #{reference_id} (Trừ {used_prep:.2f} {ingredient.unpacked_unit} chờ bán)',
+                created_by=user,
+            ))
+            transactions.append(StockTransaction.objects.create(
+                ingredient=ingredient,
+                transaction_type=StockTransaction.TransactionType.SALE,
+                quantity=-rem_stock,
+                unit_cost=ingredient.average_cost,
+                balance_after=ingredient.current_stock,
+                reference_type='order',
+                reference_id=reference_id,
+                note=f'Tự động xuất kho bán hàng đơn #{reference_id}',
+                created_by=user,
+            ))
+        else:
+            # Chưa tách ra chờ bán -> Trừ trực tiếp vào kho tổng (current_stock)
+            ingredient.current_stock -= req_stock
+            ingredient.save(update_fields=('current_stock', 'updated_at'))
+            transactions.append(StockTransaction.objects.create(
+                ingredient=ingredient,
+                transaction_type=StockTransaction.TransactionType.SALE,
+                quantity=-req_stock,
+                unit_cost=ingredient.average_cost,
+                balance_after=ingredient.current_stock,
+                reference_type='order',
+                reference_id=reference_id,
+                note=f'Tự động xuất kho bán hàng đơn #{reference_id}',
+                created_by=user,
+            ))
     return transactions
 
 
@@ -90,34 +178,73 @@ def receive_stock(receipt, user):
     receipt.save(update_fields=('status', 'confirmed_at'))
 
 
-def restore_stock_for_undone_sale(order_id):
-    """Hoàn trả lại tồn kho nguyên liệu khi hoàn tác thanh toán một đơn hàng."""
+@transaction.atomic
+def restore_stock_for_cancelled_sale(order_id, user=None, reason=''):
+    """
+    Tự động hoàn trả lại đúng số NVL đã trừ vào Thẻ kho / Quầy chờ bán khi Hóa đơn bị Hủy hoặc Hoàn tác.
+    """
     if not order_id:
-        return
+        return []
+
+    already_restored = StockTransaction.objects.filter(
+        reference_type__in=('order', 'order_prep'),
+        reference_id=order_id,
+        transaction_type=StockTransaction.TransactionType.RESTORE,
+    ).exists()
+    if already_restored:
+        return []
+
     sale_txs = list(
         StockTransaction.objects.filter(
-            reference_type='order',
+            reference_type__in=('order', 'order_prep'),
             reference_id=order_id,
             transaction_type=StockTransaction.TransactionType.SALE,
-        )
+        ).select_related('ingredient')
     )
     if not sale_txs:
-        return
+        return []
 
     ingredient_ids = list({tx.ingredient_id for tx in sale_txs})
     locked = {
         ing.pk: ing
         for ing in Ingredient.objects.select_for_update().filter(pk__in=ingredient_ids)
     }
+
+    restore_transactions = []
     for tx in sale_txs:
         ing = locked.get(tx.ingredient_id)
         if ing is not None:
-            ing.current_stock += abs(tx.quantity)
-            ing.save(update_fields=('current_stock', 'updated_at'))
-    StockTransaction.objects.filter(pk__in=[tx.pk for tx in sale_txs]).delete()
+            restore_qty = abs(tx.quantity)
+            pack_size = ing.pack_size if ing.pack_size and ing.pack_size > 0 else Decimal('1')
+            if tx.reference_type == 'order_prep':
+                ing.prep_stock = (ing.prep_stock or Decimal('0')) + (restore_qty * pack_size)
+                ing.save(update_fields=('prep_stock', 'updated_at'))
+            else:
+                ing.current_stock += restore_qty
+                ing.save(update_fields=('current_stock', 'updated_at'))
 
-from .models import StockIssue, StockIssueItem, StockAdjustment, StockAdjustmentItem
-from audit.models import ActivityLog, log_activity
+            restore_note = f'Tự động hoàn kho do hủy/hoàn tác đơn #{order_id}'
+            if reason:
+                restore_note += f': {reason}'
+            restore_transactions.append(
+                StockTransaction.objects.create(
+                    ingredient=ing,
+                    transaction_type=StockTransaction.TransactionType.RESTORE,
+                    quantity=restore_qty,
+                    unit_cost=tx.unit_cost or ing.average_cost,
+                    balance_after=ing.current_stock,
+                    reference_type=tx.reference_type,
+                    reference_id=order_id,
+                    note=restore_note[:255],
+                    created_by=user or tx.created_by,
+                )
+            )
+    return restore_transactions
+
+
+def restore_stock_for_undone_sale(order_id, user=None, reason=''):
+    """Tương thích ngược: gọi restore_stock_for_cancelled_sale."""
+    return restore_stock_for_cancelled_sale(order_id, user=user, reason=reason)
 
 
 def generate_receipt_code():
@@ -190,6 +317,8 @@ def create_and_confirm_receipt(user, supplier, note, items_data, request=None):
             cost = Decimal(0)
 
         ingredient = Ingredient.objects.select_for_update().get(pk=ing_id)
+        if cost == 0 and ingredient.average_cost > 0:
+            cost = ingredient.average_cost
         line_cost = qty * cost
         total_amount += line_cost
 
@@ -203,10 +332,8 @@ def create_and_confirm_receipt(user, supplier, note, items_data, request=None):
 
         old_stock = ingredient.current_stock
         new_stock = old_stock + qty
-        if new_stock > 0:
+        if new_stock > 0 and cost > 0:
             ingredient.average_cost = ((old_stock * ingredient.average_cost) + line_cost) / new_stock
-        else:
-            ingredient.average_cost = cost
         ingredient.current_stock = new_stock
         ingredient.save(update_fields=('current_stock', 'average_cost', 'updated_at'))
 
@@ -226,9 +353,7 @@ def create_and_confirm_receipt(user, supplier, note, items_data, request=None):
     receipt.total_amount = total_amount
     receipt.save(update_fields=('total_amount',))
 
-    # Cập nhật lại giá vốn món ăn
     from .views import update_product_cost_from_recipe
-    from .models import RecipeItem, Recipe
     for ing in affected_ingredients:
         recipe_ids = RecipeItem.objects.filter(ingredient=ing).values_list('recipe_id', flat=True).distinct()
         for r in Recipe.objects.filter(id__in=recipe_ids, is_active=True).select_related('product'):
@@ -255,9 +380,10 @@ def create_and_confirm_issue(user, issue_type, receiver, note, items_data, reque
         raise ValidationError('Phiếu xuất phải có ít nhất một nguyên liệu.')
 
     issue_code = generate_issue_code()
+    effective_type = issue_type or StockIssue.IssueType.MANUAL
     issue = StockIssue.objects.create(
         issue_code=issue_code,
-        issue_type=issue_type or StockIssue.IssueType.MANUAL,
+        issue_type=effective_type,
         receiver=receiver.strip() if receiver else '',
         note=note.strip() if note else '',
         status=StockIssue.Status.CONFIRMED,
@@ -265,6 +391,8 @@ def create_and_confirm_issue(user, issue_type, receiver, note, items_data, reque
     )
 
     total_amount = Decimal(0)
+    is_unpack_to_prep = effective_type in (StockIssue.IssueType.MANUAL, StockIssue.IssueType.INTERNAL)
+
     for item in items_data:
         ing_id = item.get('ingredient_id')
         qty = Decimal(str(item.get('quantity', 0)).replace(',', '.'))
@@ -273,7 +401,10 @@ def create_and_confirm_issue(user, issue_type, receiver, note, items_data, reque
 
         ingredient = Ingredient.objects.select_for_update().get(pk=ing_id)
         if ingredient.current_stock < qty:
-            raise ValidationError(f'Nguyên liệu "{ingredient.name}" chỉ còn tồn {ingredient.current_stock:.3f} {ingredient.unit}, không đủ để xuất {qty:.3f}!')
+            raise ValidationError(
+                f'Nguyên liệu "{ingredient.name}" trong kho tổng chỉ còn {ingredient.current_stock:.2f} {ingredient.unit}, '
+                f'không đủ để xuất {qty:.2f} {ingredient.unit}!'
+            )
 
         unit_cost = ingredient.average_cost
         line_cost = qty * unit_cost
@@ -289,7 +420,21 @@ def create_and_confirm_issue(user, issue_type, receiver, note, items_data, reque
 
         new_stock = ingredient.current_stock - qty
         ingredient.current_stock = new_stock
-        ingredient.save(update_fields=('current_stock', 'updated_at'))
+
+        pack_size = ingredient.pack_size if ingredient.pack_size and ingredient.pack_size > 0 else Decimal('1')
+        added_prep = qty * pack_size
+        if is_unpack_to_prep:
+            ingredient.prep_stock = (ingredient.prep_stock or Decimal('0')) + added_prep
+            ingredient.save(update_fields=('current_stock', 'prep_stock', 'updated_at'))
+            tx_note = (
+                f'Xuất tách kho {issue.issue_code}: {qty:g} {ingredient.unit} -> '
+                f'+{added_prep:g} {ingredient.unpacked_unit or "hộp"} đang chờ bán'
+            )
+            if note:
+                tx_note += f' ({note})'
+        else:
+            ingredient.save(update_fields=('current_stock', 'updated_at'))
+            tx_note = f'Xuất kho {issue.issue_code} ({issue.get_issue_type_display()})' + (f' - {note}' if note else '')
 
         StockTransaction.objects.create(
             ingredient=ingredient,
@@ -299,7 +444,7 @@ def create_and_confirm_issue(user, issue_type, receiver, note, items_data, reque
             balance_after=new_stock,
             reference_type='stock_issue',
             reference_id=issue.pk,
-            note=f'Xuất kho {issue.issue_code} ({issue.get_issue_type_display()})' + (f' - {note}' if note else ''),
+            note=tx_note[:255],
             created_by=user,
         )
 
@@ -391,4 +536,3 @@ def create_and_confirm_adjustment(user, note, items_data, request=None):
     )
 
     return adjustment
-

@@ -6,6 +6,15 @@
     let cachedIngredients = [];
     let currentActiveTab = 'xnt';
     let currentRangePreset = 'this_month';
+    let currentInvWarehouse = 'all';
+    let currentAdjWarehouse = 'all';
+    let currentUnpackWarehouse = 'all';
+    let unpackRowsCache = [];
+
+    const removeViTones = (str) => {
+        if (!str) return '';
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    };
 
     const getCsrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
 
@@ -46,6 +55,9 @@
             q: query,
             low_stock_only: lowStockOnly,
         });
+        if (currentInvWarehouse && currentInvWarehouse !== 'all') {
+            params.set('warehouse', currentInvWarehouse);
+        }
 
         try {
             const resp = await fetch(`${apiUrl}?${params.toString()}`);
@@ -64,6 +76,28 @@
             }
             if (data.end_date_str && document.querySelector('#inv-date-to')) {
                 document.querySelector('#inv-date-to').value = data.end_date_str;
+            }
+
+            // Update Warehouse Tab Counts
+            if (data.warehouse_counts) {
+                const wc = data.warehouse_counts;
+                const cAll = document.querySelector('#inv-wh-count-all');
+                const cFresh = document.querySelector('#inv-wh-count-fresh');
+                const cDry = document.querySelector('#inv-wh-count-dry');
+                const cBev = document.querySelector('#inv-wh-count-beverage');
+                if (cAll) cAll.textContent = wc.all;
+                if (cFresh) cFresh.textContent = wc.fresh;
+                if (cDry) cDry.textContent = wc.dry;
+                if (cBev) cBev.textContent = wc.beverage;
+
+                const aAll = document.querySelector('#adj-count-all');
+                const aFresh = document.querySelector('#adj-count-fresh');
+                const aDry = document.querySelector('#adj-count-dry');
+                const aBev = document.querySelector('#adj-count-beverage');
+                if (aAll) aAll.textContent = wc.all;
+                if (aFresh) aFresh.textContent = wc.fresh;
+                if (aDry) aDry.textContent = wc.dry;
+                if (aBev) aBev.textContent = wc.beverage;
             }
 
             // Update KPIs
@@ -118,25 +152,39 @@
                 sumCloseVal += r.closing_val;
 
                 const statusBadge = r.is_low_stock
-                    ? '<span class="inv-badge badge-status-low">⚠️ SẮP HẾT</span>'
-                    : '<span class="inv-badge badge-status-good">✓ Bình thường</span>';
+                    ? '<span class="inv-badge badge-status-low" style="padding: 2px 6px; font-size: 10.5px;">⚠️ SẮP HẾT</span>'
+                    : '<span class="inv-badge badge-status-good" style="padding: 2px 6px; font-size: 10.5px;">✓ Đủ</span>';
+
+                let whBadge = '';
+                if (r.storage_area === 'fresh') {
+                    whBadge = '<span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">🥦 Kho 1: Tươi</span>';
+                } else if (r.storage_area === 'dry') {
+                    whBadge = '<span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; background: #fffbeb; color: #d97706; border: 1px solid #fde68a;">🥫 Kho 2: Khô & GV</span>';
+                } else {
+                    whBadge = '<span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">🍹 Kho 3: Nước & Quả</span>';
+                }
 
                 return `
                     <tr class="${r.is_low_stock ? 'row-low-stock' : ''}">
                         <td class="text-center">${idx + 1}</td>
+                        <td>${whBadge}</td>
                         <td><strong>${r.code}</strong></td>
-                        <td><strong>${r.name}</strong></td>
-                        <td><span style="color: #64748b;">${r.group}</span></td>
-                        <td class="text-center">${r.unit}</td>
+                        <td>
+                            <strong>${r.name}</strong>
+                            <div style="font-size: 11.5px; color: #64748b;">${r.group}</div>
+                        </td>
+                        <td class="text-center" style="font-weight: 700;">${r.unit}</td>
                         <td class="text-right">${r.cost_formatted}</td>
                         <td class="text-right">${r.opening_stock_formatted}</td>
                         <td class="text-right text-emerald text-bold">${r.receipt_qty > 0 ? '+' + r.receipt_qty_formatted : '-'}</td>
                         <td class="text-right text-indigo">${r.sale_qty > 0 ? r.sale_qty_formatted : '-'}</td>
                         <td class="text-right text-amber">${r.issue_qty > 0 ? r.issue_qty_formatted : '-'}</td>
                         <td class="text-right">${r.adjust_qty !== 0 ? (r.adjust_qty > 0 ? '+' : '') + r.adjust_qty_formatted : '-'}</td>
-                        <td class="text-right text-bold" style="font-size: 13px;">${r.closing_stock_formatted}</td>
+                        <td class="text-right text-bold" style="font-size: 13.5px; color: #0f172a;">${r.closing_stock_formatted}</td>
                         <td class="text-right text-bold text-blue">${r.closing_val_formatted} đ</td>
-                        <td class="text-right text-muted">${r.minimum_stock_formatted}</td>
+                        <td style="text-align: left; font-weight: 700; color: #0284c7; font-size: 12px;">
+                            ⏳ ${r.portions_wait || '-'}
+                        </td>
                         <td class="text-center">${statusBadge}</td>
                     </tr>
                 `;
@@ -266,22 +314,40 @@
             await loadXntData();
         }
 
-        tbody.innerHTML = cachedIngredients.map((ing, idx) => `
-            <tr data-ingredient-id="${ing.id}" data-cost="${ing.average_cost}" data-system="${ing.current_stock}">
-                <td class="text-center">${idx + 1}</td>
-                <td><strong>${ing.code}</strong></td>
-                <td><strong>${ing.name}</strong></td>
-                <td><span style="color: #64748b;">${ing.group || '-'}</span></td>
-                <td class="text-center">${ing.unit}</td>
-                <td class="text-right">${ing.cost_formatted} đ</td>
-                <td class="text-right text-bold system-stock-val">${ing.current_stock_formatted}</td>
-                <td class="text-center">
-                    <input type="number" step="0.01" class="inv-input-actual-stock" value="${ing.current_stock}" data-id="${ing.id}">
-                </td>
-                <td class="text-right text-bold diff-qty-val">0</td>
-                <td class="text-right text-bold diff-amt-val">0 đ</td>
-            </tr>
-        `).join('');
+        const filteredIngs = (currentAdjWarehouse && currentAdjWarehouse !== 'all')
+            ? cachedIngredients.filter(i => i.storage_area === currentAdjWarehouse)
+            : cachedIngredients;
+
+        tbody.innerHTML = filteredIngs.map((ing, idx) => {
+            let whBadge = '';
+            if (ing.storage_area === 'fresh') {
+                whBadge = '<span style="display: inline-block; padding: 2px 6px; border-radius: 8px; font-size: 10.5px; font-weight: 700; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">🥦 Kho 1</span>';
+            } else if (ing.storage_area === 'dry') {
+                whBadge = '<span style="display: inline-block; padding: 2px 6px; border-radius: 8px; font-size: 10.5px; font-weight: 700; background: #fffbeb; color: #d97706; border: 1px solid #fde68a;">🥫 Kho 2</span>';
+            } else {
+                whBadge = '<span style="display: inline-block; padding: 2px 6px; border-radius: 8px; font-size: 10.5px; font-weight: 700; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">🍹 Kho 3</span>';
+            }
+
+            return `
+                <tr data-ingredient-id="${ing.id}" data-cost="${ing.average_cost}" data-system="${ing.current_stock}">
+                    <td class="text-center">${idx + 1}</td>
+                    <td><strong>${ing.code}</strong> ${whBadge}</td>
+                    <td>
+                        <strong>${ing.name}</strong>
+                        <div style="font-size: 11px; color: #0284c7; font-weight: 700;">⏳ ${ing.portions_wait || ''}</div>
+                    </td>
+                    <td><span style="color: #64748b;">${ing.group || '-'}</span></td>
+                    <td class="text-center" style="font-weight: 700;">${ing.unit}</td>
+                    <td class="text-right">${ing.cost_formatted} đ</td>
+                    <td class="text-right text-bold system-stock-val">${ing.current_stock_formatted}</td>
+                    <td class="text-center">
+                        <input type="number" step="0.01" class="inv-input-actual-stock" value="${ing.current_stock}" data-id="${ing.id}">
+                    </td>
+                    <td class="text-right text-bold diff-qty-val">0</td>
+                    <td class="text-right text-bold diff-amt-val">0 đ</td>
+                </tr>
+            `;
+        }).join('');
 
         const updateDiffRow = (input) => {
             const tr = input.closest('tr');
@@ -434,6 +500,38 @@
         sub.hidden = false;
     };
 
+    const buildGroupedIngredientOptions = (items, isIssue = false) => {
+        const freshList = items.filter(i => i.storage_area === 'fresh');
+        const dryList = items.filter(i => i.storage_area === 'dry');
+        const bevList = items.filter(i => i.storage_area === 'beverage');
+
+        let html = '<option value="">-- Chọn nguyên liệu --</option>';
+        const renderItem = (ing) => {
+            if (isIssue) {
+                return `<option value="${ing.id}" data-cost="${ing.average_cost}" data-stock="${ing.current_stock}" data-unit="${ing.unit}">${ing.code} - ${ing.name} (Tồn: ${ing.current_stock} ${ing.unit})</option>`;
+            } else {
+                return `<option value="${ing.id}" data-cost="${ing.average_cost}" data-unit="${ing.unit}">${ing.code} - ${ing.name} (${ing.unit})</option>`;
+            }
+        };
+
+        if (freshList.length) {
+            html += '<optgroup label="🥦 Kho 1: Sản phẩm tươi sống & Rau củ quả">';
+            freshList.forEach(i => { html += renderItem(i); });
+            html += '</optgroup>';
+        }
+        if (dryList.length) {
+            html += '<optgroup label="🥫 Kho 2: Nguyên liệu khô, Gia vị & Bao bì">';
+            dryList.forEach(i => { html += renderItem(i); });
+            html += '</optgroup>';
+        }
+        if (bevList.length) {
+            html += '<optgroup label="🍹 Kho 3: Đồ uống & Trái cây">';
+            bevList.forEach(i => { html += renderItem(i); });
+            html += '</optgroup>';
+        }
+        return html;
+    };
+
     const addReceiptRow = () => {
         const tbody = document.querySelector('#inv-rec-items-tbody');
         if (!tbody) return;
@@ -441,10 +539,7 @@
         const row = document.createElement('tr');
         row.className = 'inv-item-row';
 
-        let optionsHtml = '<option value="">-- Chọn nguyên liệu --</option>';
-        cachedIngredients.forEach((ing) => {
-            optionsHtml += `<option value="${ing.id}" data-cost="${ing.average_cost}" data-unit="${ing.unit}">${ing.code} - ${ing.name} (${ing.unit})</option>`;
-        });
+        const optionsHtml = buildGroupedIngredientOptions(cachedIngredients, false);
 
         row.innerHTML = `
             <td>
@@ -921,6 +1016,386 @@
     };
 
     // =========================================================================
+    // 0. QUẢN LÝ KHO HÀNG: NHẬP KHO & XUẤT TÁCH THÙNG RA ĐỒ HỘP / CHỜ BÁN
+    // =========================================================================
+    const getManageActionUrl = () => {
+        const modal = document.querySelector('#modal-inventory-manager') || document.querySelector('.inv-manager-dialog');
+        return modal?.dataset.apiManageAction || '/inventory/api/manage-action/';
+    };
+
+    const loadUnpackData = async () => {
+        const modal = document.querySelector('#modal-inventory-manager') || document.querySelector('.inv-manager-dialog');
+        const apiUrl = modal?.dataset.apiDashboard || '/inventory/api/dashboard/';
+
+        try {
+            const resp = await fetch(`${apiUrl}?range=this_month`);
+            if (!resp.ok) throw new Error('Không thể tải dữ liệu Quản lý kho hàng.');
+            const data = await resp.json();
+            if (!data.ok) throw new Error(data.error || 'Lỗi dữ liệu kho.');
+
+            cachedIngredients = data.ingredients || [];
+            unpackRowsCache = data.report_rows || [];
+
+            if (data.warehouse_counts) {
+                const wc = data.warehouse_counts;
+                const uAll = document.querySelector('#unpack-wh-count-all');
+                const uFresh = document.querySelector('#unpack-wh-count-fresh');
+                const uDry = document.querySelector('#unpack-wh-count-dry');
+                const uBev = document.querySelector('#unpack-wh-count-beverage');
+                if (uAll) uAll.textContent = wc.all;
+                if (uFresh) uFresh.textContent = wc.fresh;
+                if (uDry) uDry.textContent = wc.dry;
+                if (uBev) uBev.textContent = wc.beverage;
+            }
+
+            // Populate Group filter dropdown for Unpack tab
+            const groupSelect = document.querySelector('#unpack-select-group');
+            if (groupSelect && groupSelect.children.length <= 1) {
+                (data.groups || []).forEach((g) => {
+                    const opt = document.createElement('option');
+                    opt.value = g;
+                    opt.textContent = g;
+                    groupSelect.appendChild(opt);
+                });
+            }
+
+            renderUnpackTable();
+        } catch (err) {
+            showInvToast(err.message || 'Lỗi khi tải dữ liệu Quản lý kho hàng.', false);
+        }
+    };
+
+    const renderUnpackTable = () => {
+        const tbody = document.querySelector('#inv-unpack-tbody');
+        if (!tbody) return;
+
+        const qRaw = (document.querySelector('#unpack-search-query')?.value || '').trim();
+        const qNorm = removeViTones(qRaw);
+        const groupFilter = document.querySelector('#unpack-select-group')?.value || '';
+        const onlyHasStock = document.querySelector('#unpack-chk-has-stock')?.checked || false;
+
+        // Update KPIs across all items in unpackRowsCache
+        const totalItems = unpackRowsCache.length;
+        const hasStockCount = unpackRowsCache.filter(r => (r.closing_stock || 0) > 0).length;
+        const hasPrepCount = unpackRowsCache.filter(r => (r.prep_stock || 0) > 0).length;
+        const totalVal = unpackRowsCache.reduce((sum, r) => sum + (r.closing_val || 0), 0);
+
+        const elTotal = document.querySelector('#unpack-kpi-total-items');
+        const elHasStock = document.querySelector('#unpack-kpi-has-stock');
+        const elHasPrep = document.querySelector('#unpack-kpi-has-prep');
+        const elVal = document.querySelector('#unpack-kpi-total-val');
+        if (elTotal) elTotal.textContent = `${totalItems} mặt hàng`;
+        if (elHasStock) elHasStock.textContent = `${hasStockCount} mặt hàng`;
+        if (elHasPrep) elHasPrep.textContent = `${hasPrepCount} mặt hàng`;
+        if (elVal) elVal.textContent = formatMoney(totalVal);
+
+        let filtered = unpackRowsCache.filter((r) => {
+            if (currentUnpackWarehouse === 'drinks_beer') {
+                const g = (r.group || '').toLowerCase();
+                const u = (r.unit || '').toLowerCase();
+                if (!(r.storage_area === 'beverage' && (g.includes('bia') || g.includes('nước ngọt') || g.includes('giải khát') || u === 'thùng'))) {
+                    return false;
+                }
+            } else if (currentUnpackWarehouse !== 'all' && r.storage_area !== currentUnpackWarehouse) {
+                return false;
+            }
+            if (groupFilter && r.group !== groupFilter) return false;
+            if (onlyHasStock && (r.closing_stock || 0) <= 0 && (r.prep_stock || 0) <= 0) return false;
+            if (qNorm) {
+                const hay = removeViTones(`${r.code} ${r.name} ${r.group} ${r.unit} ${r.unpacked_unit || ''}`);
+                if (!hay.includes(qNorm)) return false;
+            }
+            return true;
+        });
+
+        // Sort: Kho 2 (Đồ khô/hộp) & Kho 3 (Nước ngọt/Bia đóng thùng) lên trước để dễ tách thùng, sau đó A-Z tiếng Việt
+        filtered.sort((a, b) => {
+            if (a.storage_area !== b.storage_area) {
+                const order = { dry: 1, beverage: 2, fresh: 3 };
+                return (order[a.storage_area] || 9) - (order[b.storage_area] || 9);
+            }
+            return (a.name || '').localeCompare(b.name || '', 'vi', { sensitivity: 'base' });
+        });
+
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 28px; color: #64748b;">Không tìm thấy mặt hàng nào phù hợp với bộ lọc.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filtered.map((r, idx) => {
+            let whBadge = '';
+            if (r.storage_area === 'fresh') {
+                whBadge = '<span style="display:inline-block;padding:2px 6px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;white-space:nowrap;">🥦 Kho 1</span>';
+            } else if (r.storage_area === 'dry') {
+                whBadge = '<span style="display:inline-block;padding:2px 6px;border-radius:6px;font-size:10.5px;font-weight:800;background:#fffbeb;color:#d97706;border:1px solid #fde68a;white-space:nowrap;">🥫 Kho 2</span>';
+            } else {
+                whBadge = '<span style="display:inline-block;padding:2px 6px;border-radius:6px;font-size:10.5px;font-weight:800;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;white-space:nowrap;">🍹 Kho 3</span>';
+            }
+
+            const stockQty = Number(r.closing_stock || 0);
+            const prepQty = Number(r.prep_stock || 0);
+            const packSize = Number(r.pack_size || 1);
+            const subUnit = r.unpacked_unit || 'hộp';
+
+            const stockDisplay = stockQty > 0
+                ? `<strong style="font-size: 13px; color: #059669;">${r.closing_stock_formatted} ${r.unit}</strong>`
+                : `<span style="color: #94a3b8; font-weight: 600; font-size: 12px;">0 ${r.unit}</span>`;
+
+            let prepBadgeHtml = '';
+            if (prepQty > 0) {
+                prepBadgeHtml = `
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                        <span style="display: inline-flex; align-items: center; gap: 3px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 2px 7px; border-radius: 6px; font-weight: 800; font-size: 11.5px;">
+                            🟢 ${r.portions_wait}
+                        </span>
+                        <button type="button" class="inv-row-btn btn-return-prep" data-id="${r.id}" data-name="${r.name}" title="Hoàn trả lượng chờ bán về lại Kho tổng" style="padding: 2px 5px; font-size: 10.5px; color: #dc2626; border-color: #fca5a5; background: #fef2f2;">
+                            ↩
+                        </button>
+                    </div>
+                `;
+            } else {
+                prepBadgeHtml = `<span style="color: #94a3b8; font-size: 11.5px;">0 ${subUnit} (Chưa tách)</span>`;
+            }
+
+            return `
+                <tr data-id="${r.id}" data-pack-size="${packSize}" data-unit="${r.unit}" data-sub-unit="${subUnit}" data-name="${r.name}" data-cost="${r.average_cost}">
+                    <td class="text-center" style="padding: 5px 4px; font-size: 11.5px; color: #64748b;">${idx + 1}</td>
+                    <td style="padding: 5px 6px;">${whBadge}</td>
+                    <td style="padding: 5px 8px;">
+                        <div style="display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap;">
+                            <strong style="color: #0f172a; font-size: 12.5px;">${r.name}</strong>
+                            <span style="font-size: 10.5px; color: #64748b; font-family: monospace;">(${r.code})</span>
+                        </div>
+                        <div style="font-size: 10.5px; color: #64748b;">${r.group} • Giá vốn: <strong style="color:#475569;">${r.cost_formatted} đ/${r.unit}</strong></div>
+                    </td>
+                    <td style="background: #f8fafc; padding: 5px 6px;">
+                        <div style="display: flex; align-items: center; gap: 3px; flex-wrap: nowrap;">
+                            <span style="font-size: 11px; font-weight: 800; color: #334155; white-space: nowrap;">1 ${r.unit}=</span>
+                            <input type="number" class="inv-input-text inp-inline-pack-size" data-id="${r.id}" data-unit="${r.unit}" value="${packSize}" min="1" step="0.5" title="Nhập số lượng tách ra từ 1 ${r.unit}" style="width: 48px; height: 26px; padding: 2px 4px; font-size: 12px; font-weight: 800; text-align: center; color: #b45309; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 4px;">
+                            <input type="text" class="inv-input-text inp-inline-pack-sub" data-id="${r.id}" value="${subUnit}" title="Đơn vị lẻ sau khi tách (phần, hộp, quả, lon...)" style="width: 56px; height: 26px; padding: 2px 4px; font-size: 11.5px; font-weight: 700; text-align: center; color: #0369a1; background: #f0f9ff; border: 1px solid #38bdf8; border-radius: 4px;">
+                            <button type="button" class="inv-row-btn btn-inline-save-pack" data-id="${r.id}" data-unit="${r.unit}" title="Lưu quy cách đóng gói ngay trên dòng" style="height: 26px; padding: 0 6px; font-size: 10.5px; font-weight: 800; background: #0284c7; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">
+                                Lưu
+                            </button>
+                            <button type="button" class="inv-row-btn btn-edit-pack-rule" data-id="${r.id}" data-code="${r.code}" data-name="${r.name}" data-unit="${r.unit}" data-pack="${packSize}" data-sub="${subUnit}" title="Mở bảng thiết lập quy cách đóng gói chi tiết" style="height: 26px; padding: 0 5px; font-size: 11px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">
+                                ⚙️
+                            </button>
+                        </div>
+                    </td>
+                    <td class="text-right" style="padding: 5px 6px;">${stockDisplay}</td>
+                    <td style="background: #f0fdf4; padding: 5px 6px;">
+                        <div style="display: flex; gap: 3px; align-items: center;">
+                            <input type="number" class="inv-input-text inp-quick-rec-qty" data-id="${r.id}" data-cost="${r.average_cost}" min="0" step="0.5" placeholder="SL (${r.unit})" style="width: 72px; height: 27px; padding: 2px 5px; font-size: 12px; font-weight: 700; text-align: right; background: #fff;">
+                            <button type="button" class="inv-btn-primary btn-receipt-emerald btn-row-quick-rec" data-id="${r.id}" data-cost="${r.average_cost}" style="height: 27px; padding: 0 7px; font-size: 11px; white-space: nowrap;">
+                                +Nhập
+                            </button>
+                        </div>
+                    </td>
+                    <td style="background: #fffbeb; padding: 5px 6px;">
+                        <div style="display: flex; gap: 3px; align-items: center;">
+                            <input type="number" class="inv-input-text inp-quick-unpack-qty" data-id="${r.id}" data-pack="${packSize}" data-sub="${subUnit}" data-name="${r.name}" min="0" max="${stockQty > 0 ? stockQty : 9999}" step="0.5" placeholder="SL (${r.unit})" style="width: 72px; height: 27px; padding: 2px 5px; font-size: 12px; font-weight: 700; text-align: right; background: #fff;">
+                            <button type="button" class="inv-btn-primary btn-issue-amber btn-row-quick-unpack" data-id="${r.id}" style="height: 27px; padding: 0 7px; font-size: 11px; white-space: nowrap;">
+                                📤Tách
+                            </button>
+                        </div>
+                        <div class="unpack-live-preview" style="font-size: 10.5px; color: #b45309; font-weight: 700; margin-top: 2px;" hidden></div>
+                    </td>
+                    <td style="background: #f8fafc; padding: 5px 8px;">
+                        ${prepBadgeHtml}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // Bind events on rendered rows
+        tbody.querySelectorAll('.inp-quick-unpack-qty').forEach((inp) => {
+            inp.addEventListener('input', () => {
+                const tr = inp.closest('tr');
+                const preview = tr.querySelector('.unpack-live-preview');
+                const val = Number(inp.value || 0);
+                const pSize = Number(inp.dataset.pack || 1);
+                const subU = inp.dataset.sub || 'hộp';
+                const iName = (inp.dataset.name || '').toLowerCase();
+                if (val > 0 && preview) {
+                    const totalSub = Math.round(val * pSize * 100) / 100;
+                    if (iName.includes('phồng tôm')) {
+                        preview.textContent = `➔ Tách ra +${totalSub} ${subU} (${Math.round(totalSub * 10)} cái bánh) chờ bán`;
+                    } else {
+                        preview.textContent = `➔ Tách ra +${totalSub} ${subU} đang chờ bán`;
+                    }
+                    preview.hidden = false;
+                } else if (preview) {
+                    preview.hidden = true;
+                }
+            });
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    inp.closest('tr').querySelector('.btn-row-quick-unpack')?.click();
+                }
+            });
+        });
+
+        tbody.querySelectorAll('.inp-quick-rec-qty').forEach((inp) => {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    inp.closest('tr').querySelector('.btn-row-quick-rec')?.click();
+                }
+            });
+        });
+
+        // Quick Receipt on single row
+        tbody.querySelectorAll('.btn-row-quick-rec').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const tr = btn.closest('tr');
+                const inp = tr.querySelector('.inp-quick-rec-qty');
+                const qty = Number(inp?.value || 0);
+                if (qty <= 0) {
+                    showInvToast('Vui lòng nhập số lượng cần nhập vào kho (> 0).', false);
+                    inp?.focus();
+                    return;
+                }
+                await performManageAction({
+                    action: 'quick_receipt',
+                    items: [{ ingredient_id: btn.dataset.id, quantity: qty, unit_cost: btn.dataset.cost || 0 }],
+                    note: `Tự nhập hàng vào kho tổng (${tr.dataset.name})`,
+                });
+            });
+        });
+
+        // Quick Unpack on single row
+        tbody.querySelectorAll('.btn-row-quick-unpack').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const tr = btn.closest('tr');
+                const inp = tr.querySelector('.inp-quick-unpack-qty');
+                const qty = Number(inp?.value || 0);
+                if (qty <= 0) {
+                    showInvToast('Vui lòng nhập số lượng muốn xuất tách ra bán (> 0).', false);
+                    inp?.focus();
+                    return;
+                }
+                await performManageAction({
+                    action: 'unpack',
+                    items: [{ ingredient_id: btn.dataset.id, quantity: qty }],
+                    note: `Xuất tách từ kho tổng ra bán trong ngày (${tr.dataset.name})`,
+                });
+            });
+        });
+
+        // Return prep stock to warehouse
+        tbody.querySelectorAll('.btn-return-prep').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                if (!confirm(`Hoàn trả toàn bộ lượng đang chờ bán của "${btn.dataset.name}" về lại Kho tổng?`)) return;
+                await performManageAction({
+                    action: 'return_to_warehouse',
+                    ingredient_id: btn.dataset.id,
+                });
+            });
+        });
+
+        // Inline save pack rule directly on the table row
+        tbody.querySelectorAll('.btn-inline-save-pack').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const tr = btn.closest('tr');
+                const sizeInp = tr.querySelector('.inp-inline-pack-size');
+                const subInp = tr.querySelector('.inp-inline-pack-sub');
+                const numPack = Number(String(sizeInp?.value || '').replace(',', '.'));
+                const newSub = (subInp?.value || '').trim() || 'phần';
+                if (!numPack || numPack <= 0) {
+                    showInvToast('Số lượng quy cách phải lớn hơn 0.', false);
+                    sizeInp?.focus();
+                    return;
+                }
+                await performManageAction({
+                    action: 'update_pack_rule',
+                    ingredient_id: btn.dataset.id,
+                    unit: btn.dataset.unit,
+                    pack_size: numPack,
+                    unpacked_unit: newSub,
+                });
+            });
+        });
+
+        tbody.querySelectorAll('.inp-inline-pack-size, .inp-inline-pack-sub').forEach((inp) => {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    inp.closest('tr').querySelector('.btn-inline-save-pack')?.click();
+                }
+            });
+        });
+
+        // Open Styled UI Modal for Pack Rule (no browser prompt!)
+        tbody.querySelectorAll('.btn-edit-pack-rule').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                openPackRuleModal({
+                    id: btn.dataset.id,
+                    code: btn.dataset.code || '',
+                    name: btn.dataset.name || '',
+                    unit: btn.dataset.unit || 'Kg',
+                    pack_size: btn.dataset.pack || 10,
+                    unpacked_unit: btn.dataset.sub || 'phần',
+                });
+            });
+        });
+    };
+
+
+    const updatePackRuleModalPreview = () => {
+        const unit = (document.querySelector('#inv-pack-rule-unit')?.value || 'Kg').trim();
+        const size = document.querySelector('#inv-pack-rule-size')?.value || '10';
+        const sub = (document.querySelector('#inv-pack-rule-sub')?.value || 'phần').trim();
+        const labelEl = document.querySelector('#inv-pack-rule-qty-label');
+        const prevEl = document.querySelector('#inv-pack-rule-live-preview');
+        if (labelEl) {
+            labelEl.textContent = `2. 1 ${unit} tách ra bao nhiêu ${sub}?`;
+        }
+        if (prevEl) {
+            prevEl.textContent = `📦 1 ${unit} = ${size} ${sub}`;
+        }
+    };
+
+    const openPackRuleModal = (item) => {
+        const modal = document.querySelector('#modal-inv-pack-rule');
+        if (!modal) return;
+        document.querySelector('#inv-pack-rule-ing-id').value = item.id;
+        document.querySelector('#inv-pack-rule-item-name').textContent = item.name;
+        document.querySelector('#inv-pack-rule-item-code').textContent = item.code || `#${item.id}`;
+        document.querySelector('#inv-pack-rule-unit').value = item.unit || 'Kg';
+        document.querySelector('#inv-pack-rule-size').value = item.pack_size || 10;
+        document.querySelector('#inv-pack-rule-sub').value = item.unpacked_unit || 'phần';
+        updatePackRuleModalPreview();
+        modal.hidden = false;
+        setTimeout(() => {
+            const sizeInp = document.querySelector('#inv-pack-rule-size');
+            if (sizeInp) {
+                sizeInp.focus();
+                sizeInp.select();
+            }
+        }, 50);
+    };
+
+    const performManageAction = async (payload) => {
+        try {
+            const resp = await fetch(getManageActionUrl(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify(payload),
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) throw new Error(data.error || 'Thao tác thất bại.');
+
+            showInvToast(data.message || 'Thực hiện thành công!', true);
+            await loadUnpackData();
+        } catch (err) {
+            showInvToast(err.message || 'Lỗi khi thực hiện thao tác kho.', false);
+        }
+    };
+
+    // =========================================================================
     // OPEN POS INVENTORY MODAL (GLOBAL EXPORT)
     // =========================================================================
     window.openPosInventoryModal = (targetTab = 'xnt') => {
@@ -948,7 +1423,16 @@
             panel.classList.toggle('active', panel.id === `inv-panel-${tabName}`);
         });
 
-        if (tabName === 'xnt') loadXntData();
+        const titleEl = document.querySelector('#inv-modal-title');
+        if (titleEl) {
+            if (tabName === 'unpack') {
+                titleEl.textContent = 'Quản lý Kho hàng — Nhập Kho & Xuất Từ Thùng Tách Ra Đồ Hộp / Suất Chờ Bán';
+            } else {
+                titleEl.textContent = 'Quản lý Kho hàng & Báo cáo Xuất - Nhập - Tồn';
+            }
+        }
+        if (tabName === 'unpack') loadUnpackData();
+        else if (tabName === 'xnt') loadXntData();
         else if (tabName === 'receipts') loadReceiptsData();
         else if (tabName === 'issues') loadIssuesData();
         else if (tabName === 'adjustments') loadAdjustmentsData();
@@ -962,6 +1446,66 @@
         // Tab switching clicks
         document.querySelectorAll('.inv-tab-btn').forEach((btn) => {
             btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        // XNT 3-Warehouse Tabs Switcher
+        document.querySelectorAll('.inv-wh-tab-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.inv-wh-tab-btn').forEach((b) => {
+                    b.classList.remove('active');
+                    b.style.background = '#ffffff';
+                    b.style.color = '#334155';
+                });
+                btn.classList.add('active');
+                currentInvWarehouse = btn.dataset.wh;
+                if (currentInvWarehouse === 'all') {
+                    btn.style.background = '#0f172a';
+                    btn.style.color = '#ffffff';
+                } else if (currentInvWarehouse === 'fresh') {
+                    btn.style.background = '#16a34a';
+                    btn.style.color = '#ffffff';
+                } else if (currentInvWarehouse === 'dry') {
+                    btn.style.background = '#d97706';
+                    btn.style.color = '#ffffff';
+                } else if (currentInvWarehouse === 'beverage') {
+                    btn.style.background = '#2563eb';
+                    btn.style.color = '#ffffff';
+                }
+                loadXntData();
+            });
+        });
+
+        // Tab 4 Kiểm kê Warehouse Filter Buttons
+        document.querySelectorAll('.btn-adj-wh-filter').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-adj-wh-filter').forEach((b) => {
+                    b.classList.remove('active');
+                    b.style.background = '#ffffff';
+                    b.style.color = '#334155';
+                });
+                btn.classList.add('active');
+                currentAdjWarehouse = btn.dataset.wh;
+                if (currentAdjWarehouse === 'all') {
+                    btn.style.background = '#0f172a';
+                    btn.style.color = '#ffffff';
+                } else if (currentAdjWarehouse === 'fresh') {
+                    btn.style.background = '#16a34a';
+                    btn.style.color = '#ffffff';
+                    const noteInp = document.querySelector('#inv-adj-note');
+                    if (noteInp) noteInp.value = 'Kiểm kê cuối ngày - Kho 1 (Tươi sống & Rau củ)';
+                } else if (currentAdjWarehouse === 'dry') {
+                    btn.style.background = '#d97706';
+                    btn.style.color = '#ffffff';
+                    const noteInp = document.querySelector('#inv-adj-note');
+                    if (noteInp) noteInp.value = 'Kiểm kê định kỳ - Kho 2 (Nguyên liệu khô & Gia vị)';
+                } else if (currentAdjWarehouse === 'beverage') {
+                    btn.style.background = '#2563eb';
+                    btn.style.color = '#ffffff';
+                    const noteInp = document.querySelector('#inv-adj-note');
+                    if (noteInp) noteInp.value = 'Kiểm kê kho - Kho 3 (Đồ uống & Trái cây)';
+                }
+                loadAdjustmentsData();
+            });
         });
 
         // Date Preset buttons
@@ -1048,7 +1592,143 @@
             }
         });
 
-        // Trigger open from POS menu
+        // Unpack 3-Warehouse Tabs Switcher
+        document.querySelectorAll('.unpack-wh-tab-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.unpack-wh-tab-btn').forEach((b) => {
+                    b.classList.remove('active');
+                    b.style.background = '#ffffff';
+                    b.style.color = '#334155';
+                });
+                btn.classList.add('active');
+                currentUnpackWarehouse = btn.dataset.wh;
+                if (currentUnpackWarehouse === 'all') {
+                    btn.style.background = '#0f172a';
+                    btn.style.color = '#ffffff';
+                } else if (currentUnpackWarehouse === 'fresh') {
+                    btn.style.background = '#16a34a';
+                    btn.style.color = '#ffffff';
+                } else if (currentUnpackWarehouse === 'dry') {
+                    btn.style.background = '#d97706';
+                    btn.style.color = '#ffffff';
+                } else if (currentUnpackWarehouse === 'beverage') {
+                    btn.style.background = '#2563eb';
+                    btn.style.color = '#ffffff';
+                } else if (currentUnpackWarehouse === 'drinks_beer') {
+                    btn.style.background = '#0284c7';
+                    btn.style.color = '#ffffff';
+                }
+                renderUnpackTable();
+            });
+        });
+
+        document.querySelector('#unpack-search-query')?.addEventListener('input', renderUnpackTable);
+        document.querySelector('#unpack-select-group')?.addEventListener('change', renderUnpackTable);
+        document.querySelector('#unpack-chk-has-stock')?.addEventListener('change', renderUnpackTable);
+
+        // Batch Receipt button in Unpack tab
+        document.querySelector('#unpack-btn-batch-receipt')?.addEventListener('click', async () => {
+            const items = [];
+            document.querySelectorAll('#inv-unpack-tbody .inp-quick-rec-qty').forEach((inp) => {
+                const q = Number(inp.value || 0);
+                if (q > 0) {
+                    items.push({ ingredient_id: inp.dataset.id, quantity: q, unit_cost: inp.dataset.cost || 0 });
+                }
+            });
+            if (!items.length) {
+                showInvToast('Vui lòng nhập số lượng vào cột "📥 Tự nhập hàng vào Kho" ở ít nhất 1 mặt hàng.', false);
+                return;
+            }
+            await performManageAction({
+                action: 'quick_receipt',
+                items: items,
+                note: `Tự nhập kho hàng loạt (${items.length} mặt hàng)`,
+            });
+        });
+
+        // Batch Unpack button in Unpack tab
+        document.querySelector('#unpack-btn-batch-unpack')?.addEventListener('click', async () => {
+            const items = [];
+            document.querySelectorAll('#inv-unpack-tbody .inp-quick-unpack-qty').forEach((inp) => {
+                const q = Number(inp.value || 0);
+                if (q > 0) {
+                    items.push({ ingredient_id: inp.dataset.id, quantity: q });
+                }
+            });
+            if (!items.length) {
+                showInvToast('Vui lòng nhập số lượng vào cột "📤 Xuất kho tách ra Hộp / Bán" ở ít nhất 1 mặt hàng.', false);
+                return;
+            }
+            await performManageAction({
+                action: 'unpack',
+                items: items,
+                note: `Xuất tách thùng ra hộp / chờ bán hàng loạt (${items.length} mặt hàng)`,
+            });
+        });
+
+
+        // Pack Rule Sub-Modal bindings
+        document.querySelector('#inv-pack-rule-close')?.addEventListener('click', () => {
+            const m = document.querySelector('#modal-inv-pack-rule');
+            if (m) m.hidden = true;
+        });
+        document.querySelector('#inv-pack-rule-cancel')?.addEventListener('click', () => {
+            const m = document.querySelector('#modal-inv-pack-rule');
+            if (m) m.hidden = true;
+        });
+        ['#inv-pack-rule-unit', '#inv-pack-rule-size', '#inv-pack-rule-sub'].forEach((sel) => {
+            document.querySelector(sel)?.addEventListener('input', updatePackRuleModalPreview);
+        });
+        document.querySelectorAll('.chip-pack-main-unit').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                const inp = document.querySelector('#inv-pack-rule-unit');
+                if (inp) {
+                    inp.value = chip.dataset.val;
+                    updatePackRuleModalPreview();
+                }
+            });
+        });
+        document.querySelectorAll('.chip-pack-preset').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                const uInp = document.querySelector('#inv-pack-rule-unit');
+                const sInp = document.querySelector('#inv-pack-rule-size');
+                const subInp = document.querySelector('#inv-pack-rule-sub');
+                if (uInp && chip.dataset.unit) uInp.value = chip.dataset.unit;
+                if (sInp && chip.dataset.size) sInp.value = chip.dataset.size;
+                if (subInp && chip.dataset.sub) subInp.value = chip.dataset.sub;
+                updatePackRuleModalPreview();
+            });
+        });
+        document.querySelector('#inv-pack-rule-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ingId = document.querySelector('#inv-pack-rule-ing-id')?.value;
+            const unit = (document.querySelector('#inv-pack-rule-unit')?.value || 'Kg').trim();
+            const size = Number(String(document.querySelector('#inv-pack-rule-size')?.value || '').replace(',', '.'));
+            const sub = (document.querySelector('#inv-pack-rule-sub')?.value || 'phần').trim();
+            if (!size || size <= 0) {
+                showInvToast('Số lượng tách ra phải lớn hơn 0.', false);
+                return;
+            }
+            const modal = document.querySelector('#modal-inv-pack-rule');
+            if (modal) modal.hidden = true;
+            await performManageAction({
+                action: 'update_pack_rule',
+                ingredient_id: ingId,
+                unit: unit,
+                pack_size: size,
+                unpacked_unit: sub,
+            });
+        });
+
+        // Reset All Stock to 0 button
+        document.querySelector('#unpack-btn-reset-zero')?.addEventListener('click', async () => {
+            if (!confirm('Bạn có chắc chắn muốn đưa TOÀN BỘ số lượng nhập hàng, tồn kho và suất chờ bán về 0 để tự nhập lại từ đầu?')) return;
+            await performManageAction({ action: 'reset_all_zero' });
+        });
+
+        // Trigger open from POS menu:
+        // - #open-inventory-manager-menu ("Quản lý kho hàng") -> opens 'unpack' tab (Tách thùng ra đồ hộp / Chờ bán)
+        // - #open-inventory-report-menu ("Xuất nhập tồn kho") -> opens 'xnt' tab (Báo cáo Xuất Nhập Tồn giữ nguyên)
         document.querySelectorAll('#open-inventory-manager-menu, #open-inventory-report-menu, [data-open-inventory]').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -1058,7 +1738,7 @@
                     const b = item.querySelector('.nav-menu-btn') || item.querySelector(':scope > button');
                     if (b) b.setAttribute('aria-expanded', 'false');
                 });
-                const targetTab = btn.id === 'open-inventory-report-menu' ? 'xnt' : 'xnt';
+                const targetTab = btn.id === 'open-inventory-report-menu' ? 'xnt' : 'unpack';
                 window.openPosInventoryModal(targetTab);
             });
         });
@@ -1066,6 +1746,8 @@
         // Escape key handling
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
+                const subPack = document.querySelector('#modal-inv-pack-rule');
+                if (subPack && !subPack.hidden) { subPack.hidden = true; return; }
                 const subSlip = document.querySelector('#modal-inv-view-slip');
                 if (subSlip && !subSlip.hidden) { subSlip.hidden = true; return; }
                 const subRec = document.querySelector('#modal-inv-new-receipt');
@@ -1077,9 +1759,11 @@
             }
         });
 
-        // If on standalone page /inventory/
-        if (document.body.classList.contains('page-inventory-home') || document.querySelector('.inv-standalone-container')) {
-            loadXntData();
+        // If on standalone page /inventory/ or /inventory/manage/
+        const standaloneEl = document.querySelector('.inv-standalone-container');
+        if (document.body.classList.contains('page-inventory-home') || standaloneEl) {
+            const initTab = standaloneEl?.dataset.initialTab || 'xnt';
+            switchTab(initTab);
         }
     });
 

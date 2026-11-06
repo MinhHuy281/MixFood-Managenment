@@ -14,6 +14,7 @@ from django.utils import timezone
 from accounts.decorators import role_required
 from catalog.models import Category, Ingredient, Product
 
+from .conversions import calculate_recipe_item_cost, convert_recipe_to_stock_qty
 from .models import (
 	Recipe, RecipeItem, StockReceipt, StockReceiptItem,
 	StockTransaction, StockIssue, StockIssueItem, StockAdjustment, StockAdjustmentItem
@@ -26,7 +27,7 @@ from .services import (
 
 
 def update_product_cost_from_recipe(product):
-	"""Tự động tính lại giá vốn món ăn từ tổng định lượng nguyên liệu."""
+	"""Tự động tính lại giá vốn món ăn từ tổng định lượng nguyên liệu (có quy đổi đơn vị)."""
 	recipe = getattr(product, 'recipe', None)
 	if not recipe or not recipe.is_active:
 		return Decimal(0)
@@ -34,7 +35,7 @@ def update_product_cost_from_recipe(product):
 	total_cost = Decimal(0)
 	for item in recipe.items.select_related('ingredient'):
 		if item.ingredient and item.ingredient.is_active:
-			total_cost += item.quantity * item.ingredient.average_cost
+			total_cost += calculate_recipe_item_cost(item.ingredient, item.quantity, item.unit)
 
 	product.cost_price = total_cost
 	product.save(update_fields=('cost_price', 'updated_at'))
@@ -78,40 +79,42 @@ def _parse_filter_date_range(range_type='this_month', start_str=None, end_str=No
 
 
 def _ensure_sample_ingredients_exist():
-	"""Tự động thêm một số nguyên liệu mẫu phong phú nếu chưa có nhiều nguyên liệu."""
+	"""Tự động thêm một số nguyên liệu mẫu nếu chưa có nhiều nguyên liệu (Tồn kho mặc định = 0)."""
 	if Ingredient.objects.filter(is_active=True).count() >= 8:
 		return
 	sample_data = [
-		{'code': 'NL-THITBO', 'name': 'Thịt bò phi lê', 'group': 'Thịt & Hải sản', 'unit': 'Kg', 'current_stock': Decimal('15.5'), 'minimum_stock': Decimal('5.0'), 'average_cost': Decimal('240000'), 'supplier': 'Cty TNHH Thực phẩm Sạch'},
-		{'code': 'NL-THITHEO', 'name': 'Thịt heo ba chỉ', 'group': 'Thịt & Hải sản', 'unit': 'Kg', 'current_stock': Decimal('22.0'), 'minimum_stock': Decimal('6.0'), 'average_cost': Decimal('125000'), 'supplier': 'Cty TNHH Thực phẩm Sạch'},
-		{'code': 'NL-XUCSICH', 'name': 'Xúc xích Đức xông khói', 'group': 'Thịt & Hải sản', 'unit': 'Gói', 'current_stock': Decimal('35.0'), 'minimum_stock': Decimal('10.0'), 'average_cost': Decimal('48000'), 'supplier': 'Nhà phân phối CP'},
-		{'code': 'NL-PHOMAI', 'name': 'Phô mai Mozzarella sợi', 'group': 'Bơ sữa & Phô mai', 'unit': 'Kg', 'current_stock': Decimal('12.0'), 'minimum_stock': Decimal('4.0'), 'average_cost': Decimal('180000'), 'supplier': 'Anchor Food'},
-		{'code': 'NL-BOSUA', 'name': 'Bơ lạt thơm béo', 'group': 'Bơ sữa & Phô mai', 'unit': 'Hộp', 'current_stock': Decimal('18.0'), 'minimum_stock': Decimal('5.0'), 'average_cost': Decimal('65000'), 'supplier': 'Anchor Food'},
-		{'code': 'NL-TRUNGGA', 'name': 'Trứng gà ta tươi', 'group': 'Trứng & Đồ khô', 'unit': 'Quả', 'current_stock': Decimal('150.0'), 'minimum_stock': Decimal('30.0'), 'average_cost': Decimal('3200'), 'supplier': 'Trang trại Ba Huân'},
-		{'code': 'NL-BANHTRANG', 'name': 'Bánh tráng phơi sương', 'group': 'Trứng & Đồ khô', 'unit': 'Xấp', 'current_stock': Decimal('60.0'), 'minimum_stock': Decimal('15.0'), 'average_cost': Decimal('18000'), 'supplier': 'Cơ sở bánh tráng Tây Ninh'},
-		{'code': 'NL-BAPCAI', 'name': 'Bắp cải tím Đà Lạt', 'group': 'Rau củ quả', 'unit': 'Kg', 'current_stock': Decimal('8.5'), 'minimum_stock': Decimal('3.0'), 'average_cost': Decimal('22000'), 'supplier': 'Vườn rau Đà Lạt'},
-		{'code': 'NL-XALACH', 'name': 'Xà lách mỡ xoăn', 'group': 'Rau củ quả', 'unit': 'Kg', 'current_stock': Decimal('6.0'), 'minimum_stock': Decimal('4.0'), 'average_cost': Decimal('35000'), 'supplier': 'Vườn rau Đà Lạt'},
-		{'code': 'NL-SOTMAYO', 'name': 'Sốt Mayonnaise Kewpie', 'group': 'Gia vị & Sốt', 'unit': 'Chai', 'current_stock': Decimal('14.0'), 'minimum_stock': Decimal('5.0'), 'average_cost': Decimal('55000'), 'supplier': 'Kewpie VN'},
-		{'code': 'NL-TUONGOT', 'name': 'Tương ớt cay nồng Cholimex', 'group': 'Gia vị & Sốt', 'unit': 'Chai', 'current_stock': Decimal('20.0'), 'minimum_stock': Decimal('6.0'), 'average_cost': Decimal('16000'), 'supplier': 'Cholimex Food'},
-		{'code': 'NL-DAUAN', 'name': 'Dầu ăn Neptune Gold (5L)', 'group': 'Gia vị & Sốt', 'unit': 'Can', 'current_stock': Decimal('7.0'), 'minimum_stock': Decimal('3.0'), 'average_cost': Decimal('245000'), 'supplier': 'Calofic VN'},
-		{'code': 'NL-TRADAO', 'name': 'Cốt trà đào Cozy túi lọc', 'group': 'Đồ uống & Pha chế', 'unit': 'Hộp', 'current_stock': Decimal('25.0'), 'minimum_stock': Decimal('8.0'), 'average_cost': Decimal('32000'), 'supplier': 'Cozy Tea'},
-		{'code': 'NL-COCA', 'name': 'Nước ngọt Coca-Cola lon 320ml', 'group': 'Đồ uống & Pha chế', 'unit': 'Thùng', 'current_stock': Decimal('16.0'), 'minimum_stock': Decimal('5.0'), 'average_cost': Decimal('198000'), 'supplier': 'Đại lý nước ngọt Kim Phát'},
+		{'code': 'NL-THITBO', 'name': 'Thịt bò phi lê', 'group': 'Thịt & Hải sản', 'unit': 'Kg', 'pack_size': Decimal('10'), 'unpacked_unit': 'phần', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('5.0'), 'average_cost': Decimal('240000'), 'supplier': 'Cty TNHH Thực phẩm Sạch'},
+		{'code': 'NL-THITHEO', 'name': 'Thịt heo ba chỉ', 'group': 'Thịt & Hải sản', 'unit': 'Kg', 'pack_size': Decimal('10'), 'unpacked_unit': 'phần', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('6.0'), 'average_cost': Decimal('125000'), 'supplier': 'Cty TNHH Thực phẩm Sạch'},
+		{'code': 'NL-XUCSICH', 'name': 'Xúc xích Đức xông khói', 'group': 'Thịt & Hải sản', 'unit': 'Gói', 'pack_size': Decimal('10'), 'unpacked_unit': 'phần', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('10.0'), 'average_cost': Decimal('48000'), 'supplier': 'Nhà phân phối CP'},
+		{'code': 'NL-PHOMAI', 'name': 'Phô mai Mozzarella sợi', 'group': 'Bơ sữa & Phô mai', 'unit': 'Thùng', 'pack_size': Decimal('10'), 'unpacked_unit': 'hộp', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('2.0'), 'average_cost': Decimal('1800000'), 'supplier': 'Anchor Food', 'storage_area': 'dry'},
+		{'code': 'NL-BOSUA', 'name': 'Bơ lạt thơm béo', 'group': 'Bơ sữa & Phô mai', 'unit': 'Thùng', 'pack_size': Decimal('24'), 'unpacked_unit': 'hộp', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('2.0'), 'average_cost': Decimal('1560000'), 'supplier': 'Anchor Food', 'storage_area': 'dry'},
+		{'code': 'NL-TRUNGGA', 'name': 'Trứng gà tươi', 'group': 'Trứng sữa', 'unit': 'Vỉ', 'pack_size': Decimal('30'), 'unpacked_unit': 'quả', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('3.0'), 'average_cost': Decimal('96000'), 'supplier': 'Trang trại Ba Huân', 'storage_area': 'dry'},
+		{'code': 'NL-BANHTRANG', 'name': 'Bánh tráng phơi sương', 'group': 'Trứng & Đồ khô', 'unit': 'Thùng', 'pack_size': Decimal('20'), 'unpacked_unit': 'hộp (xấp)', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('2.0'), 'average_cost': Decimal('360000'), 'supplier': 'Cơ sở bánh tráng Tây Ninh', 'storage_area': 'dry'},
+		{'code': 'NL-BAPCAI', 'name': 'Bắp cải tím Đà Lạt', 'group': 'Rau củ quả', 'unit': 'Kg', 'pack_size': Decimal('10'), 'unpacked_unit': 'phần', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('3.0'), 'average_cost': Decimal('22000'), 'supplier': 'Vườn rau Đà Lạt'},
+		{'code': 'NL-XALACH', 'name': 'Xà lách mỡ xoăn', 'group': 'Rau củ quả', 'unit': 'Kg', 'pack_size': Decimal('10'), 'unpacked_unit': 'phần', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('4.0'), 'average_cost': Decimal('35000'), 'supplier': 'Vườn rau Đà Lạt'},
+		{'code': 'NL-SOTMAYO', 'name': 'Sốt Mayonnaise Kewpie', 'group': 'Gia vị & Sốt', 'unit': 'Thùng', 'pack_size': Decimal('12'), 'unpacked_unit': 'hộp', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('2.0'), 'average_cost': Decimal('660000'), 'supplier': 'Kewpie VN', 'storage_area': 'dry'},
+		{'code': 'NL-TUONGOT', 'name': 'Tương ớt cay nồng Cholimex', 'group': 'Gia vị & Sốt', 'unit': 'Thùng', 'pack_size': Decimal('24'), 'unpacked_unit': 'hộp', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('2.0'), 'average_cost': Decimal('384000'), 'supplier': 'Cholimex Food', 'storage_area': 'dry'},
+		{'code': 'NL-DAUAN', 'name': 'Dầu ăn Neptune Gold (5L)', 'group': 'Gia vị & Sốt', 'unit': 'Thùng', 'pack_size': Decimal('4'), 'unpacked_unit': 'hộp (can 5L)', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('2.0'), 'average_cost': Decimal('980000'), 'supplier': 'Calofic VN', 'storage_area': 'dry'},
+		{'code': 'NL-TRADAO', 'name': 'Cốt trà đào Cozy túi lọc', 'group': 'Đồ uống & Pha chế', 'unit': 'Thùng', 'pack_size': Decimal('12'), 'unpacked_unit': 'hộp', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('2.0'), 'average_cost': Decimal('384000'), 'supplier': 'Cozy Tea', 'storage_area': 'beverage'},
+		{'code': 'NL-COCA', 'name': 'Nước ngọt Coca-Cola lon 320ml', 'group': 'Đồ uống & Pha chế', 'unit': 'Thùng', 'pack_size': Decimal('24'), 'unpacked_unit': 'lon', 'current_stock': Decimal('0'), 'minimum_stock': Decimal('5.0'), 'average_cost': Decimal('198000'), 'supplier': 'Đại lý nước ngọt Kim Phát', 'storage_area': 'beverage'},
 	]
 	for d in sample_data:
 		Ingredient.objects.get_or_create(code=d['code'], defaults=d)
 
 
-def _compute_xnt_report(start_date, end_date, group=None, query=None, low_stock_only=False):
+def _compute_xnt_report(start_date, end_date, group=None, query=None, low_stock_only=False, warehouse=None):
 	_ensure_sample_ingredients_exist()
 	now = timezone.localtime()
 
 	qs = Ingredient.objects.filter(is_active=True)
+	if warehouse and warehouse in ['fresh', 'dry', 'beverage']:
+		qs = qs.filter(storage_area=warehouse)
 	if group:
 		qs = qs.filter(group=group)
 	if query:
 		qs = qs.filter(Q(code__icontains=query) | Q(name__icontains=query) | Q(group__icontains=query))
 
-	ingredients = list(qs.order_by('group', 'name'))
+	ingredients = list(qs.order_by('storage_area', 'group', 'name'))
 	if not ingredients:
 		return [], {
 			'total_inventory_value': 0,
@@ -157,12 +160,15 @@ def _compute_xnt_report(start_date, end_date, group=None, query=None, low_stock_
 			# Trừ đi các biến động xảy ra sau end_date
 			future_delta = Decimal(0)
 			for ftx in txs_after_period.get(i_id, []):
+				if ftx.reference_type == 'order_prep':
+					continue
 				future_delta += ftx.quantity
 			closing_stock = ing.current_stock - future_delta
 
 		# Tính tổng biến động trong kỳ
 		receipt_qty = Decimal(0)
 		sale_qty = Decimal(0)
+		direct_sale_qty = Decimal(0)
 		issue_qty = Decimal(0)
 		adjust_qty = Decimal(0)
 
@@ -173,13 +179,19 @@ def _compute_xnt_report(start_date, end_date, group=None, query=None, low_stock_
 				receipt_qty += qty
 			elif ttype == StockTransaction.TransactionType.SALE:
 				sale_qty += abs(qty)
+				if tx.reference_type != 'order_prep':
+					direct_sale_qty += abs(qty)
+			elif ttype == StockTransaction.TransactionType.RESTORE:
+				sale_qty = max(Decimal(0), sale_qty - abs(qty))
+				if tx.reference_type != 'order_prep':
+					direct_sale_qty = max(Decimal(0), direct_sale_qty - abs(qty))
 			elif ttype == StockTransaction.TransactionType.ISSUE:
 				issue_qty += abs(qty)
 			elif ttype in (StockTransaction.TransactionType.INCREASE, StockTransaction.TransactionType.DECREASE):
 				adjust_qty += qty
 
-		# opening_stock = closing_stock - (receipt_qty - sale_qty - issue_qty + adjust_qty)
-		net_in_period = receipt_qty - sale_qty - issue_qty + adjust_qty
+		# opening_stock = closing_stock - (receipt_qty - direct_sale_qty - issue_qty + adjust_qty)
+		net_in_period = receipt_qty - direct_sale_qty - issue_qty + adjust_qty
 		opening_stock = closing_stock - net_in_period
 
 		# Giá trị
@@ -203,6 +215,15 @@ def _compute_xnt_report(start_date, end_date, group=None, query=None, low_stock_
 
 		report_rows.append({
 			'id': ing.id,
+			'storage_area': ing.storage_area,
+			'storage_area_name': ing.storage_area_display,
+			'storage_area_short': ing.storage_area_short,
+			'portions_wait': ing.portions_wait_display,
+			'pack_size': float(ing.pack_size or 1),
+			'unpacked_unit': ing.unpacked_unit or 'hộp',
+			'prep_stock': float(ing.prep_stock or 0),
+			'prep_stock_formatted': f'{(ing.prep_stock or 0):.2f}'.rstrip('0').rstrip('.') if '.' in f'{(ing.prep_stock or 0):.2f}' else f'{(ing.prep_stock or 0):.0f}',
+			'pack_rule_display': ing.pack_rule_display,
 			'code': ing.code,
 			'name': ing.name,
 			'group': ing.group or 'Khác',
@@ -267,16 +288,17 @@ def inventory_home(request):
 
 @login_required
 def inventory_dashboard_api(request):
-	"""API trả về dữ liệu Báo cáo Xuất Nhập Tồn + KPIs cho AJAX và Modal."""
+	"""API trả về dữ liệu Báo cáo Xuất Nhập Tồn + KPIs cho AJAX và Modal theo 3 Kho."""
 	range_type = request.GET.get('range', 'this_month')
 	start_str = request.GET.get('start_date')
 	end_str = request.GET.get('end_date')
 	group = request.GET.get('group', '').strip()
 	query = request.GET.get('q', '').strip()
+	warehouse = (request.GET.get('warehouse') or request.GET.get('storage_area', '')).strip().lower()
 	low_stock_only = request.GET.get('low_stock_only') in ('1', 'true', 'True')
 
 	start_date, end_date, range_label = _parse_filter_date_range(range_type, start_str, end_str)
-	report_rows, kpis = _compute_xnt_report(start_date, end_date, group=group, query=query, low_stock_only=low_stock_only)
+	report_rows, kpis = _compute_xnt_report(start_date, end_date, group=group, query=query, low_stock_only=low_stock_only, warehouse=warehouse)
 
 	groups = list(Ingredient.objects.filter(is_active=True).values_list('group', flat=True).distinct().order_by('group'))
 	groups = [g for g in groups if g]
@@ -284,6 +306,10 @@ def inventory_dashboard_api(request):
 	# Danh sách tất cả nguyên liệu để tiện tạo phiếu nhập / xuất
 	all_ingredients = [{
 		'id': ing.id,
+		'storage_area': ing.storage_area,
+		'storage_area_name': ing.storage_area_display,
+		'storage_area_short': ing.storage_area_short,
+		'portions_wait': ing.portions_wait_display,
 		'code': ing.code,
 		'name': ing.name,
 		'group': ing.group or '',
@@ -296,11 +322,21 @@ def inventory_dashboard_api(request):
 		'supplier': ing.supplier or '',
 	} for ing in Ingredient.objects.filter(is_active=True).order_by('group', 'name')]
 
+	base_ing = Ingredient.objects.filter(is_active=True)
+	warehouse_counts = {
+		'all': base_ing.count(),
+		'fresh': base_ing.filter(storage_area=Ingredient.StorageArea.FRESH).count(),
+		'dry': base_ing.filter(storage_area=Ingredient.StorageArea.DRY).count(),
+		'beverage': base_ing.filter(storage_area=Ingredient.StorageArea.BEVERAGE).count(),
+	}
+
 	return JsonResponse({
 		'ok': True,
 		'range_label': range_label,
 		'start_date_str': start_date.strftime('%Y-%m-%d'),
 		'end_date_str': end_date.strftime('%Y-%m-%d'),
+		'current_warehouse': warehouse or 'all',
+		'warehouse_counts': warehouse_counts,
 		'kpis': kpis,
 		'report_rows': report_rows,
 		'groups': groups,
@@ -762,7 +798,7 @@ def recipe_data_api(request):
 			items_list = []
 			total_cost = Decimal(0)
 			for it in items_qs:
-				line_cost = it.quantity * it.ingredient.average_cost
+				line_cost = calculate_recipe_item_cost(it.ingredient, it.quantity, it.unit)
 				total_cost += line_cost
 				items_list.append({
 					'item_id': it.id,
@@ -805,9 +841,13 @@ def recipe_data_api(request):
 				'items': items_list,
 			}
 
-	ingredients_qs = Ingredient.objects.filter(is_active=True).order_by('group', 'name')
+	ingredients_qs = Ingredient.objects.filter(is_active=True).order_by('storage_area', 'group', 'name')
 	ingredients_data = [{
 		'id': ing.id,
+		'storage_area': ing.storage_area,
+		'storage_area_name': ing.storage_area_display,
+		'storage_area_short': ing.storage_area_short,
+		'portions_wait': ing.portions_wait_display,
 		'group': ing.group or '',
 		'code': ing.code,
 		'name': ing.name,
@@ -822,11 +862,19 @@ def recipe_data_api(request):
 		'name': c.name,
 	} for c in categories]
 
+	base_ing = Ingredient.objects.filter(is_active=True)
+	warehouse_counts = {
+		'all': base_ing.count(),
+		'fresh': base_ing.filter(storage_area=Ingredient.StorageArea.FRESH).count(),
+		'dry': base_ing.filter(storage_area=Ingredient.StorageArea.DRY).count(),
+		'beverage': base_ing.filter(storage_area=Ingredient.StorageArea.BEVERAGE).count(),
+	}
 	return JsonResponse({
 		'products': products_data,
 		'selected_recipe': selected_recipe_data,
 		'ingredients': ingredients_data,
 		'categories': categories_data,
+		'warehouse_counts': warehouse_counts,
 		'total_products': len(products_data),
 	})
 
@@ -892,8 +940,8 @@ def recipe_save_item_api(request):
 			'unit': recipe_item.unit,
 			'unit_cost': float(ingredient.average_cost),
 			'unit_cost_formatted': f'{ingredient.average_cost:,.0f}'.replace(',', '.'),
-			'total_cost': float(recipe_item.quantity * ingredient.average_cost),
-			'total_cost_formatted': f'{(recipe_item.quantity * ingredient.average_cost):,.0f}'.replace(',', '.'),
+			'total_cost': float(calculate_recipe_item_cost(ingredient, recipe_item.quantity, recipe_item.unit)),
+			'total_cost_formatted': f'{calculate_recipe_item_cost(ingredient, recipe_item.quantity, recipe_item.unit):,.0f}'.replace(',', '.'),
 		},
 		'new_cost_price': float(new_cost),
 		'new_cost_price_formatted': f'{new_cost:,.0f}'.replace(',', '.'),
@@ -941,6 +989,57 @@ def recipe_delete_recipe_api(request, product_id):
 	return JsonResponse({
 		'success': True,
 		'message': f'Đã xóa công thức định lượng của món "{product.name}".',
+	})
+
+
+@login_required
+def recipe_copy_api(request):
+	"""Sao chép toàn bộ nguyên liệu định lượng từ món nguồn sang món đích."""
+	if request.method != 'POST':
+		return JsonResponse({'error': 'Phương thức không hợp lệ.'}, status=405)
+
+	try:
+		data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+	except Exception:
+		data = request.POST
+
+	from_product_id = data.get('from_product_id')
+	to_product_id = data.get('to_product_id')
+
+	if not from_product_id or not to_product_id:
+		return JsonResponse({'error': 'Vui lòng chọn món nguồn và món đích.'}, status=400)
+
+	from_prod = get_object_or_404(Product, pk=int(from_product_id))
+	to_prod = get_object_or_404(Product, pk=int(to_product_id))
+
+	from_recipe = getattr(from_prod, 'recipe', None)
+	if not from_recipe or not from_recipe.items.exists():
+		return JsonResponse({'error': f'Món "{from_prod.name}" chưa có công thức định lượng để sao chép.'}, status=400)
+
+	to_recipe, _ = Recipe.objects.get_or_create(
+		product=to_prod,
+		defaults={'is_active': True, 'description': f'Công thức cho {to_prod.name}'}
+	)
+	to_recipe.is_active = True
+	to_recipe.save(update_fields=('is_active', 'updated_at'))
+
+	copied_count = 0
+	for item in from_recipe.items.all():
+		RecipeItem.objects.update_or_create(
+			recipe=to_recipe,
+			ingredient=item.ingredient,
+			defaults={'quantity': item.quantity, 'unit': item.unit}
+		)
+		copied_count += 1
+
+	new_cost = update_product_cost_from_recipe(to_prod)
+
+	return JsonResponse({
+		'success': True,
+		'message': f'Đã sao chép thành công {copied_count} nguyên liệu từ "{from_prod.name}" sang "{to_prod.name}".',
+		'copied_count': copied_count,
+		'new_cost_price': float(new_cost),
+		'new_cost_price_formatted': f'{new_cost:,.0f}'.replace(',', '.')
 	})
 
 
@@ -1079,3 +1178,148 @@ def recipe_import_excel(request):
 		'affected_dishes_count': len(affected_products),
 		'message': f'Đã nhập thành công {imported_count} định lượng cho {len(affected_products)} món ăn.'
 	})
+
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Warehouse', 'Sales', 'Cashier')
+def warehouse_manage(request):
+	"""
+	Trang Quản lý Kho hàng: Nhập Kho Tổng & Xuất Tách Thùng / Vỉ ra Đồ Hộp / Quả / Phần chờ bán trong ngày.
+	"""
+	_ensure_sample_ingredients_exist()
+	groups = list(Ingredient.objects.filter(is_active=True).values_list('group', flat=True).distinct().order_by('group'))
+	groups = [g for g in groups if g]
+	return render(request, 'inventory/pages/warehouse_manage.html', {
+		'groups': groups,
+		'total_ingredients': Ingredient.objects.filter(is_active=True).count(),
+	})
+
+
+@login_required
+def warehouse_manage_action_api(request):
+	"""
+	API xử lý nhanh cho chức năng Quản lý Kho hàng:
+	- unpack: Xuất tách từ Thùng/Vỉ/Hộp trong kho tổng ra Đồ hộp / Quả / Phần đang chờ bán
+	- quick_receipt: Nhập nhanh số lượng hàng vào kho tổng
+	- return_to_warehouse: Hoàn trả lượng chờ bán (prep_stock) về lại kho tổng (current_stock)
+	- update_pack_rule: Cập nhật quy cách đóng gói (1 Thùng/Vỉ = X Hộp/Quả)
+	- reset_all_zero: Đưa toàn bộ số lượng nhập hàng, tồn kho và chờ bán về 0
+	"""
+	if request.method != 'POST':
+		return JsonResponse({'ok': False, 'error': 'Chỉ hỗ trợ phương thức POST.'}, status=405)
+
+	try:
+		body = json.loads(request.body.decode('utf-8'))
+	except Exception:
+		return JsonResponse({'ok': False, 'error': 'Dữ liệu JSON không hợp lệ.'}, status=400)
+
+	action = (body.get('action') or '').strip()
+
+	try:
+		if action == 'unpack':
+			items = body.get('items', [])
+			note = body.get('note', 'Xuất tách thùng/vỉ ra đồ hộp/suất chờ bán trong ngày')
+			if not items:
+				return JsonResponse({'ok': False, 'error': 'Vui lòng nhập số lượng cần xuất tách.'}, status=400)
+
+			issue = create_and_confirm_issue(
+				user=request.user,
+				issue_type=StockIssue.IssueType.INTERNAL,
+				receiver='Quầy / Bếp (Chờ bán trong ngày)',
+				note=note,
+				items_data=items,
+				request=request,
+			)
+			return JsonResponse({
+				'ok': True,
+				'message': f'Đã xuất tách thành công (Phiếu {issue.issue_code}) sang trạng thái Đang chờ bán!',
+			})
+
+		elif action == 'quick_receipt':
+			items = body.get('items', [])
+			supplier = body.get('supplier', 'Nhập kho trực tiếp')
+			note = body.get('note', 'Tự nhập hàng vào kho tổng')
+			if not items:
+				return JsonResponse({'ok': False, 'error': 'Vui lòng nhập số lượng nhập kho > 0.'}, status=400)
+
+			receipt = create_and_confirm_receipt(
+				user=request.user,
+				supplier=supplier,
+				note=note,
+				items_data=items,
+				request=request,
+			)
+			return JsonResponse({
+				'ok': True,
+				'message': f'Đã nhập kho thành công (Phiếu {receipt.receipt_code})!',
+			})
+
+		elif action == 'return_to_warehouse':
+			ing_id = body.get('ingredient_id')
+			with transaction.atomic():
+				ing = Ingredient.objects.select_for_update().get(pk=ing_id)
+				prep = ing.prep_stock or Decimal('0')
+				if prep <= 0:
+					return JsonResponse({'ok': False, 'error': 'Mặt hàng này hiện không có lượng chờ bán nào để hoàn về kho.'}, status=400)
+				pack_size = ing.pack_size if ing.pack_size and ing.pack_size > 0 else Decimal('1')
+				return_stock_qty = prep / pack_size
+				ing.current_stock = (ing.current_stock or Decimal('0')) + return_stock_qty
+				ing.prep_stock = Decimal('0')
+				ing.save(update_fields=('current_stock', 'prep_stock', 'updated_at'))
+				StockTransaction.objects.create(
+					ingredient=ing,
+					transaction_type=StockTransaction.TransactionType.INCREASE,
+					quantity=return_stock_qty,
+					unit_cost=ing.average_cost,
+					balance_after=ing.current_stock,
+					reference_type='return_prep',
+					note=f'Hoàn trả {prep:g} {ing.unpacked_unit} chờ bán về kho tổng (+{return_stock_qty:.2f} {ing.unit})',
+					created_by=request.user,
+				)
+			return JsonResponse({
+				'ok': True,
+				'message': f'Đã hoàn trả {prep:g} {ing.unpacked_unit} của "{ing.name}" về lại kho tổng!',
+			})
+
+		elif action == 'update_pack_rule':
+			ing_id = body.get('ingredient_id')
+			unit = (body.get('unit') or '').strip()
+			pack_size = Decimal(str(body.get('pack_size', 1)).replace(',', '.'))
+			unpacked_unit = (body.get('unpacked_unit') or '').strip()
+			if pack_size <= 0:
+				return JsonResponse({'ok': False, 'error': 'Quy cách đóng gói phải lớn hơn 0.'}, status=400)
+			ing = get_object_or_404(Ingredient, pk=ing_id)
+			if unit:
+				ing.unit = unit
+			ing.pack_size = pack_size
+			if unpacked_unit:
+				ing.unpacked_unit = unpacked_unit
+			ing.save(update_fields=('unit', 'pack_size', 'unpacked_unit', 'updated_at'))
+			return JsonResponse({
+				'ok': True,
+				'message': f'Đã cập nhật quy cách "{ing.name}": 1 {ing.unit} = {ing.pack_size:g} {ing.unpacked_unit}!',
+			})
+
+		elif action == 'reset_all_zero':
+			with transaction.atomic():
+				StockTransaction.objects.all().delete()
+				StockReceiptItem.objects.all().delete()
+				StockReceipt.objects.all().delete()
+				StockIssueItem.objects.all().delete()
+				StockIssue.objects.all().delete()
+				StockAdjustmentItem.objects.all().delete()
+				StockAdjustment.objects.all().delete()
+				Ingredient.objects.all().update(current_stock=Decimal('0'), prep_stock=Decimal('0'))
+			return JsonResponse({
+				'ok': True,
+				'message': 'Đã đưa toàn bộ số lượng nhập hàng, tồn kho và suất chờ bán về 0!',
+			})
+
+		return JsonResponse({'ok': False, 'error': 'Hành động không hợp lệ.'}, status=400)
+
+	except ValidationError as e:
+		msg = e.messages[0] if hasattr(e, 'messages') and e.messages else str(e)
+		return JsonResponse({'ok': False, 'error': msg}, status=400)
+	except Exception as e:
+		return JsonResponse({'ok': False, 'error': str(e)}, status=400)

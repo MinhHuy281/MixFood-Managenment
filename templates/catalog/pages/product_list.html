@@ -1,7 +1,579 @@
 {% extends 'base.html' %}
-{% block title %}Món ăn | MixFood Manager{% endblock %}
+{% load static %}
+{% block title %}Quản lý Mặt hàng & Giá bán | MixFood Manager{% endblock %}
+
 {% block content %}
-<section class="list-header"><div><p class="eyebrow">CATALOG / PRODUCTS</p><h1>Món ăn & giá bán</h1></div><a class="primary-button" href="{% url 'catalog:product_create' %}">+ Thêm món</a></section>
-<form class="filter-bar" method="get"><input name="q" value="{{ query }}" placeholder="Tìm mã món hoặc tên món..."><select name="category"><option value="">Tất cả danh mục</option>{% for category in categories %}<option value="{{ category.pk }}" {% if selected_category == category.pk|stringformat:'s' %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select><button class="primary-button" type="submit">Lọc</button></form>
-<div class="data-table"><table><thead><tr><th>Mã món</th><th>Tên món</th><th>Danh mục</th><th>ĐVT</th><th>Giá bán</th><th>Loại</th><th>Trạng thái</th><th></th></tr></thead><tbody>{% for product in products %}<tr><td>{{ product.code }}</td><td><strong>{{ product.name }}</strong></td><td>{{ product.category.name }}</td><td>{{ product.unit }}</td><td>{{ product.price|floatformat:0 }} đ</td><td>{{ product.get_product_type_display }}</td><td>{% if product.is_available %}<span class="status good">Đang bán</span>{% else %}<span class="status">Tạm ngưng</span>{% endif %}</td><td class="row-actions"><a href="{% url 'catalog:product_update' product.pk %}">Sửa</a><form method="post" action="{% url 'catalog:product_delete' product.pk %}">{% csrf_token %}<button type="submit">Tắt</button></form></td></tr>{% empty %}<tr><td colspan="8">Chưa có món ăn nào.</td></tr>{% endfor %}</tbody></table></div>
+<div class="ingredient-admin-page-container">
+    <!-- Page Header -->
+    <div class="ingredient-page-header">
+        <div class="ingredient-page-title-wrap">
+            <span class="ingredient-page-icon">🍽️</span>
+            <div>
+                <p class="eyebrow" style="margin-bottom: 2px;">CÀI ĐẶT / THỰC ĐƠN & MẶT HÀNG</p>
+                <h1 class="ingredient-page-title">Quản lý Mặt hàng & Giá bán</h1>
+                <p class="ingredient-page-subtitle">Quản lý danh sách món ăn, bảng giá 3 cấp, trạng thái kinh doanh và liên kết định lượng nguyên vật liệu BOM</p>
+            </div>
+        </div>
+        <div class="ingredient-page-top-actions">
+            <button type="button" class="btn-ing-action btn-ing-add" id="btn-open-add-product" style="font-weight: 700; padding: 9px 18px; font-size: 13.5px; background: #f97316; color: #fff;">
+                + Thêm mặt hàng mới
+            </button>
+            <a href="{% url 'catalog:product_create' %}" class="btn-ing-action" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;" title="Mở form thêm mặt hàng dạng trang đầy đủ">
+                📝 Form chi tiết
+            </a>
+            <a href="{% url 'inventory:recipes' %}" class="btn-ing-action" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">
+                ⚖️ Định lượng nguyên liệu
+            </a>
+            <a href="{% url 'catalog:ingredients' %}" class="btn-ing-action" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                📦 Mặt hàng kho (NVL)
+            </a>
+            <a href="{% url 'catalog:menu_export_excel' %}" class="btn-export-excel-classic">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Xuất Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert Banner -->
+    <div id="product-alert-banner" class="menu-alert-banner" style="margin-bottom: 16px;" hidden></div>
+
+    <!-- KPI Stats Cards -->
+    <div class="inv-kpi-grid" style="grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px;">
+        <div class="inv-kpi-card" style="border-left: 4px solid #3b82f6;">
+            <div class="inv-kpi-label">Tổng số mặt hàng</div>
+            <div class="inv-kpi-value text-primary" style="font-size: 26px;">{{ total_count }}</div>
+            <div class="inv-kpi-sub">Mặt hàng đang trong hệ thống</div>
+        </div>
+        <div class="inv-kpi-card" style="border-left: 4px solid #10b981;">
+            <div class="inv-kpi-label">Đang mở bán</div>
+            <div class="inv-kpi-value text-success" style="font-size: 26px;">{{ available_count }}</div>
+            <div class="inv-kpi-sub">Hiển thị trên màn hình POS</div>
+        </div>
+        <div class="inv-kpi-card" style="border-left: 4px solid #f59e0b;">
+            <div class="inv-kpi-label">Tạm ngưng phục vụ</div>
+            <div class="inv-kpi-value text-warning" style="font-size: 26px;">{{ unavailable_count }}</div>
+            <div class="inv-kpi-sub">Đang hết hàng hoặc tạm khóa</div>
+        </div>
+        <div class="inv-kpi-card" style="border-left: 4px solid #8b5cf6;">
+            <div class="inv-kpi-label">Đã thiết lập Định lượng (BOM)</div>
+            <div class="inv-kpi-value text-purple" style="font-size: 26px; color: #8b5cf6;">{{ recipe_count }}</div>
+            <div class="inv-kpi-sub">Tự động trừ kho khi bán hàng</div>
+        </div>
+    </div>
+
+    <!-- Main Card Container -->
+    <div class="ingredient-page-card" style="padding: 20px;">
+        <!-- Filters Toolbar -->
+        <form method="get" class="ingredient-toolbar" style="flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+            <div class="ingredient-search-wrap" style="flex: 1; min-width: 260px;">
+                <input type="text" name="q" value="{{ query }}" class="ingredient-search-input" placeholder="🔍 Tìm kiếm mã món, tên món, nhóm con...">
+            </div>
+            <select name="category" class="ingredient-group-select" style="min-width: 180px;" onchange="this.form.submit()">
+                <option value="">-- Tất cả danh mục --</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:'s' %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" class="ingredient-group-select" style="min-width: 150px;" onchange="this.form.submit()">
+                <option value="">-- Trạng thái bán --</option>
+                <option value="available" {% if selected_status == 'available' %}selected{% endif %}>Đang bán</option>
+                <option value="unavailable" {% if selected_status == 'unavailable' %}selected{% endif %}>Tạm ngưng</option>
+            </select>
+            <select name="type" class="ingredient-group-select" style="min-width: 160px;" onchange="this.form.submit()">
+                <option value="">-- Tất cả loại món --</option>
+                {% for code, label in product_types %}
+                <option value="{{ code }}" {% if selected_type == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-ing-action btn-ing-edit" style="padding: 8px 16px;">Lọc</button>
+            {% if query or selected_category or selected_status or selected_type %}
+            <a href="{% url 'catalog:products' %}" class="btn-ing-action" style="text-decoration: none; padding: 8px 14px; background: #f1f5f9; color: #64748b;">Bỏ lọc</a>
+            {% endif %}
+        </form>
+
+        <!-- Product Table -->
+        <div class="ingredient-table-container" style="overflow-x: auto;">
+            <table class="ingredient-data-table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="width: 4%; text-align: center;">#</th>
+                        <th style="width: 8%;">Mã món</th>
+                        <th style="width: 24%;">Tên mặt hàng / Món ăn</th>
+                        <th style="width: 12%;">Danh mục</th>
+                        <th style="width: 7%; text-align: center;">ĐVT</th>
+                        <th style="width: 11%; text-align: right;">Giá bán</th>
+                        <th style="width: 11%; text-align: right;">Giá vốn (BOM)</th>
+                        <th style="width: 7%; text-align: center;">Tỷ suất</th>
+                        <th style="width: 12%; text-align: center;">Định lượng</th>
+                        <th style="width: 8%; text-align: center;">Trạng thái</th>
+                        <th style="width: 13%; text-align: center;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in products %}
+                    <tr data-id="{{ item.obj.id }}">
+                        <td style="text-align: center; color: #94a3b8; font-size: 12px;">{{ forloop.counter }}</td>
+                        <td><span class="dish-item-code" style="font-weight: 700; color: #1e293b; font-family: monospace;">{{ item.obj.code }}</span></td>
+                        <td>
+                            <strong style="color: #0f172a; font-size: 14px;">{{ item.obj.name }}</strong>
+                            {% if item.obj.subgroup %}<div style="font-size: 12px; color: #64748b;">Nhóm: {{ item.obj.subgroup }}</div>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge-cat" style="background: {{ item.obj.category.color|default:'#f1f5f9' }}22; color: {{ item.obj.category.color|default:'#475569' }}; border: 1px solid {{ item.obj.category.color|default:'#cbd5e1' }}66;">
+                                {{ item.obj.category.name }}
+                            </span>
+                        </td>
+                        <td style="text-align: center;"><span style="background: #f8fafc; padding: 3px 8px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 600;">{{ item.obj.unit }}</span></td>
+                        <td style="text-align: right;"><strong style="color: #0284c7; font-size: 14px;">{{ item.price_formatted }} đ</strong></td>
+                        <td style="text-align: right;"><span style="color: #d97706; font-size: 13.5px; font-weight: 600;">{{ item.cost_price_formatted }} đ</span></td>
+                        <td style="text-align: center;">
+                            {% if item.margin_pct >= 50 %}
+                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 700;">{{ item.margin_pct }}%</span>
+                            {% elif item.margin_pct >= 30 %}
+                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; background: #fef3c7; color: #b45309; font-size: 12px; font-weight: 700;">{{ item.margin_pct }}%</span>
+                            {% else %}
+                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; background: #fee2e2; color: #b91c1c; font-size: 12px; font-weight: 700;">{{ item.margin_pct }}%</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <a href="{% url 'inventory:recipes' %}?product_id={{ item.obj.id }}" style="text-decoration: none;" title="Xem hoặc chỉnh sửa định lượng cho món này">
+                                {% if item.has_recipe %}
+                                <span class="dish-item-badge badge-has-recipe" style="cursor: pointer;">
+                                    ⚖️ {{ item.items_count }} NVL
+                                </span>
+                                {% else %}
+                                <span class="dish-item-badge badge-no-recipe" style="cursor: pointer;">
+                                    + Thêm định lượng
+                                </span>
+                                {% endif %}
+                            </a>
+                        </td>
+                        <td style="text-align: center;">
+                            {% if item.obj.is_available %}
+                            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; background: #dcfce7; color: #166534; font-size: 12px; font-weight: 600;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span> Đang bán
+                            </span>
+                            {% else %}
+                            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; background: #f1f5f9; color: #64748b; font-size: 12px; font-weight: 600;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;"></span> Tạm ngưng
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="display: inline-flex; align-items: center; gap: 5px;">
+                                <button type="button" class="btn-product-edit" data-dish='{"id": {{ item.obj.id }}, "code": "{{ item.obj.code|escapejs }}", "name": "{{ item.obj.name|escapejs }}", "category_id": {{ item.obj.category_id }}, "subgroup": "{{ item.obj.subgroup|default:""|escapejs }}", "unit": "{{ item.obj.unit|escapejs }}", "price": {{ item.obj.price|floatformat:0 }}, "price_2": {{ item.obj.price_2|floatformat:0 }}, "price_3": {{ item.obj.price_3|floatformat:0 }}, "cost_price": {{ item.obj.cost_price|floatformat:0 }}, "product_type": "{{ item.obj.product_type }}", "is_available": {% if item.obj.is_available %}true{% else %}false{% endif %}}' title="Sửa nhanh mặt hàng (Modal)" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; color: #0284c7; font-size: 12px; font-weight: 700;">
+                                    ✏️ Sửa
+                                </button>
+                                <a href="{% url 'catalog:product_update' item.obj.id %}" title="Mở trang sửa đầy đủ" style="padding: 4px 7px; border-radius: 4px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; text-decoration: none; font-size: 12px; font-weight: 600;">
+                                    ↗
+                                </a>
+                                <button type="button" class="btn-product-delete" data-id="{{ item.obj.id }}" data-name="{{ item.obj.name|escapejs }}" title="Xóa mặt hàng" style="padding: 4px 7px; border-radius: 4px; border: 1px solid #fee2e2; background: #fef2f2; cursor: pointer; color: #dc2626; font-size: 12px; font-weight: 600;">
+                                    🗑️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 40px; color: #94a3b8;">
+                            Không tìm thấy mặt hàng nào phù hợp với điều kiện lọc.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Table Footer -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
+            <span style="font-size: 13px; color: #64748b;">Hiển thị <strong>{{ products|length }}</strong> / <strong>{{ total_count }}</strong> mặt hàng</span>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- SUBMODAL: THÊM / SỬA MẶT HÀNG (PRODUCT FORM MODAL ĐỒNG BỘ HIỆN ĐẠI) -->
+<!-- ========================================================================= -->
+<div class="dining-submodal-overlay" id="product-form-modal" hidden>
+    <div class="dining-submodal-card" style="max-width: 640px; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);">
+        <div class="dining-submodal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 14px 20px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">🍽️</span>
+                <h4 id="product-form-modal-title" style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">Thêm mặt hàng mới</h4>
+            </div>
+            <button type="button" class="btn-submodal-close" id="product-form-modal-close" style="font-size: 22px; cursor: pointer; color: #94a3b8; border: none; background: none;">&times;</button>
+        </div>
+        <form id="product-crud-form">
+            <input type="hidden" id="crud-dish-id" value="">
+            <div class="dining-submodal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+                
+                <!-- Tên món & Danh mục -->
+                <div class="form-row">
+                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+                        Tên mặt hàng / Món ăn <span class="text-danger" style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="text" id="crud-dish-name" class="form-input" required placeholder="Ví dụ: Pad Thái Tôm, Cơm chiên hải sản..." style="height: 40px; font-weight: 600; font-size: 14px;">
+                </div>
+
+                <div class="form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-col">
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+                            Danh mục thực đơn <span class="text-danger" style="color: #ef4444;">*</span>
+                        </label>
+                        <select id="crud-dish-category" class="form-input" style="height: 38px; font-weight: 600;" required>
+                            <option value="">-- Chọn danh mục --</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-col">
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+                            Nhóm con (Phân loại)
+                        </label>
+                        <input type="text" id="crud-dish-subgroup" class="form-input" list="crud-subgroup-list" style="height: 38px;" placeholder="Ví dụ: Món xào, Món nướng...">
+                        <datalist id="crud-subgroup-list">
+                            <option value="Món xào">
+                            <option value="Món nướng">
+                            <option value="Món lẩu">
+                            <option value="Món hấp">
+                            <option value="Tráng miệng">
+                            <option value="Nước ép tươi">
+                        </datalist>
+                    </div>
+                </div>
+
+                <!-- Mã món & Đơn vị tính -->
+                <div class="form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-col">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Mã mặt hàng</label>
+                            <button type="button" id="btn-modal-auto-code" style="background: none; border: none; color: #0284c7; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 0;">
+                                ⚡ Tự sinh mã
+                            </button>
+                        </div>
+                        <input type="text" id="crud-dish-code" class="form-input" style="height: 38px; text-transform: uppercase; font-family: monospace; font-weight: 700;" placeholder="Tự sinh nếu để trống">
+                    </div>
+                    <div class="form-col">
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+                            Đơn vị tính (ĐVT) <span class="text-danger" style="color: #ef4444;">*</span>
+                        </label>
+                        <input type="text" id="crud-dish-unit" class="form-input" value="Phần" style="height: 38px;" required placeholder="Phần, Dĩa, Tô, Ly...">
+                    </div>
+                </div>
+
+                <!-- Quick Unit Selector Pills -->
+                <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                    <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Chọn nhanh ĐVT:</span>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Phần" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Phần</button>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Dĩa" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Dĩa</button>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Tô" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Tô</button>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Nồi" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Nồi</button>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Ly" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Ly</button>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Lon" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Lon</button>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Chai" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Chai</button>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Ổ" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Ổ</button>
+                    <button type="button" class="btn-modal-unit-chip" data-unit="Gói" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">Gói</button>
+                </div>
+
+                <!-- Bảng giá bán 3 cấp -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+                    <div style="font-size: 12.5px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">💵 Bảng giá bán (VNĐ)</div>
+                    <div class="form-row-2col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 600; color: #166534; display: block; margin-bottom: 2px;">Giá bán 1 (Chuẩn) <span class="text-danger">*</span></label>
+                            <input type="text" id="crud-dish-price" class="form-input" required value="0" placeholder="0" style="height: 36px; text-align: right; font-weight: 700; color: #15803d;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 600; color: #1e40af; display: block; margin-bottom: 2px;">Giá 2 (VIP)</label>
+                            <input type="text" id="crud-dish-price2" class="form-input" value="0" placeholder="0" style="height: 36px; text-align: right; font-weight: 700; color: #1d4ed8;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 600; color: #92400e; display: block; margin-bottom: 2px;">Giá 3 (Mang về/Ship)</label>
+                            <input type="text" id="crud-dish-price3" class="form-input" value="0" placeholder="0" style="height: 36px; text-align: right; font-weight: 700; color: #b45309;">
+                        </div>
+                    </div>
+                    
+                    <!-- Live Margin Indicator -->
+                    <div id="modal-margin-indicator" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+                        <span style="color: #64748b;">Giá vốn BOM: <strong id="modal-live-cost" style="color: #d97706;">0 đ</strong></span>
+                        <span style="color: #64748b;">Tỷ suất lãi: <strong id="modal-live-margin" style="color: #16a34a; font-weight: 800;">0%</strong></span>
+                    </div>
+                </div>
+
+                <!-- Loại mặt hàng & Switch mở bán -->
+                <div class="form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center;">
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">Loại mặt hàng</label>
+                        <select id="crud-dish-type" class="form-input" style="height: 36px;">
+                            {% for code, label in product_types %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="custom-checkbox-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 18px;">
+                            <input type="checkbox" id="crud-dish-available" checked style="width: 17px; height: 17px; accent-color: #16a34a;">
+                            <span style="font-size: 13px; font-weight: 700; color: #166534;">Đang mở bán phục vụ</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Direct link to Recipe BOM (when editing) -->
+                <div id="modal-recipe-link-box" style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;" hidden>
+                    <span style="font-size: 12.5px; color: #0369a1; font-weight: 600;">⚖️ Món ăn này đã có công thức định lượng (BOM)</span>
+                    <a id="modal-recipe-link-btn" href="#" target="_blank" style="font-size: 12px; font-weight: 700; color: #0284c7; text-decoration: underline;">Chỉnh sửa định lượng ↗</a>
+                </div>
+            </div>
+
+            <div class="dining-submodal-footer" style="padding: 14px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" class="btn-modal-cancel" id="btn-cancel-product-modal" style="padding: 8px 16px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; font-weight: 600; cursor: pointer;">Bỏ qua</button>
+                <div style="display: flex; gap: 8px;">
+                    <button type="submit" class="btn-modal-save" id="btn-save-product-modal" style="background: #f97316; color: #fff; font-weight: 700; padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 1px 2px rgba(249,115,22,0.3);">
+                        Lưu mặt hàng
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- SUBMODAL: XÁC NHẬN XÓA MẶT HÀNG -->
+<!-- ========================================================================= -->
+<div class="dining-submodal-overlay" id="product-delete-modal" hidden>
+    <div class="dining-submodal-card" style="max-width: 440px; border-radius: 12px;">
+        <div class="dining-submodal-header" style="background: #fef2f2; border-bottom: 1px solid #fee2e2; padding: 14px 18px;">
+            <h4 style="font-size: 16px; font-weight: 800; color: #991b1b; margin: 0;">Xác nhận xóa mặt hàng</h4>
+            <button type="button" class="btn-submodal-close" id="product-delete-modal-close" style="font-size: 20px; cursor: pointer; color: #991b1b; border: none; background: none;">&times;</button>
+        </div>
+        <div class="dining-submodal-body" style="padding: 18px;">
+            <p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0;">
+                Bạn có chắc chắn muốn xóa mặt hàng <strong id="delete-dish-name-text" class="text-danger" style="color: #dc2626;"></strong> khỏi thực đơn?
+            </p>
+            <p style="font-size: 12px; color: #64748b; margin-top: 10px; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <em>Lưu ý: Nếu mặt hàng đã phát sinh hóa đơn bán hàng trước đó, hệ thống sẽ tự động chuyển sang trạng thái <strong>Tạm ngưng bán</strong> để bảo toàn số liệu doanh thu và thẻ kho.</em>
+            </p>
+        </div>
+        <div class="dining-submodal-footer" style="padding: 12px 18px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn-modal-cancel" id="btn-cancel-delete-modal" style="padding: 7px 14px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer;">Bỏ qua</button>
+            <button type="button" class="btn-modal-save" id="btn-confirm-delete-dish" style="background: #ef4444; color: #fff; padding: 7px 16px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">Đồng ý xóa</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- JAVASCRIPT CONTROLLER CHO TRANG MẶT HÀNG -->
+<!-- ========================================================================= -->
+<script>
+(() => {
+    const formModal = document.getElementById('product-form-modal');
+    const deleteModal = document.getElementById('product-delete-modal');
+    const alertBanner = document.getElementById('product-alert-banner');
+    
+    let deleteTargetId = null;
+    let currentCostPrice = 0;
+
+    const csrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '{{ csrf_token }}';
+
+    const showAlert = (message, type = 'success') => {
+        if (!alertBanner) return;
+        alertBanner.className = `menu-alert-banner ${type}`;
+        alertBanner.textContent = message;
+        alertBanner.hidden = false;
+        setTimeout(() => { alertBanner.hidden = true; }, 4000);
+    };
+
+    const parseNum = val => Number(String(val).replace(/\D/g, '') || 0);
+    const formatNum = val => parseNum(val).toLocaleString('vi-VN');
+
+    const priceInput = document.getElementById('crud-dish-price');
+    const price2Input = document.getElementById('crud-dish-price2');
+    const price3Input = document.getElementById('crud-dish-price3');
+
+    function updateModalMargin() {
+        const p = parseNum(priceInput.value);
+        const c = currentCostPrice;
+        const profit = p - c;
+        const margin = p > 0 ? ((profit / p) * 100).toFixed(1) : 0;
+        
+        document.getElementById('modal-live-cost').textContent = `${c.toLocaleString('vi-VN')} đ`;
+        const marginEl = document.getElementById('modal-live-margin');
+        marginEl.textContent = `${margin}%`;
+        if (margin >= 50) marginEl.style.color = '#16a34a';
+        else if (margin >= 30) marginEl.style.color = '#d97706';
+        else marginEl.style.color = '#dc2626';
+    }
+
+    // Format tiền tệ khi nhập liệu
+    [priceInput, price2Input, price3Input].forEach(inp => {
+        if (!inp) return;
+        inp.addEventListener('input', (e) => {
+            e.target.value = formatNum(e.target.value);
+            updateModalMargin();
+        });
+    });
+
+    // Chọn nhanh ĐVT trong modal
+    document.querySelectorAll('.btn-modal-unit-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('crud-dish-unit').value = btn.dataset.unit;
+        });
+    });
+
+    // Tự sinh mã trong modal
+    document.getElementById('btn-modal-auto-code')?.addEventListener('click', () => {
+        const catSelect = document.getElementById('crud-dish-category');
+        const catText = catSelect.selectedOptions[0]?.text || '';
+        let prefix = 'M';
+        if (catText && catText !== '-- Chọn danh mục --') {
+            prefix = catText.split(/\s+/).map(w => w[0]).join('').toUpperCase().substring(0, 3) || 'M';
+        }
+        const rand = Math.floor(Math.random() * 90) + 10;
+        document.getElementById('crud-dish-code').value = `${prefix}${rand}`;
+    });
+
+    // Mở modal Thêm mặt hàng
+    document.getElementById('btn-open-add-product')?.addEventListener('click', () => {
+        document.getElementById('product-form-modal-title').textContent = 'Thêm mặt hàng mới';
+        document.getElementById('crud-dish-id').value = '';
+        document.getElementById('crud-dish-code').value = '';
+        document.getElementById('crud-dish-name').value = '';
+        document.getElementById('crud-dish-subgroup').value = '';
+        document.getElementById('crud-dish-unit').value = 'Phần';
+        document.getElementById('crud-dish-price').value = '0';
+        document.getElementById('crud-dish-price2').value = '0';
+        document.getElementById('crud-dish-price3').value = '0';
+        document.getElementById('crud-dish-available').checked = true;
+        currentCostPrice = 0;
+        document.getElementById('modal-recipe-link-box').hidden = true;
+        updateModalMargin();
+        formModal.hidden = false;
+    });
+
+    // Mở modal Sửa mặt hàng
+    document.querySelectorAll('.btn-product-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const dataStr = btn.getAttribute('data-dish');
+            if (!dataStr) return;
+            const data = JSON.parse(dataStr);
+
+            document.getElementById('product-form-modal-title').textContent = `Chỉnh sửa mặt hàng: ${data.name}`;
+            document.getElementById('crud-dish-id').value = data.id;
+            document.getElementById('crud-dish-code').value = data.code || '';
+            document.getElementById('crud-dish-name').value = data.name || '';
+            document.getElementById('crud-dish-category').value = data.category_id || '';
+            document.getElementById('crud-dish-subgroup').value = data.subgroup || '';
+            document.getElementById('crud-dish-unit').value = data.unit || 'Phần';
+            document.getElementById('crud-dish-price').value = Number(data.price || 0).toLocaleString('vi-VN');
+            document.getElementById('crud-dish-price2').value = Number(data.price_2 || 0).toLocaleString('vi-VN');
+            document.getElementById('crud-dish-price3').value = Number(data.price_3 || 0).toLocaleString('vi-VN');
+            document.getElementById('crud-dish-type').value = data.product_type || 'food';
+            document.getElementById('crud-dish-available').checked = !!data.is_available;
+
+            currentCostPrice = Number(data.cost_price || 0);
+            updateModalMargin();
+
+            const recipeBox = document.getElementById('modal-recipe-link-box');
+            const recipeLink = document.getElementById('modal-recipe-link-btn');
+            recipeBox.hidden = false;
+            recipeLink.href = `/inventory/recipes/?product_id=${data.id}`;
+
+            formModal.hidden = false;
+        });
+    });
+
+    // Đóng form modal
+    const closeFormModal = () => { formModal.hidden = true; };
+    document.getElementById('product-form-modal-close')?.addEventListener('click', closeFormModal);
+    document.getElementById('btn-cancel-product-modal')?.addEventListener('click', closeFormModal);
+
+    // Xử lý Lưu Mặt hàng (AJAX)
+    document.getElementById('product-crud-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dishId = document.getElementById('crud-dish-id').value;
+        const name = document.getElementById('crud-dish-name').value.trim();
+        const code = document.getElementById('crud-dish-code').value.trim();
+        const categoryId = document.getElementById('crud-dish-category').value;
+        const subgroup = document.getElementById('crud-dish-subgroup').value.trim();
+        const unit = document.getElementById('crud-dish-unit').value.trim();
+        const price = document.getElementById('crud-dish-price').value.replace(/\D/g, '');
+        const price2 = document.getElementById('crud-dish-price2').value.replace(/\D/g, '');
+        const price3 = document.getElementById('crud-dish-price3').value.replace(/\D/g, '');
+        const productType = document.getElementById('crud-dish-type').value;
+        const isAvailable = document.getElementById('crud-dish-available').checked;
+
+        if (!name) { alert('Vui lòng nhập tên mặt hàng.'); return; }
+        if (!categoryId) { alert('Vui lòng chọn danh mục.'); return; }
+
+        try {
+            const resp = await fetch('{% url "catalog:menu_save_dish" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken()
+                },
+                body: JSON.stringify({
+                    dish_id: dishId ? Number(dishId) : null,
+                    name: name,
+                    code: code,
+                    category_id: Number(categoryId),
+                    subgroup: subgroup,
+                    unit: unit,
+                    price: price,
+                    price_2: price2,
+                    price_3: price3,
+                    product_type: productType,
+                    is_available: isAvailable,
+                })
+            });
+            const res = await resp.json();
+            if (!resp.ok) throw new Error(res.error || 'Lỗi khi lưu mặt hàng.');
+
+            closeFormModal();
+            showAlert(res.message || 'Đã lưu mặt hàng thành công!');
+            setTimeout(() => { window.location.reload(); }, 600);
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    });
+
+    // Mở modal Xóa mặt hàng
+    document.querySelectorAll('.btn-product-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            deleteTargetId = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            document.getElementById('delete-dish-name-text').textContent = `"${name}"`;
+            deleteModal.hidden = false;
+        });
+    });
+
+    // Đóng delete modal
+    const closeDeleteModal = () => { deleteModal.hidden = true; deleteTargetId = null; };
+    document.getElementById('product-delete-modal-close')?.addEventListener('click', closeDeleteModal);
+    document.getElementById('btn-cancel-delete-modal')?.addEventListener('click', closeDeleteModal);
+
+    // Xử lý Xóa mặt hàng (AJAX)
+    document.getElementById('btn-confirm-delete-dish')?.addEventListener('click', async () => {
+        if (!deleteTargetId) return;
+        try {
+            const resp = await fetch(`/catalog/menu/api/delete-dish/${deleteTargetId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken()
+                }
+            });
+            const res = await resp.json();
+            if (!resp.ok) throw new Error(res.error || 'Lỗi khi xóa.');
+
+            closeDeleteModal();
+            showAlert(res.message || 'Đã xóa mặt hàng thành công!');
+            setTimeout(() => { window.location.reload(); }, 600);
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    });
+
+})();
+</script>
 {% endblock %}

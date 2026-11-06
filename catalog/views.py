@@ -68,34 +68,163 @@ def category_delete(request, pk):
 @login_required
 def product_list(request):
 	query = request.GET.get('q', '').strip()
-	category_id = request.GET.get('category', '')
-	products = Product.objects.select_related('category').all()
+	category_id = request.GET.get('category', '').strip()
+	status_filter = request.GET.get('status', '').strip()
+	type_filter = request.GET.get('type', '').strip()
+
+	qs = Product.objects.filter(is_active=True).select_related('category', 'recipe').prefetch_related('recipe__items')
+
+	total_count = qs.count()
+	available_count = qs.filter(is_available=True).count()
+	unavailable_count = total_count - available_count
+
 	if query:
-		products = products.filter(Q(code__icontains=query) | Q(name__icontains=query))
-	if category_id:
-		products = products.filter(category_id=category_id)
-	return render(request, 'catalog/pages/product_list.html', {'products': products, 'categories': Category.objects.filter(is_active=True), 'query': query, 'selected_category': category_id})
+		qs = qs.filter(Q(code__icontains=query) | Q(name__icontains=query) | Q(subgroup__icontains=query))
+	if category_id and category_id.isdigit():
+		qs = qs.filter(category_id=int(category_id))
+	if status_filter == 'available':
+		qs = qs.filter(is_available=True)
+	elif status_filter == 'unavailable':
+		qs = qs.filter(is_available=False)
+	if type_filter:
+		qs = qs.filter(product_type=type_filter)
+
+	products_qs = qs.order_by('category__display_order', 'name')
+
+	enhanced_products = []
+	recipe_has_count = 0
+	for p in products_qs:
+		recipe = getattr(p, 'recipe', None)
+		has_recipe = recipe is not None and recipe.is_active and recipe.items.exists()
+		if has_recipe:
+			recipe_has_count += 1
+		items_count = recipe.items.count() if has_recipe else 0
+		price = float(p.price)
+		cost = float(p.cost_price)
+		profit = price - cost
+		margin_pct = round((profit / price * 100), 1) if price > 0 else 0
+		enhanced_products.append({
+			'obj': p,
+			'has_recipe': has_recipe,
+			'items_count': items_count,
+			'price': price,
+			'price_formatted': f'{p.price:,.0f}'.replace(',', '.'),
+			'cost_price': cost,
+			'cost_price_formatted': f'{p.cost_price:,.0f}'.replace(',', '.'),
+			'profit': profit,
+			'profit_formatted': f'{profit:,.0f}'.replace(',', '.'),
+			'margin_pct': margin_pct,
+		})
+
+	categories = Category.objects.filter(is_active=True).order_by('display_order', 'name')
+	product_types = Product.ProductType.choices
+
+	context = {
+		'products': enhanced_products,
+		'categories': categories,
+		'product_types': product_types,
+		'query': query,
+		'selected_category': category_id,
+		'selected_status': status_filter,
+		'selected_type': type_filter,
+		'total_count': total_count,
+		'available_count': available_count,
+		'unavailable_count': unavailable_count,
+		'recipe_count': recipe_has_count,
+	}
+	return render(request, 'catalog/pages/product_list.html', context)
 
 
 @login_required
 def product_create(request):
-	form = ProductForm(request.POST or None, request.FILES or None)
-	if form.is_valid():
-		form.save()
-		messages.success(request, 'Đã thêm món ăn.')
-		return redirect('catalog:products')
-	return render(request, 'catalog/pages/form.html', {'form': form, 'title': 'Thêm món ăn', 'back_url': 'catalog:products'})
+	categories = Category.objects.filter(is_active=True).order_by('display_order', 'name')
+	product_types = Product.ProductType.choices
+	common_units = ['Phần', 'Dĩa', 'Tô', 'Nồi', 'Ly', 'Lon', 'Chai', 'Ổ', 'Gói', 'Cái', 'Chén']
+
+	if request.method == 'POST':
+		post_data = request.POST.copy()
+		if not post_data.get('code', '').strip() and post_data.get('category'):
+			try:
+				cat = Category.objects.get(pk=post_data.get('category'))
+				prefix = ''.join([w[0] for w in cat.name.split() if w]).upper()[:3] or 'M'
+				for i in range(1, 1000):
+					test_code = f'{prefix}{i:02d}'
+					if not Product.objects.filter(code=test_code).exists():
+						post_data['code'] = test_code
+						break
+			except Exception:
+				pass
+
+		form = ProductForm(post_data, request.FILES)
+		if form.is_valid():
+			product = form.save()
+			messages.success(request, f'Đã thêm mặt hàng "{product.name}" thành công.')
+			if request.POST.get('save_and_add_recipe'):
+				return redirect(f'/inventory/recipes/?product_id={product.id}')
+			return redirect('catalog:products')
+	else:
+		form = ProductForm(initial={'unit': 'Phần', 'is_available': True, 'is_active': True, 'price': 0, 'price_2': 0, 'price_3': 0})
+
+	context = {
+		'form': form,
+		'title': 'Thêm mặt hàng mới',
+		'is_edit': False,
+		'product': None,
+		'cost_price': 0,
+		'profit': 0,
+		'margin_pct': 0,
+		'categories': categories,
+		'product_types': product_types,
+		'common_units': common_units,
+		'back_url': 'catalog:products',
+	}
+	return render(request, 'catalog/pages/product_form.html', context)
 
 
 @login_required
 def product_update(request, pk):
 	product = get_object_or_404(Product, pk=pk)
-	form = ProductForm(request.POST or None, request.FILES or None, instance=product)
-	if form.is_valid():
-		form.save()
-		messages.success(request, 'Đã cập nhật món ăn.')
-		return redirect('catalog:products')
-	return render(request, 'catalog/pages/form.html', {'form': form, 'title': 'Sửa món ăn', 'back_url': 'catalog:products'})
+	categories = Category.objects.filter(is_active=True).order_by('display_order', 'name')
+	product_types = Product.ProductType.choices
+	common_units = ['Phần', 'Dĩa', 'Tô', 'Nồi', 'Ly', 'Lon', 'Chai', 'Ổ', 'Gói', 'Cái', 'Chén']
+
+	recipe = getattr(product, 'recipe', None)
+	has_recipe = recipe is not None and recipe.is_active and recipe.items.exists()
+
+	if request.method == 'POST':
+		post_data = request.POST.copy()
+		form = ProductForm(post_data, request.FILES, instance=product)
+		if form.is_valid():
+			product = form.save()
+			messages.success(request, f'Đã cập nhật thông tin mặt hàng "{product.name}".')
+			if request.POST.get('save_and_edit_recipe'):
+				return redirect(f'/inventory/recipes/?product_id={product.id}')
+			return redirect('catalog:products')
+	else:
+		form = ProductForm(instance=product)
+
+	price = float(product.price)
+	cost = float(product.cost_price)
+	profit = price - cost
+	margin_pct = round((profit / price * 100), 1) if price > 0 else 0
+
+	context = {
+		'form': form,
+		'title': f'Chỉnh sửa mặt hàng: {product.name}',
+		'is_edit': True,
+		'product': product,
+		'has_recipe': has_recipe,
+		'recipe_items_count': recipe.items.count() if has_recipe else 0,
+		'price': price,
+		'cost_price': cost,
+		'profit': profit,
+		'margin_pct': margin_pct,
+		'categories': categories,
+		'product_types': product_types,
+		'common_units': common_units,
+		'back_url': 'catalog:products',
+	}
+	return render(request, 'catalog/pages/product_form.html', context)
 
 
 @login_required
@@ -118,23 +247,36 @@ def _generate_ingredient_code():
 
 @login_required
 def ingredient_list(request):
-	"""Trang Quản trị Mặt hàng - Admin (Nguyên liệu / Hàng hóa kho)."""
+	"""Trang Quản trị Mặt hàng - Admin (Nguyên liệu / Hàng hóa kho) phân theo 3 Kho."""
 	query = request.GET.get('q', '').strip()
 	group_filter = request.GET.get('group', '').strip()
+	warehouse_filter = (request.GET.get('warehouse') or request.GET.get('storage_area', '')).strip().lower()
 
-	ingredients = Ingredient.objects.filter(is_active=True)
+	base_qs = Ingredient.objects.filter(is_active=True)
+	ingredients = base_qs
+	if warehouse_filter in ['fresh', 'dry', 'beverage']:
+		ingredients = ingredients.filter(storage_area=warehouse_filter)
 	if group_filter:
 		ingredients = ingredients.filter(group=group_filter)
 	if query:
 		ingredients = ingredients.filter(Q(code__icontains=query) | Q(name__icontains=query) | Q(group__icontains=query) | Q(supplier__icontains=query))
 
-	ingredients = ingredients.order_by('group', 'name')
-	groups = list(Ingredient.objects.filter(is_active=True).exclude(group='').values_list('group', flat=True).distinct().order_by('group'))
+	ingredients = ingredients.order_by('storage_area', 'group', 'name')
+	groups = list(base_qs.exclude(group='').values_list('group', flat=True).distinct().order_by('group'))
+
+	warehouse_counts = {
+		'all': base_qs.count(),
+		'fresh': base_qs.filter(storage_area=Ingredient.StorageArea.FRESH).count(),
+		'dry': base_qs.filter(storage_area=Ingredient.StorageArea.DRY).count(),
+		'beverage': base_qs.filter(storage_area=Ingredient.StorageArea.BEVERAGE).count(),
+	}
 
 	return render(request, 'catalog/pages/ingredient_list.html', {
 		'ingredients': ingredients,
 		'groups': groups,
 		'current_group': group_filter,
+		'current_warehouse': warehouse_filter or 'all',
+		'warehouse_counts': warehouse_counts,
 		'query': query,
 		'total_count': ingredients.count(),
 	})
@@ -142,22 +284,33 @@ def ingredient_list(request):
 
 @login_required
 def ingredient_data_api(request):
-	"""API trả về danh sách Mặt hàng cho Modal và AJAX list."""
+	"""API trả về danh sách Mặt hàng cho Modal và AJAX list kèm phân loại 3 Kho."""
 	query = request.GET.get('q', '').strip()
 	group_filter = request.GET.get('group', '').strip()
+	warehouse_filter = (request.GET.get('warehouse') or request.GET.get('storage_area', '')).strip().lower()
 
-	ingredients = Ingredient.objects.filter(is_active=True)
+	base_qs = Ingredient.objects.filter(is_active=True)
+	ingredients = base_qs
+	if warehouse_filter in ['fresh', 'dry', 'beverage']:
+		ingredients = ingredients.filter(storage_area=warehouse_filter)
 	if group_filter:
 		ingredients = ingredients.filter(group=group_filter)
 	if query:
 		ingredients = ingredients.filter(Q(code__icontains=query) | Q(name__icontains=query) | Q(group__icontains=query))
 
-	ingredients = ingredients.order_by('group', 'name')
+	ingredients = ingredients.order_by('storage_area', 'group', 'name')
 
 	items = []
 	for ing in ingredients:
 		items.append({
 			'id': ing.id,
+			'storage_area': ing.storage_area,
+			'storage_area_name': ing.storage_area_display,
+			'storage_area_short': ing.storage_area_short,
+			'portions_wait': ing.portions_wait_display,
+			'pack_size': float(ing.pack_size or 1),
+			'unpacked_unit': ing.unpacked_unit or 'phần',
+			'pack_rule_display': ing.pack_rule_display,
 			'group': ing.group or '',
 			'code': ing.code,
 			'name': ing.name,
@@ -171,11 +324,18 @@ def ingredient_data_api(request):
 			'supplier': ing.supplier or '',
 		})
 
-	groups = list(Ingredient.objects.filter(is_active=True).exclude(group='').values_list('group', flat=True).distinct().order_by('group'))
+	groups = list(base_qs.exclude(group='').values_list('group', flat=True).distinct().order_by('group'))
+	warehouse_counts = {
+		'all': base_qs.count(),
+		'fresh': base_qs.filter(storage_area=Ingredient.StorageArea.FRESH).count(),
+		'dry': base_qs.filter(storage_area=Ingredient.StorageArea.DRY).count(),
+		'beverage': base_qs.filter(storage_area=Ingredient.StorageArea.BEVERAGE).count(),
+	}
 
 	return JsonResponse({
 		'ingredients': items,
 		'groups': groups,
+		'warehouse_counts': warehouse_counts,
 		'total_count': len(items),
 	})
 
@@ -192,6 +352,9 @@ def ingredient_save_api(request):
 		data = request.POST
 
 	ing_id = data.get('id') or data.get('ingredient_id')
+	storage_area = data.get('storage_area', '').strip().lower()
+	if storage_area not in ['fresh', 'dry', 'beverage']:
+		storage_area = Ingredient.StorageArea.FRESH
 	group = data.get('group', '').strip()
 	name = data.get('name', '').strip()
 	code = data.get('code', '').strip().upper()
@@ -211,6 +374,16 @@ def ingredient_save_api(request):
 
 	supplier = data.get('supplier', '').strip()
 
+	try:
+		pack_size_raw = str(data.get('pack_size', '')).replace(',', '.').strip()
+		pack_size = Decimal(pack_size_raw) if pack_size_raw else None
+		if pack_size is not None and pack_size <= 0:
+			pack_size = Decimal('1')
+	except Exception:
+		pack_size = None
+
+	unpacked_unit = data.get('unpacked_unit', '').strip()
+
 	if not name:
 		return JsonResponse({'error': 'Vui lòng nhập tên mặt hàng.'}, status=400)
 
@@ -229,6 +402,8 @@ def ingredient_save_api(request):
 
 	if ing_id and str(ing_id).isdigit():
 		ingredient = get_object_or_404(Ingredient, pk=int(ing_id))
+		if storage_area:
+			ingredient.storage_area = storage_area
 		ingredient.group = group
 		ingredient.code = code
 		ingredient.name = name
@@ -236,11 +411,18 @@ def ingredient_save_api(request):
 		ingredient.average_cost = average_cost
 		ingredient.minimum_stock = minimum_stock
 		ingredient.supplier = supplier
+		if pack_size is not None:
+			ingredient.pack_size = pack_size
+		if unpacked_unit:
+			ingredient.unpacked_unit = unpacked_unit
 		ingredient.is_active = True
 		ingredient.save()
 		message = f'Đã cập nhật mặt hàng "{ingredient.name}".'
 	else:
+		default_pack = pack_size if pack_size is not None else (Decimal('24') if storage_area in ['dry', 'beverage'] else Decimal('10'))
+		default_sub = unpacked_unit if unpacked_unit else ('hộp' if storage_area == 'dry' else ('lon' if storage_area == 'beverage' else 'phần'))
 		ingredient = Ingredient.objects.create(
+			storage_area=storage_area,
 			group=group,
 			code=code,
 			name=name,
@@ -248,6 +430,8 @@ def ingredient_save_api(request):
 			average_cost=average_cost,
 			minimum_stock=minimum_stock,
 			supplier=supplier,
+			pack_size=default_pack,
+			unpacked_unit=default_sub,
 			is_active=True,
 		)
 		message = f'Đã thêm mặt hàng "{ingredient.name}".'
@@ -257,6 +441,13 @@ def ingredient_save_api(request):
 		'message': message,
 		'ingredient': {
 			'id': ingredient.id,
+			'storage_area': ingredient.storage_area,
+			'storage_area_name': ingredient.storage_area_display,
+			'storage_area_short': ingredient.storage_area_short,
+			'portions_wait': ingredient.portions_wait_display,
+			'pack_size': float(ingredient.pack_size or 1),
+			'unpacked_unit': ingredient.unpacked_unit or 'phần',
+			'pack_rule_display': ingredient.pack_rule_display,
 			'group': ingredient.group or '',
 			'code': ingredient.code,
 			'name': ingredient.name,
@@ -572,8 +763,6 @@ def menu_save_dish(request):
 
 	auto_recipe = str(data.get('auto_recipe', 'true')).lower() in ('true', '1', 'on', 'yes')
 
-	if not code:
-		return JsonResponse({'error': 'Vui lòng nhập mã món.'}, status=400)
 	if not name:
 		return JsonResponse({'error': 'Vui lòng nhập tên món.'}, status=400)
 	if not category_id:
@@ -583,6 +772,16 @@ def menu_save_dish(request):
 		category = Category.objects.get(pk=category_id)
 	except Category.DoesNotExist:
 		return JsonResponse({'error': 'Danh mục không tồn tại.'}, status=400)
+
+	if not code:
+		prefix = ''.join([w[0] for w in category.name.split() if w]).upper()[:3] or 'M'
+		for i in range(1, 1000):
+			test_code = f'{prefix}{i:02d}'
+			if not Product.objects.filter(code=test_code).exists():
+				code = test_code
+				break
+		if not code:
+			code = f'M{Product.objects.count() + 1}'
 
 	existing_query = Product.objects.filter(code=code)
 	if dish_id and str(dish_id).isdigit():

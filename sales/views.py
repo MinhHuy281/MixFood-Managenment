@@ -14,7 +14,7 @@ from accounts.decorators import role_required
 from audit.models import ActivityLog, log_activity
 from catalog.models import Product
 from dining.models import DiningTable
-from inventory.services import deduct_for_sale, restore_stock_for_undone_sale
+from inventory.services import deduct_for_sale, restore_stock_for_undone_sale, restore_stock_for_cancelled_sale
 
 from .models import Invoice, Order, OrderItem, Payment
 
@@ -692,12 +692,19 @@ def delete_invoice(request):
 	invoice = Invoice.objects.select_related('order').filter(invoice_code=invoice_code).first()
 	if invoice is None:
 		return JsonResponse({'error': 'Không tìm thấy hóa đơn.'}, status=404)
-	invoice.status = Invoice.Status.CANCELLED
-	invoice.cancelled_at = timezone.now()
-	invoice.cancel_reason = reason[:255]
-	invoice.save(update_fields=('status', 'cancelled_at', 'cancel_reason'))
-	invoice.order.status = Order.Status.CANCELLED
-	invoice.order.save(update_fields=('status', 'updated_at'))
+	with transaction.atomic():
+		invoice.status = Invoice.Status.CANCELLED
+		invoice.cancelled_at = timezone.now()
+		invoice.cancel_reason = reason[:255]
+		invoice.save(update_fields=('status', 'cancelled_at', 'cancel_reason'))
+		if invoice.order:
+			invoice.order.status = Order.Status.CANCELLED
+			invoice.order.save(update_fields=('status', 'updated_at'))
+			restore_stock_for_cancelled_sale(
+				invoice.order_id,
+				user=request.user,
+				reason=f'Hủy HĐ {invoice.invoice_code}: {reason}'
+			)
 
 	total_fmt = f'{invoice.total_amount:,.0f}'.replace(',', '.')
 	log_desc = f'Xóa hóa đơn số {invoice.invoice_code} thành tiền {total_fmt} đ ({reason})'

@@ -82,7 +82,7 @@ class RecipeAdminTests(TestCase):
 		response = self.client.get(reverse('inventory:recipes'))
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Định lượng nguyên liệu')
-		self.assertContains(response, 'Cà phê đen đá')
+		self.assertTrue(any(p.name == 'Cà phê đen đá' for p in response.context['products']))
 
 	def test_recipe_data_api(self):
 		from django.urls import reverse

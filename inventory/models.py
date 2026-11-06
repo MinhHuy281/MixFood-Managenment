@@ -74,6 +74,7 @@ class StockTransaction(models.Model):
 		ISSUE = 'issue', 'Xuất kho thủ công'
 		INCREASE = 'increase', 'Điều chỉnh tăng'
 		DECREASE = 'decrease', 'Điều chỉnh giảm'
+		RESTORE = 'restore', 'Hoàn kho (Hủy đơn/Hoàn tác)'
 
 	ingredient = models.ForeignKey(Ingredient, on_delete=models.PROTECT, related_name='stock_transactions')
 	transaction_type = models.CharField('Loại giao dịch', max_length=20, choices=TransactionType.choices)

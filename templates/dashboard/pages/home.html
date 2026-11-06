@@ -118,7 +118,7 @@
                         <span class="dropdown-icon">👥</span> Danh sách khách hàng
                     </button>
                     <span class="dropdown-separator"></span>
-                    <a href="{% url 'inventory:home' %}" role="menuitem" id="open-inventory-manager-menu" class="dropdown-action">
+                    <a href="{% url 'inventory:manage' %}" role="menuitem" id="open-inventory-manager-menu" class="dropdown-action">
                         <span class="dropdown-icon">📦</span> Quản lý kho hàng
                     </a>
                     <button type="button" class="dropdown-action management-action" data-management="cashbook">
@@ -2902,6 +2902,7 @@
 
         let ingredientsData = [];
         let selectedId = null;
+        let currentWarehouse = 'all';
 
         const csrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
 
@@ -2919,12 +2920,21 @@
             const params = new URLSearchParams();
             if (q) params.set('q', q);
             if (g) params.set('group', g);
+            if (currentWarehouse && currentWarehouse !== 'all') params.set('warehouse', currentWarehouse);
 
             try {
                 const resp = await fetch(`/catalog/ingredients/api/list/?${params.toString()}`);
                 if (!resp.ok) throw new Error('Không thể tải dữ liệu mặt hàng.');
                 const data = await resp.json();
                 ingredientsData = data.ingredients || [];
+
+                if (data.warehouse_counts) {
+                    const cnt = data.warehouse_counts;
+                    if (document.getElementById('modal-pos-wh-count-all')) document.getElementById('modal-pos-wh-count-all').textContent = cnt.all;
+                    if (document.getElementById('modal-pos-wh-count-fresh')) document.getElementById('modal-pos-wh-count-fresh').textContent = cnt.fresh;
+                    if (document.getElementById('modal-pos-wh-count-dry')) document.getElementById('modal-pos-wh-count-dry').textContent = cnt.dry;
+                    if (document.getElementById('modal-pos-wh-count-beverage')) document.getElementById('modal-pos-wh-count-beverage').textContent = cnt.beverage;
+                }
 
                 // Cập nhật group filter options nếu chưa có
                 if (groupFilter && data.groups) {
@@ -2950,20 +2960,42 @@
             if (countSpan) countSpan.textContent = `${ingredientsData.length} mặt hàng`;
 
             if (ingredientsData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty-table-row">Chưa có mặt hàng nào. Bấm "Thêm" hoặc "Nhập dữ liệu từ Excel".</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-table-row">Không tìm thấy mặt hàng nào trong kho này. Bấm "Thêm" để tạo mới.</td></tr>';
                 selectedId = null;
                 return;
             }
 
-            tbody.innerHTML = ingredientsData.map(ing => `
-                <tr data-id="${ing.id}" class="ingredient-row ${selectedId === ing.id ? 'selected' : ''}">
-                    <td>${ing.group || '-'}</td>
-                    <td><strong>${ing.name}</strong> <span class="text-muted" style="font-size: 11px; margin-left: 6px;">(${ing.code})</span></td>
-                    <td style="text-align: center;">${ing.unit}</td>
-                    <td style="text-align: right; font-weight: 600;">${ing.cost_formatted}</td>
-                    <td style="text-align: right; color: #64748b;">${ing.minimum_stock_formatted}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = ingredientsData.map(ing => {
+                let whBadge = '';
+                if (ing.storage_area === 'fresh') {
+                    whBadge = '<span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">🥦 Kho 1</span>';
+                } else if (ing.storage_area === 'dry') {
+                    whBadge = '<span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; background: #fffbeb; color: #d97706; border: 1px solid #fde68a;">🥫 Kho 2</span>';
+                } else {
+                    whBadge = '<span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">🍹 Kho 3</span>';
+                }
+
+                return `
+                    <tr data-id="${ing.id}" class="ingredient-row ${selectedId === ing.id ? 'selected' : ''}">
+                        <td>${whBadge}</td>
+                        <td>
+                            <strong>${ing.name}</strong> <span class="text-muted" style="font-size: 11px; margin-left: 6px;">(${ing.code})</span>
+                            <div style="font-size: 11.5px; color: #64748b;">${ing.group || '-'}</div>
+                        </td>
+                        <td style="text-align: center; font-weight: 700;">${ing.unit}</td>
+                        <td>
+                            <span style="display: inline-block; background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 2px 7px; border-radius: 6px; font-size: 11.5px; font-weight: 700;">
+                                📦 ${ing.pack_rule_display || `1 ${ing.unit} = ${ing.pack_size || 10} ${ing.unpacked_unit || 'phần'}`}
+                            </span>
+                        </td>
+                        <td style="text-align: right; font-weight: 700;">${ing.current_stock_formatted || '0.000'}</td>
+                        <td style="text-align: left; font-weight: 700; color: #0284c7;">
+                            ⏳ ${ing.portions_wait || '0 phần'}
+                        </td>
+                        <td style="text-align: right; font-weight: 700; color: #d97706;">${ing.cost_formatted}</td>
+                    </tr>
+                `;
+            }).join('');
 
             tbody.querySelectorAll('.ingredient-row').forEach(row => {
                 row.addEventListener('click', () => {
@@ -2988,6 +3020,13 @@
             document.getElementById('pos-ing-cost').value = '0';
             document.getElementById('pos-ing-min-stock').value = '0.000';
             document.getElementById('pos-ing-supplier').value = '';
+            if (document.getElementById('pos-ing-pack-size')) document.getElementById('pos-ing-pack-size').value = '10';
+            if (document.getElementById('pos-ing-unpacked-unit')) document.getElementById('pos-ing-unpacked-unit').value = 'phần';
+
+            const defWh = (currentWarehouse && currentWarehouse !== 'all') ? currentWarehouse : 'fresh';
+            const radio = document.querySelector(`input[name="pos-ing-storage-area"][value="${defWh}"]`);
+            if (radio) radio.checked = true;
+
             if (submodal) submodal.hidden = false;
         };
 
@@ -3006,6 +3045,13 @@
             document.getElementById('pos-ing-cost').value = ing.cost_formatted;
             document.getElementById('pos-ing-min-stock').value = ing.minimum_stock_formatted;
             document.getElementById('pos-ing-supplier').value = ing.supplier || '';
+            if (document.getElementById('pos-ing-pack-size')) document.getElementById('pos-ing-pack-size').value = ing.pack_size || 10;
+            if (document.getElementById('pos-ing-unpacked-unit')) document.getElementById('pos-ing-unpacked-unit').value = ing.unpacked_unit || 'phần';
+
+            const sa = ing.storage_area || 'fresh';
+            const radio = document.querySelector(`input[name="pos-ing-storage-area"][value="${sa}"]`);
+            if (radio) radio.checked = true;
+
             if (submodal) submodal.hidden = false;
         };
 
@@ -3031,6 +3077,33 @@
             });
         }
 
+        // Warehouse tabs switch in POS modal
+        document.querySelectorAll('.btn-pos-wh-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-pos-wh-tab').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = '#ffffff';
+                    b.style.color = '#334155';
+                });
+                btn.classList.add('active');
+                currentWarehouse = btn.dataset.wh;
+                if (currentWarehouse === 'all') {
+                    btn.style.background = '#0f172a';
+                    btn.style.color = '#ffffff';
+                } else if (currentWarehouse === 'fresh') {
+                    btn.style.background = '#16a34a';
+                    btn.style.color = '#ffffff';
+                } else if (currentWarehouse === 'dry') {
+                    btn.style.background = '#d97706';
+                    btn.style.color = '#ffffff';
+                } else if (currentWarehouse === 'beverage') {
+                    btn.style.background = '#2563eb';
+                    btn.style.color = '#ffffff';
+                }
+                loadIngredientData();
+            });
+        });
+
         // Search & Filter
         searchInput?.addEventListener('input', () => { loadIngredientData(); });
         groupFilter?.addEventListener('change', () => { loadIngredientData(); });
@@ -3042,11 +3115,52 @@
         document.getElementById('pos-submodal-ing-close')?.addEventListener('click', () => { if (submodal) submodal.hidden = true; });
         document.getElementById('pos-submodal-ing-cancel')?.addEventListener('click', () => { if (submodal) submodal.hidden = true; });
 
+        // Quick unit chips in POS ingredient modal
+        document.querySelectorAll('#pos-submodal-ingredient .btn-pos-ing-unit-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const u = chip.dataset.unit;
+                const unitInput = document.getElementById('pos-ing-unit');
+                if (unitInput && u) {
+                    unitInput.value = u;
+                }
+            });
+        });
+        document.querySelectorAll('#pos-submodal-ingredient .btn-pos-ing-pack-preset').forEach(preset => {
+            preset.addEventListener('click', () => {
+                const uInput = document.getElementById('pos-ing-unit');
+                const pInput = document.getElementById('pos-ing-pack-size');
+                const sInput = document.getElementById('pos-ing-unpacked-unit');
+                if (uInput && preset.dataset.unit) uInput.value = preset.dataset.unit;
+                if (pInput && preset.dataset.size) pInput.value = preset.dataset.size;
+                if (sInput && preset.dataset.sub) sInput.value = preset.dataset.sub;
+            });
+        });
+
+        // Auto generate code in POS ingredient modal
+        document.getElementById('pos-btn-auto-ing-code')?.addEventListener('click', () => {
+            const codeInput = document.getElementById('pos-ing-code');
+            const rand = Math.floor(100 + Math.random() * 900);
+            if (codeInput) {
+                codeInput.value = `MH${rand}`;
+            }
+        });
+
+        // Cost formatting mask
+        const posCostInput = document.getElementById('pos-ing-cost');
+        if (posCostInput) {
+            posCostInput.addEventListener('input', () => {
+                const num = parseInt(posCostInput.value.replace(/\D/g, ''), 10);
+                posCostInput.value = isNaN(num) ? '0' : num.toLocaleString('vi-VN');
+            });
+        }
+
         // Save Form
         document.getElementById('pos-form-ingredient')?.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const selectedArea = document.querySelector('input[name="pos-ing-storage-area"]:checked')?.value || 'fresh';
             const payload = {
                 id: document.getElementById('pos-ing-id').value || undefined,
+                storage_area: selectedArea,
                 group: document.getElementById('pos-ing-group').value.trim(),
                 name: document.getElementById('pos-ing-name').value.trim(),
                 code: document.getElementById('pos-ing-code').value.trim(),
@@ -3054,6 +3168,8 @@
                 average_cost: document.getElementById('pos-ing-cost').value.trim(),
                 minimum_stock: document.getElementById('pos-ing-min-stock').value.trim(),
                 supplier: document.getElementById('pos-ing-supplier').value.trim(),
+                pack_size: document.getElementById('pos-ing-pack-size')?.value || 10,
+                unpacked_unit: document.getElementById('pos-ing-unpacked-unit')?.value.trim() || 'phần',
             };
 
             try {
@@ -3334,38 +3450,273 @@
             });
         };
 
+        let posRecipeWhFilter = 'all';
+        let posRecipeIngSearchQuery = '';
+
+        const removeVietnameseTones = (str) => {
+            if (!str) return '';
+            str = str.toLowerCase();
+            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a');
+            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+            str = str.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+            str = str.replace(/đ/g, 'd');
+            str = str.replace(/[\u0300\u0301\u0303\u0309\u0323]/g, '');
+            str = str.replace(/[\u02C6\u0306\u031B]/g, '');
+            return str.trim();
+        };
+
         const populateIngredientSelect = () => {
             const ingSelect = document.getElementById('pos-recipe-item-ingredient');
-            if (!ingSelect) return;
-            const cur = ingSelect.value;
-            ingSelect.innerHTML = '<option value="">-- Chọn mặt hàng từ kho --</option>' +
-                ingredientsData.map(ing => `
-                    <option value="${ing.id}" data-cost="${ing.average_cost}" data-unit="${ing.unit}" data-name="${ing.name}">
-                        ${ing.name} (${ing.unit} - ${ing.cost_formatted} đ) ${ing.group ? `[${ing.group}]` : ''}
-                    </option>
-                `).join('');
-            if (cur) ingSelect.value = cur;
+            const quickSelect = document.getElementById('pos-quick-add-ingredient');
+            const matchCountEl = document.getElementById('pos-quick-add-ing-match-count');
+
+            // 1. Lọc theo Kho
+            let filtered = (posRecipeWhFilter && posRecipeWhFilter !== 'all')
+                ? ingredientsData.filter(i => i.storage_area === posRecipeWhFilter)
+                : ingredientsData.slice();
+
+            // 2. Lọc theo từ khóa tìm kiếm (hỗ trợ có dấu và không dấu, mã, tên, nhóm)
+            const qRaw = posRecipeIngSearchQuery.trim().toLowerCase();
+            const qNorm = removeVietnameseTones(qRaw);
+
+            if (qRaw) {
+                filtered = filtered.filter(i => {
+                    const name = (i.name || '').toLowerCase();
+                    const code = (i.code || '').toLowerCase();
+                    const group = (i.group || '').toLowerCase();
+                    const nameNorm = removeVietnameseTones(name);
+                    const codeNorm = removeVietnameseTones(code);
+                    const groupNorm = removeVietnameseTones(group);
+
+                    return name.includes(qRaw) || code.includes(qRaw) || group.includes(qRaw) ||
+                           nameNorm.includes(qNorm) || codeNorm.includes(qNorm) || groupNorm.includes(qNorm);
+                });
+            }
+
+            if (matchCountEl) {
+                if (qRaw) {
+                    matchCountEl.hidden = false;
+                    matchCountEl.textContent = `${filtered.length} kết quả khớp`;
+                } else {
+                    matchCountEl.hidden = true;
+                }
+            }
+
+            // 3. Sắp xếp Alphabet A-Z tiếng Việt
+            const sortVietnamese = (a, b) => (a.name || '').localeCompare((b.name || ''), 'vi', { sensitivity: 'base' });
+
+            const freshList = filtered.filter(i => i.storage_area === 'fresh').sort(sortVietnamese);
+            const dryList = filtered.filter(i => i.storage_area === 'dry').sort(sortVietnamese);
+            const bevList = filtered.filter(i => i.storage_area === 'beverage').sort(sortVietnamese);
+
+            let optionsHtml = '<option value="">-- Chọn mặt hàng từ kho --</option>';
+            if (freshList.length) {
+                optionsHtml += `<optgroup label="🥦 Kho 1: Tươi sống & Rau củ quả (${freshList.length})">`;
+                freshList.forEach(ing => {
+                    optionsHtml += `<option value="${ing.id}" data-cost="${ing.average_cost}" data-unit="${ing.unit}" data-name="${ing.name}" data-pack-size="${ing.pack_size || 1}">
+                        [Kho 1] ${ing.name} (${ing.unit} - ${ing.cost_formatted} đ)
+                    </option>`;
+                });
+                optionsHtml += '</optgroup>';
+            }
+            if (dryList.length) {
+                optionsHtml += `<optgroup label="🥫 Kho 2: Khô, Gia vị & Bao bì (${dryList.length})">`;
+                dryList.forEach(ing => {
+                    optionsHtml += `<option value="${ing.id}" data-cost="${ing.average_cost}" data-unit="${ing.unit}" data-name="${ing.name}" data-pack-size="${ing.pack_size || 1}">
+                        [Kho 2] ${ing.name} (${ing.unit} - ${ing.cost_formatted} đ)
+                    </option>`;
+                });
+                optionsHtml += '</optgroup>';
+            }
+            if (bevList.length) {
+                optionsHtml += `<optgroup label="🍹 Kho 3: Đồ uống & Trái cây (${bevList.length})">`;
+                bevList.forEach(ing => {
+                    optionsHtml += `<option value="${ing.id}" data-cost="${ing.average_cost}" data-unit="${ing.unit}" data-name="${ing.name}" data-pack-size="${ing.pack_size || 1}">
+                        [Kho 3] ${ing.name} (${ing.unit} - ${ing.cost_formatted} đ)
+                    </option>`;
+                });
+                optionsHtml += '</optgroup>';
+            }
+
+            if (ingSelect) {
+                const cur = ingSelect.value;
+                ingSelect.innerHTML = optionsHtml;
+                if (cur) ingSelect.value = cur;
+            }
+            if (quickSelect) {
+                const cur = quickSelect.value;
+                quickSelect.innerHTML = optionsHtml;
+                if (cur && filtered.some(i => i.id == cur)) {
+                    quickSelect.value = cur;
+                } else if (qRaw && filtered.length === 1) {
+                    quickSelect.value = filtered[0].id;
+                    quickSelect.dispatchEvent(new Event('change'));
+                }
+            }
+        };
+
+
+        const updatePosQuickAddPreview = () => {
+            const quickSelect = document.getElementById('pos-quick-add-ingredient');
+            const qtyInput = document.getElementById('pos-quick-add-qty');
+            const unitInput = document.getElementById('pos-quick-add-unit');
+            const previewEl = document.getElementById('pos-quick-add-cost-preview');
+            const hintEl = document.getElementById('pos-quick-add-calc-hint');
+            if (!quickSelect || !previewEl) return;
+
+            const opt = quickSelect.selectedOptions[0];
+            if (!opt || !opt.dataset.cost) {
+                previewEl.textContent = '0 đ';
+                if (hintEl) hintEl.hidden = true;
+                return;
+            }
+
+            const cost = Number(opt.dataset.cost) || 0;
+            const stockUnit = opt.dataset.unit || '';
+            const ingName = opt.dataset.name || '';
+            const qty = Number(qtyInput?.value) || 0;
+            const unit = unitInput?.value.trim() || stockUnit;
+
+            const packSize = Number(opt.dataset.packSize) || 1;
+            const conv = convertRecipeToStockQty(ingName, stockUnit, qty, unit, packSize);
+            const total = conv.stockQty * cost;
+
+            previewEl.textContent = `${Math.round(total).toLocaleString('vi-VN')} đ`;
+            if (hintEl) {
+                if (conv.hint) {
+                    hintEl.textContent = `⚡ ${conv.hint}`;
+                    hintEl.hidden = false;
+                } else {
+                    hintEl.hidden = true;
+                }
+            }
+        };
+
+        const convertRecipeToStockQty = (ingName, stockUnit, qty, recipeUnit, packSize = 1) => {
+            if (!qty || isNaN(qty)) return { stockQty: 0, hint: '' };
+            const q = Number(qty);
+            const rUnit = (recipeUnit || '').trim().toLowerCase();
+            const sUnit = (stockUnit || '').trim().toLowerCase();
+            const name = (ingName || '').toLowerCase();
+            const pSize = (packSize && Number(packSize) > 1) ? Number(packSize) : 1;
+
+            // Bánh phồng tôm (1 hộp = 100 cái bánh, 1 phần = 10 cái = 0.1 hộp)
+            if (name.includes('phồng tôm') || name.includes('phong tom') || name.includes('phongtom')) {
+                if (['cái', 'cai', 'bánh', 'banh', 'miếng', 'mieng'].some(k => rUnit.includes(k))) {
+                    if (['hộp', 'hop', 'gói', 'goi'].some(k => sUnit.includes(k))) {
+                        return { stockQty: q / 100, hint: `Quy đổi: ${q} cái bánh phồng = ${(q / 100).toFixed(2)} hộp (1 hộp = 100 cái = 80.000đ)` };
+                    }
+                } else if (['phần', 'phan', 'dĩa', 'dia'].some(k => rUnit.includes(k))) {
+                    if (['hộp', 'hop', 'gói', 'goi'].some(k => sUnit.includes(k))) {
+                        return { stockQty: q * 0.1, hint: `Quy đổi: ${q} phần = ${(q * 10)} cái = ${(q * 0.1).toFixed(2)} hộp (vốn 8.000đ/phần)` };
+                    }
+                }
+            }
+
+                        // Sữa đặc Ông Thọ (Hộp 380g => g -> Hộp)
+            if (name.includes('sữa đặc') || name.includes('sua dac')) {
+                if (['g', 'gram', 'gr', 'gam', 'ml'].includes(rUnit)) {
+                    return { stockQty: q / 380, hint: `Quy đổi: ${q} ${rUnit} = ${(q / 380).toFixed(3)} hộp sữa đặc (380g/hộp)` };
+                }
+                if (['thìa', 'muỗng', 'muong', 'thia'].includes(rUnit)) {
+                    return { stockQty: (q * 15) / 380, hint: `Quy đổi: ${q} thìa sữa = ${((q * 15) / 380).toFixed(3)} hộp` };
+                }
+            }
+
+            // Sữa tươi không đường (Hộp 1000ml => ml -> Hộp)
+            if (name.includes('sữa tươi') || name.includes('sua tuoi')) {
+                if (['ml', 'mililit', 'cc'].includes(rUnit)) {
+                    return { stockQty: q / 1000, hint: `Quy đổi: ${q} ml = ${(q / 1000).toFixed(3)} hộp sữa tươi (1L/hộp)` };
+                }
+            }
+
+            // Trà Thái đỏ / Trà Thái xanh / Trà túi lọc (Gói 400g => g -> Gói, túi -> /50)
+            if (name.includes('trà thái') || name.includes('tra thai') || name.includes('túi lọc') || name.includes('tui loc')) {
+                if (['g', 'gram', 'gr', 'gam'].includes(rUnit)) {
+                    return { stockQty: q / 400, hint: `Quy đổi: ${q} g cốt trà = ${(q / 400).toFixed(3)} gói (400g/gói)` };
+                }
+                if (['túi', 'tui', 'gói', 'goi'].includes(rUnit) && ['gói', 'goi', 'hộp', 'hop'].includes(sUnit)) {
+                    return { stockQty: q / 50, hint: `Quy đổi: ${q} túi lọc = ${(q / 50).toFixed(3)} gói trà (50 túi/gói)` };
+                }
+            }
+
+            // Tương ớt Cholimex / Sốt chai (Chai 270g => g -> Chai)
+            if (name.includes('tương ớt') || name.includes('tuong ot')) {
+                if (['g', 'gram', 'gr', 'gam'].includes(rUnit)) {
+                    return { stockQty: q / 270, hint: `Quy đổi: ${q} g tương ớt = ${(q / 270).toFixed(3)} chai (270g/chai)` };
+                }
+            }
+
+            // Nước cốt dừa (Chai/Lít 1000ml => ml -> Lít)
+            if (name.includes('cốt dừa') || name.includes('cot dua')) {
+                if (['ml', 'mililit', 'cc'].includes(rUnit)) {
+                    return { stockQty: q / 1000, hint: `Quy đổi: ${q} ml cốt dừa = ${(q / 1000).toFixed(3)} Lít` };
+                }
+            }
+
+            if (['chén', 'chen', 'bát', 'bat', 'phần', 'phan', 'dĩa', 'dia'].some(k => rUnit.includes(k)) && (name.includes('gạo') || name.includes('gao'))) {
+                return { stockQty: q * 0.1, hint: `Quy đổi: ${q} chén cơm = ${(q * 0.1).toFixed(3)} kg Gạo` };
+            }
+            if (['phần', 'phan', 'chén', 'chen'].some(k => rUnit.includes(k)) && (name.includes('nếp') || name.includes('nep'))) {
+                return { stockQty: q * 0.1, hint: `Quy đổi: ${q} phần xôi = ${(q * 0.1).toFixed(3)} kg Nếp` };
+            }
+            if (rUnit.includes('con') && (name.includes('cá') || name.includes('ca')) && ['kg', 'kilogram'].includes(sUnit)) {
+                return { stockQty: q * 0.8, hint: `Quy đổi: ${q} con cá ~ ${(q * 0.8).toFixed(3)} kg` };
+            }
+            if (['g', 'gram', 'gr', 'gam'].includes(rUnit) && ['kg', 'kilogram'].includes(sUnit)) {
+                return { stockQty: q / 1000, hint: `Quy đổi: ${q} g = ${(q / 1000).toFixed(3)} kg` };
+            }
+            if (['ml', 'mililit', 'cc'].includes(rUnit) && ['l', 'lít', 'lit', 'liter'].includes(sUnit)) {
+                return { stockQty: q / 1000, hint: `Quy đổi: ${q} ml = ${(q / 1000).toFixed(3)} Lít` };
+            }
+            if (['thùng', 'thung', 'vỉ', 'vi', 'két', 'ket', 'bao'].includes(sUnit) && pSize > 1) {
+                if (rUnit !== sUnit) {
+                    return { stockQty: q / pSize, hint: `Quy đổi: ${q} ${rUnit} = ${(q / pSize).toFixed(4)} ${stockUnit} (1 ${stockUnit} = ${pSize} hộp/đơn vị)` };
+                }
+            }
+            return { stockQty: q, hint: '' };
         };
 
         const updateCostPreview = () => {
             const ingSelect = document.getElementById('pos-recipe-item-ingredient');
             const qtyInput = document.getElementById('pos-recipe-item-qty');
+            const unitInput = document.getElementById('pos-recipe-item-unit');
             const unitCostEl = document.getElementById('pos-recipe-preview-unit-cost');
             const totalCostEl = document.getElementById('pos-recipe-preview-total-cost');
+            const hintEl = document.getElementById('pos-recipe-modal-calc-hint');
 
             const opt = ingSelect?.selectedOptions[0];
             if (!opt || !opt.dataset.cost) {
                 if (unitCostEl) unitCostEl.textContent = '0 đ';
                 if (totalCostEl) totalCostEl.textContent = '0 đ';
+                if (hintEl) hintEl.hidden = true;
                 return;
             }
 
             const cost = Number(opt.dataset.cost) || 0;
+            const stockUnit = opt.dataset.unit || '';
+            const ingName = opt.dataset.name || '';
             const qty = Number(qtyInput?.value) || 0;
-            const total = cost * qty;
+            const unit = unitInput?.value.trim() || stockUnit;
 
-            if (unitCostEl) unitCostEl.textContent = `${cost.toLocaleString('vi-VN')} đ`;
+            if (unitCostEl) unitCostEl.textContent = `${cost.toLocaleString('vi-VN')} đ / ${stockUnit}`;
+
+            const packSize = Number(opt.dataset.packSize) || 1;
+            const conv = convertRecipeToStockQty(ingName, stockUnit, qty, unit, packSize);
+            const total = conv.stockQty * cost;
+
             if (totalCostEl) totalCostEl.textContent = `${Math.round(total).toLocaleString('vi-VN')} đ`;
+            if (hintEl) {
+                if (conv.hint) {
+                    hintEl.textContent = `ℹ️ ${conv.hint}`;
+                    hintEl.hidden = false;
+                } else {
+                    hintEl.hidden = true;
+                }
+            }
         };
 
         // Open Modal from POS Dropdown Menu
@@ -3416,6 +3767,147 @@
             updateCostPreview();
         });
         document.getElementById('pos-recipe-item-qty')?.addEventListener('input', updateCostPreview);
+        document.querySelectorAll('.btn-pos-modal-unit-pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('pos-recipe-item-unit').value = btn.dataset.unit;
+                updateCostPreview();
+            });
+        });
+
+        document.getElementById('pos-recipe-item-unit')?.addEventListener('input', updateCostPreview);
+
+        // Event Listeners cho ô Tìm kiếm Nguyên liệu nhanh trong POS Modal
+        const posIngSearchInput = document.getElementById('pos-quick-add-ing-search');
+        const posIngSearchClear = document.getElementById('pos-quick-add-ing-search-clear');
+
+        if (posIngSearchInput) {
+            posIngSearchInput.addEventListener('input', (e) => {
+                posRecipeIngSearchQuery = e.target.value;
+                if (posIngSearchClear) {
+                    posIngSearchClear.style.display = posRecipeIngSearchQuery ? 'block' : 'none';
+                }
+                populateIngredientSelect();
+            });
+
+            posIngSearchClear?.addEventListener('click', () => {
+                posIngSearchInput.value = '';
+                posRecipeIngSearchQuery = '';
+                posIngSearchClear.style.display = 'none';
+                populateIngredientSelect();
+                posIngSearchInput.focus();
+            });
+
+            posIngSearchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const quickSelect = document.getElementById('pos-quick-add-ingredient');
+                    if (quickSelect && quickSelect.options.length > 1) {
+                        quickSelect.selectedIndex = 1;
+                        quickSelect.dispatchEvent(new Event('change'));
+                        document.getElementById('pos-quick-add-qty')?.focus();
+                    }
+                }
+            });
+        }
+
+        // Warehouse chip filter buttons in POS Recipe Modal
+        document.querySelectorAll('.btn-pos-rec-wh-chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-pos-rec-wh-chip').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = '#ffffff';
+                    b.style.color = '#334155';
+                });
+                btn.classList.add('active');
+                posRecipeWhFilter = btn.dataset.wh;
+                if (posRecipeWhFilter === 'all') {
+                    btn.style.background = '#0f172a';
+                    btn.style.color = '#ffffff';
+                } else if (posRecipeWhFilter === 'fresh') {
+                    btn.style.background = '#16a34a';
+                    btn.style.color = '#ffffff';
+                } else if (posRecipeWhFilter === 'dry') {
+                    btn.style.background = '#d97706';
+                    btn.style.color = '#ffffff';
+                } else if (posRecipeWhFilter === 'beverage') {
+                    btn.style.background = '#2563eb';
+                    btn.style.color = '#ffffff';
+                }
+                populateIngredientSelect();
+            });
+        });
+
+        // Event Listeners cho POS Quick Add Bar
+        document.getElementById('pos-quick-add-ingredient')?.addEventListener('change', (e) => {
+            const opt = e.target.selectedOptions[0];
+            if (opt && opt.dataset.unit) {
+                const sUnit = opt.dataset.unit.toLowerCase();
+                const ingName = (opt.dataset.name || '').toLowerCase();
+
+                if (ingName.includes('phồng tôm') || ingName.includes('phong tom') || ingName.includes('phongtom')) {
+                    document.getElementById('pos-quick-add-unit').value = 'cái';
+                    document.getElementById('pos-quick-add-qty').value = '10';
+                } else if (['kg', 'kilogram'].includes(sUnit)) {
+                    document.getElementById('pos-quick-add-unit').value = 'g';
+                    document.getElementById('pos-quick-add-qty').value = '100';
+                } else if (['l', 'lít', 'lit'].includes(sUnit)) {
+                    document.getElementById('pos-quick-add-unit').value = 'ml';
+                    document.getElementById('pos-quick-add-qty').value = '50';
+                } else {
+                    document.getElementById('pos-quick-add-unit').value = opt.dataset.unit;
+                    document.getElementById('pos-quick-add-qty').value = '1';
+                }
+            }
+            updatePosQuickAddPreview();
+        });
+
+        document.getElementById('pos-quick-add-qty')?.addEventListener('input', updatePosQuickAddPreview);
+        document.getElementById('pos-quick-add-unit')?.addEventListener('input', updatePosQuickAddPreview);
+
+        document.querySelectorAll('.btn-pos-quick-unit').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('pos-quick-add-unit').value = btn.dataset.unit;
+                updatePosQuickAddPreview();
+            });
+        });
+
+        document.getElementById('pos-quick-add-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!selectedProductId) {
+                showAlert('Vui lòng chọn một món ăn trước.', 'error');
+                return;
+            }
+            const ingId = document.getElementById('pos-quick-add-ingredient').value;
+            const qty = document.getElementById('pos-quick-add-qty').value;
+            const unit = document.getElementById('pos-quick-add-unit').value.trim();
+
+            if (!ingId) { showAlert('Vui lòng chọn nguyên liệu.', 'error'); return; }
+
+            try {
+                const resp = await fetch('/inventory/recipes/api/save-item/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+                    body: JSON.stringify({
+                        product_id: selectedProductId,
+                        ingredient_id: ingId,
+                        quantity: qty,
+                        unit: unit,
+                    }),
+                });
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.error || 'Lỗi khi lưu nguyên liệu.');
+
+                showAlert(res.message);
+                document.getElementById('pos-quick-add-ingredient').value = '';
+                document.getElementById('pos-quick-add-cost-preview').textContent = '0 đ';
+                if (document.getElementById('pos-quick-add-calc-hint')) {
+                    document.getElementById('pos-quick-add-calc-hint').hidden = true;
+                }
+                await loadRecipeData(false);
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        });
 
         document.getElementById('pos-form-recipe-item')?.addEventListener('submit', async (e) => {
             e.preventDefault();
