@@ -1,36 +1,36 @@
-<!-- Modal: Người dùng - Admin (Đồng bộ chuẩn giao diện MixFood POS 2026) -->
+<!-- # File này chịu trách nhiệm hiển thị hộp thoại Quản lý Người dùng (User Admin Modal) và hộp thoại Đổi mật khẩu trực tiếp trên màn hình thu ngân POS. -->
 <div class="menu-modal-backdrop" id="pos-user-admin-modal" hidden>
     <div class="menu-modal-dialog user-admin-modal-container" role="dialog" aria-modal="true" aria-labelledby="pos-user-modal-title">
-        <!-- Modal Header -->
+        <!-- # Modal Header -->
         <div class="menu-modal-header user-admin-modal-header">
-            <div class="modal-title-wrap" style="color: #ffffff;">
+            <div class="modal-title-wrap u-acco-33e85a31">
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                 </svg>
-                <h3 id="pos-user-modal-title" style="color: #ffffff !important;">Người dùng - {{ request.user.get_full_name|default:request.user.username|default:"Admin" }}</h3>
+                <h3 class="u-acco-1f22ecc1" id="pos-user-modal-title">Người dùng - {{ request.user.get_full_name|default:request.user.username|default:"Admin" }}</h3>
             </div>
             <button type="button" class="dialog-close" id="pos-user-modal-close" aria-label="Đóng">&times;</button>
         </div>
 
-        <!-- Alert Banner -->
-        <div id="pos-user-modal-alert" class="menu-alert-banner" style="margin: 10px 18px 0;" hidden></div>
+        <!-- # Alert Banner -->
+        <div id="pos-user-modal-alert" class="menu-alert-banner u-acco-e9c33d5a" hidden></div>
 
-        <!-- Modal Body -->
+        <!-- # Modal Body -->
         <div class="user-admin-modal-body">
-            <!-- Top Section: Users Data Table -->
+            <!-- # Top Section: Users Data Table -->
             <div class="user-admin-table-wrap">
                 <table class="user-admin-table" id="pos-user-admin-table">
                     <thead>
                         <tr>
-                            <th style="width: 58px;">Mã</th>
-                            <th style="width: 145px;">Tên truy cập</th>
-                            <th style="width: 110px;">Mật khẩu</th>
-                            <th style="width: 175px;">Họ tên</th>
-                            <th style="width: 135px;">Số điện thoại</th>
-                            <th style="width: 140px;">Bộ phận</th>
+                            <th class="u-acco-c386460d">Mã</th>
+                            <th class="u-acco-bbe67bc2">Tên truy cập</th>
+                            <th class="u-acco-3e280fa7">Mật khẩu</th>
+                            <th class="u-acco-66433d4d">Họ tên</th>
+                            <th class="u-acco-4b4fc6cf">Số điện thoại</th>
+                            <th class="u-acco-14175304">Bộ phận</th>
                             <th>Khu vực / Mã</th>
                         </tr>
                     </thead>
@@ -42,9 +42,9 @@
                 </table>
             </div>
 
-            <!-- Bottom Section: Left Controls & Right Form Box (Như ảnh mẫu) -->
+            <!-- # Bottom Section: Left Controls & Right Form Box (Như ảnh mẫu) -->
             <div class="user-admin-bottom-split">
-                <!-- Left Column: Action Buttons (Thêm, Sửa, Xóa) + Bottom Checkbox -->
+                <!-- # Left Column: Action Buttons (Thêm, Sửa, Xóa) + Bottom Checkbox -->
                 <div class="user-admin-left-panel">
                     <div class="user-admin-crud-buttons">
                         <button type="button" class="btn-user-crud btn-user-add" id="pos-user-btn-add">
@@ -68,7 +68,7 @@
                     </label>
                 </div>
 
-                <!-- Right Column: Thêm / Sửa người dùng Form Card -->
+                <!-- # Right Column: Thêm / Sửa người dùng Form Card -->
                 <div class="user-admin-form-box" id="pos-user-form-card">
                     <div class="user-admin-form-header">
                         <span id="pos-user-form-title">Thêm người dùng</span>
@@ -103,6 +103,7 @@
                                 <option value="undefined">Không xác định</option>
                                 <option value="admin">Quản trị</option>
                                 <option value="manager">Quản lý</option>
+                                <option value="warehouse">Quản lý kho hàng</option>
                                 <option value="accountant">Kế toán</option>
                                 <option value="cashier">Thu ngân</option>
                                 <option value="kitchen">Chế biến</option>
@@ -118,7 +119,7 @@
                             </div>
                         </div>
 
-                        <!-- Quick Area Picker Popover (toggled by ? button) -->
+                        <!-- # Quick Area Picker Popover (toggled by ? button) -->
                         <div class="user-area-picker-popover" id="pos-user-area-popover" hidden>
                             <div class="area-popover-title">Chọn nhanh Khu vực phụ trách:</div>
                             <div class="area-popover-chips" id="pos-user-area-chips">
@@ -136,4 +137,3 @@
         </div>
     </div>
 </div>
-

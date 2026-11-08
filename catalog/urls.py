@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm định tuyến URL cho toàn bộ trang quản lý và API của Thực đơn, Nhóm món, Món ăn và Mặt hàng nguyên liệu.
 from django.urls import path
 
 from . import views

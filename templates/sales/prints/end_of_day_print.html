@@ -1,3 +1,5 @@
+<!-- # File này chịu trách nhiệm hiển thị bản in Báo cáo cuối ngày (Phiếu tóm tắt K80 hoặc Báo cáo chi tiết món bán hôm nay/hôm qua). -->
+{% load static %}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -11,192 +13,18 @@
             Báo cáo cuối ngày ({{ eod.date_display }}) | MixFood POS
         {% endif %}
     </title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-        body {
-            background: #f1f5f9;
-            color: #0f172a;
-            padding: 20px;
-        }
-        .no-print-bar {
-            max-width: 780px;
-            margin: 0 auto 16px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-        .btn-action {
-            padding: 8px 18px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            color: #1e293b;
-            text-decoration: none;
-        }
-        .btn-action.primary {
-            background: #0284c7;
-            border-color: #0369a1;
-            color: #ffffff;
-        }
-        .print-sheet {
-            max-width: {% if is_detailed %}780px{% else %}460px{% endif %};
-            margin: 0 auto;
-            background: #ffffff;
-            padding: 26px 28px;
-            border-radius: 8px;
-            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
-            border: 1px solid #e2e8f0;
-        }
-        .sheet-header {
-            text-align: center;
-            border-bottom: 2px dashed #94a3b8;
-            padding-bottom: 14px;
-            margin-bottom: 16px;
-        }
-        .brand-name {
-            font-size: 19px;
-            font-weight: 800;
-            color: #0f172a;
-            letter-spacing: 0.03em;
-        }
-        .brand-sub {
-            font-size: 12.5px;
-            color: #475569;
-            margin-top: 3px;
-        }
-        .sheet-title {
-            font-size: 16px;
-            font-weight: 800;
-            text-transform: uppercase;
-            margin-top: 10px;
-            color: #0f172a;
-        }
-        .sheet-meta {
-            font-size: 12.5px;
-            color: #334155;
-            margin-top: 4px;
-        }
-        .eod-box {
-            font-size: 13px;
-            line-height: 1.55;
-        }
-        .top-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 2px 0;
-        }
-        .top-row strong {
-            font-weight: 700;
-        }
-        .divider {
-            border-top: 1px dashed #cbd5e1;
-            margin: 10px 0;
-        }
-        .pay-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 6px 0;
-            font-size: 13px;
-        }
-        .pay-table td {
-            padding: 3px 0;
-            font-variant-numeric: tabular-nums;
-        }
-        .pay-table td.cnt {
-            text-align: right;
-            width: 55px;
-            padding-right: 16px;
-        }
-        .pay-table td.amt {
-            text-align: right;
-            width: 120px;
-            font-weight: 600;
-        }
-        .note-block {
-            font-size: 12.5px;
-            color: #1e293b;
-            margin: 8px 0;
-            line-height: 1.5;
-        }
-        .unpaid-line {
-            display: flex;
-            justify-content: space-between;
-            font-weight: 700;
-            padding: 4px 0;
-        }
-        .detail-section-title {
-            font-size: 13.5px;
-            font-weight: 800;
-            text-transform: uppercase;
-            margin: 18px 0 8px;
-            padding-left: 8px;
-            border-left: 3px solid #0284c7;
-            color: #0f172a;
-        }
-        .detail-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            margin-bottom: 14px;
-        }
-        .detail-table th,
-        .detail-table td {
-            border: 1px solid #cbd5e1;
-            padding: 5px 8px;
-            text-align: left;
-        }
-        .detail-table th {
-            background: #f1f5f9;
-            font-weight: 700;
-        }
-        .text-right {
-            text-align: right !important;
-        }
-        .signatures {
-            margin-top: 26px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            text-align: center;
-            font-size: 12.5px;
-        }
-        .sig-space {
-            height: 52px;
-        }
-        @media print {
-            body {
-                background: #ffffff;
-                padding: 0;
-            }
-            .no-print-bar {
-                display: none !important;
-            }
-            .print-sheet {
-                box-shadow: none;
-                border: none;
-                max-width: 100%;
-                padding: 8px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/sales/end_of_day_print.css' %}?v={% now 'U' %}">
 </head>
 <body>
     <div class="no-print-bar">
-        <button type="button" class="btn-action primary" onclick="window.print()">🖨️ In báo cáo ngay</button>
+        <button type="button" class="btn-action primary" data-print-action="print">🖨️ In báo cáo ngay</button>
         <a class="btn-action" href="?mode=summary&unpaid_count={{ eod.unpaid_count }}&unpaid_amount=0">Phiếu tóm tắt</a>
         <a class="btn-action" href="?mode=detail_today&unpaid_count={{ eod.unpaid_count }}&unpaid_amount=0">Chi tiết hôm nay (CTRL)</a>
         <a class="btn-action" href="?mode=detail_yesterday">Chi tiết hôm qua (SHIFT)</a>
-        <button type="button" class="btn-action" onclick="window.close()">Đóng</button>
+        <button type="button" class="btn-action" data-print-action="close">Đóng</button>
     </div>
 
-    <div class="print-sheet">
+    <div class="print-sheet {% if is_detailed %}sheet-detailed{% else %}sheet-summary{% endif %}">
         <div class="sheet-header">
             <div class="brand-name">MIX FOOD - ẨM THỰC THÁI</div>
             <div class="brand-sub">K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng</div>
@@ -286,7 +114,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #64748b;">Chưa có món bán nào trong ngày này.</td>
+                        <td class="u-eodp-c226f6cc" colspan="6">Chưa có món bán nào trong ngày này.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -307,13 +135,6 @@
         </div>
     </div>
 
-    <script>
-        window.addEventListener('load', () => {
-            window.setTimeout(() => {
-                window.print();
-            }, 250);
-        });
-    </script>
+    <script src="{% static 'js/sales/end_of_day_print.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>
-

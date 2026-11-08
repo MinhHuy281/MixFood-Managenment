@@ -1,0 +1,157 @@
+<!-- # File này chịu trách nhiệm hiển thị giao diện Quản lý Kho hàng 3 khu vực trên Mobile cho Admin (/admin/inventory/), hỗ trợ kiểm kê tồn kho và điều chỉnh trực tiếp từ xa. -->
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Kho hàng 3 khu vực - Admin Mobile | MixFood 2026{% endblock %}
+{% block body_class %}admin-subpage-body{% endblock %}
+{% block page_class %}admin-subpage-shell{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/admin_subpages.css' %}?v={% now 'U' %}">
+{% endblock %}
+
+{% block authenticated_header %}
+<!-- # Không nạp topbar POS desktop để giữ trọn vẹn diện tích cho Mobile Admin -->
+{% endblock %}
+
+{% block content %}
+<div class="admin-subpage-shell">
+    <!-- # Header Top Bar -->
+    <header class="admin-subpage-header">
+        <div class="admin-header-left">
+            <a href="{% url 'admin_live_dashboard' %}" class="admin-back-btn" title="Về Giám sát Live">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <div>
+                <h1 class="admin-subpage-title">Kho hàng 3 khu vực</h1>
+                <span class="admin-subpage-badge">{{ total_count }} mặt hàng</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- # Toolbar Tìm kiếm & Lọc khu vực kho -->
+    <div class="admin-toolbar-wrap">
+        <form method="get" action="{% url 'admin_inventory' %}" class="admin-search-form">
+            <span class="admin-search-icon">🔍</span>
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Tìm tên hoặc mã nguyên liệu..." class="admin-search-input">
+            {% if selected_area %}
+            <input type="hidden" name="area" value="{{ selected_area }}">
+            {% endif %}
+        </form>
+
+        <div class="admin-filter-scroll">
+            <a href="{% url 'admin_inventory' %}{% if search_query %}?q={{ search_query }}{% endif %}" class="admin-filter-pill {% if not selected_area %}active{% endif %}">
+                Tất cả khu vực (3 kho)
+            </a>
+            <a href="{% url 'admin_inventory' %}?area=main_warehouse{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if selected_area == 'main_warehouse' %}active{% endif %}">
+                📦 Kho tổng
+            </a>
+            <a href="{% url 'admin_inventory' %}?area=kitchen_bar{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if selected_area == 'kitchen_bar' %}active{% endif %}">
+                🍳 Quầy bar / bếp
+            </a>
+            <a href="{% url 'admin_inventory' %}?area=point_of_sale{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if selected_area == 'point_of_sale' %}active{% endif %}">
+                🏪 Điểm bán lẻ
+            </a>
+        </div>
+    </div>
+
+    <!-- # Card List Nguyên liệu / Mặt hàng -->
+    <div class="admin-content-area">
+        <div class="admin-card-list">
+            {% for item in items %}
+            <div class="admin-card">
+                <div class="admin-card-top">
+                    <div>
+                        <h3 class="admin-card-title">
+                            <span>📦</span>
+                            <span>{{ item.name }}</span>
+                        </h3>
+                        <span class="admin-card-subtitle">Mã: {{ item.code|default:'N/A' }}</span>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <span class="admin-card-badge {% if item.storage_area == 'main_warehouse' %}badge-purple{% elif item.storage_area == 'kitchen_bar' %}badge-yellow{% else %}badge-blue{% endif %}">
+                            {{ item.get_storage_area_display }}
+                        </span>
+                        {% if item.current_stock <= item.minimum_stock %}
+                        <span class="admin-card-badge badge-red">Sắp hết hàng</span>
+                        {% else %}
+                        <span class="admin-card-badge badge-green">Đủ hàng</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="admin-card-details">
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Tồn thực tế</span>
+                        <span class="admin-detail-value" style="color: {% if item.current_stock <= item.minimum_stock %}#f87171{% else %}#34d399{% endif %}; font-size: 14px;">
+                            {{ item.current_stock }} {{ item.unit }}
+                        </span>
+                    </div>
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Tồn tối thiểu</span>
+                        <span class="admin-detail-value">{{ item.minimum_stock }} {{ item.unit }}</span>
+                    </div>
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Giá vốn ước tính</span>
+                        <span class="admin-detail-value">{{ item.cost_price|default:0 }} đ</span>
+                    </div>
+                </div>
+
+                <div class="admin-card-actions">
+                    <button type="button" class="admin-btn-action btn-action-stock btn-edit-stock"
+                            data-id="{{ item.id }}"
+                            data-name="{{ item.name }}"
+                            data-unit="{{ item.unit }}"
+                            data-stock="{{ item.current_stock }}"
+                            data-min="{{ item.minimum_stock }}">
+                        <span>⚖️ Điều chỉnh tồn</span>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="admin-empty-state">
+                <p>Không có nguyên liệu hoặc mặt hàng kho nào phù hợp.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- # MODAL ĐIỀU CHỈNH TỒN KHO -->
+<div class="admin-modal-backdrop" id="modal-stock-form" hidden>
+    <div class="admin-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-stock-title">
+        <div class="admin-modal-header">
+            <h3 id="modal-stock-title">Điều chỉnh tồn kho</h3>
+            <button type="button" class="admin-modal-close" data-dismiss="modal">&times;</button>
+        </div>
+        <form id="form-stock-save">
+            {% csrf_token %}
+            <input type="hidden" name="item_id" id="inp-stock-id" value="">
+            <div class="admin-modal-body">
+                <div class="admin-form-row">
+                    <label>Mặt hàng kiểm kê</label>
+                    <div id="disp-stock-name" style="font-weight: 700; color: #ffffff; font-size: 14px; padding: 6px 0;">--</div>
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-stock-current">Số lượng tồn kho thực tế (<span id="disp-stock-unit">ĐVT</span>)</label>
+                    <input type="number" step="any" name="current_stock" id="inp-stock-current" class="admin-form-input" required>
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-stock-min">Định mức tồn tối thiểu cảnh báo</label>
+                    <input type="number" step="any" name="minimum_stock" id="inp-stock-min" class="admin-form-input" required>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="admin-btn-cancel" data-dismiss="modal">Hủy</button>
+                <button type="submit" class="admin-btn-save">Xác nhận điều chỉnh</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard/admin_subpages.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm cung cấp lệnh quản trị (management command) khởi tạo các nhóm quyền hạn và vai trò mặc định cho hệ thống.
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
@@ -13,9 +14,11 @@ ROLE_RULES = {
 
 
 class Command(BaseCommand):
+    # Class này dùng để định nghĩa lệnh quản trị Django CLI (setup_roles) hỗ trợ khởi tạo và thiết lập dữ liệu hệ thống.
     help = 'Create the default MixFood permission groups.'
 
     def handle(self, *args, **options):
+        # Hàm này dùng để thực thi logic chính của lệnh quản trị Django CLI khi được gọi từ terminal. Input: *args, **options. Output: khởi tạo/cập nhật dữ liệu và in thông báo kết quả.
         for role_name in ROLE_NAMES:
             group, _ = Group.objects.get_or_create(name=role_name)
             if role_name == 'Owner':

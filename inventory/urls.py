@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm định tuyến URL cho Quản lý Kho hàng, Xuất - Nhập - Tồn, Định lượng nguyên liệu (Recipes) và toàn bộ API kho.
 from django.urls import path
 
 from . import views

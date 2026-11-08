@@ -1,14 +1,24 @@
+<!-- # File này chịu trách nhiệm làm khung giao diện gốc (Base Layout Template) cho toàn bộ hệ thống, nạp các file CSS/JS tĩnh theo chức năng, thanh điều hướng Topbar và vùng hiển thị thông báo. -->
 {% load static %}
 <!doctype html>
 <html lang="vi">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MixFood Manager - F&B POS Cloud{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/app.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/base/core.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/dashboard/pos.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/catalog/catalog.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/dining/dining.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/inventory/inventory.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/audit/audit.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/sales/sales.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/accounts/accounts.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/base/responsive.css' %}?v={% now 'U' %}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
     {% if user.is_authenticated %}
@@ -26,7 +36,16 @@
             </a>
             <span class="store-tag">Đà Nẵng • Ẩm Thực Thái</span>
         </div>
-        <nav class="topnav" aria-label="Điều hướng chính">
+        <button type="button" class="mobile-hamburger-btn" id="topbar-hamburger-btn" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="topbar-mobile-nav">
+            <span class="hamburger-icon" aria-hidden="true">☰</span>
+            <span class="close-icon" aria-hidden="true">&times;</span>
+        </button>
+        <div class="mobile-nav-backdrop" id="topbar-nav-backdrop" hidden></div>
+        <nav class="topnav" id="topbar-mobile-nav" aria-label="Điều hướng chính">
+            <div class="mobile-drawer-header">
+                <strong>MENU ĐIỀU HƯỚNG</strong>
+                <button type="button" class="mobile-drawer-close" id="topbar-drawer-close" aria-label="Đóng menu">&times;</button>
+            </div>
             <a href="{% url 'dashboard:home' %}">BÁN HÀNG (POS)</a>
             <a href="{% url 'dining:home' %}">KHU VỰC & BÀN</a>
             <a href="{% url 'inventory:home' %}">KHO HÀNG</a>
@@ -49,5 +68,7 @@
         {% if messages %}<div class="flash-messages">{% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
         {% block content %}{% endblock %}
     </main>
+    <script src="{% static 'js/base/ui_helpers.js' %}?v={% now 'U' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,6 +1,7 @@
+# File này chịu trách nhiệm định tuyến URL cho các API Thanh toán POS, Quản lý bàn, Chỉnh sửa Hóa đơn, Mã giảm giá và các Báo cáo thống kê bán hàng.
 from django.urls import path
 
-from . import views
+from . import pos_features_views, views
 
 app_name = 'sales'
 
@@ -12,6 +13,7 @@ urlpatterns = [
     path('invoices/undo/', views.undo_payment, name='undo_payment'),
     path('invoices/', views.invoice_list, name='invoices'),
     path('tables/action/', views.table_action_api, name='table_action_api'),
+    path('tables/order-sync/', views.table_order_sync_api, name='table_order_sync_api'),
     path('statistics/api/', views.sales_statistics_api, name='statistics_api'),
     path('statistics/export/', views.sales_statistics_export_excel, name='statistics_export'),
     path('statistics/print/', views.sales_statistics_print, name='statistics_print'),
@@ -22,4 +24,6 @@ urlpatterns = [
     path('end-of-day/print/', views.end_of_day_report_print, name='end_of_day_print'),
     path('coupons/api/', views.coupons_api, name='coupons_api'),
     path('coupons/validate/', views.validate_coupon_api, name='validate_coupon_api'),
+    path('pos-features/api/', pos_features_views.pos_features_api, name='pos_features_api'),
+    path('pos-features/backup/', pos_features_views.pos_backup_download_api, name='pos_backup_download_api'),
 ]

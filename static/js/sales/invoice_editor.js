@@ -1,3 +1,4 @@
+// # File này chịu trách nhiệm xử lý hộp thoại Xem chi tiết, Chỉnh sửa hóa đơn, Trả/Hủy món, Đổi phương thức thanh toán và In lại hóa đơn.
 /**
  * Invoice Editor Controller (Chức năng Sửa hóa đơn)
  * Tương thích chuẩn F&B SaaS 2026 và giao diện hệ thống MixFood
@@ -118,7 +119,8 @@
         const els = getElements();
         let subtotal = 0;
         currentItems.forEach(item => {
-            const raw = (Number(item.unit_price) || 0) * (Number(item.quantity) || 1);
+            const qty = Math.max(0, Number(item.quantity) || 0);
+            const raw = (Number(item.unit_price) || 0) * qty;
             const disc = raw * ((Number(item.discount_percent) || 0) / 100);
             subtotal += Math.max(0, raw - disc);
         });
@@ -300,16 +302,8 @@
         if (els.btnMinus) {
             els.btnMinus.addEventListener('click', () => {
                 if (selectedItemIndex >= 0 && selectedItemIndex < currentItems.length) {
-                    if (currentItems[selectedItemIndex].quantity > 1) {
-                        currentItems[selectedItemIndex].quantity -= 1;
-                    } else {
-                        // Confirm removal if quantity is 1
-                        const name = currentItems[selectedItemIndex].product_name;
-                        if (confirm(`Bỏ món "${name}" khỏi hóa đơn?`)) {
-                            currentItems.splice(selectedItemIndex, 1);
-                            selectedItemIndex = Math.min(selectedItemIndex, currentItems.length - 1);
-                        }
-                    }
+                    const currentQty = Number(currentItems[selectedItemIndex].quantity) || 0;
+                    currentItems[selectedItemIndex].quantity = Math.max(0, currentQty - 1);
                     renderItemsTable();
                 }
             });
@@ -378,8 +372,9 @@
 
         // Submit invoice edit after reason is entered
         const submitInvoiceEdit = async () => {
-            if (!currentItems || currentItems.length === 0) {
-                alert('Hóa đơn phải có ít nhất một món ăn.');
+            const validItems = (currentItems || []).filter(it => (Number(it.quantity) || 0) > 0);
+            if (!validItems.length) {
+                alert('Hóa đơn phải có ít nhất một món ăn có số lượng lớn hơn 0.');
                 return;
             }
 
@@ -393,7 +388,7 @@
                 invoice_code: currentInvoiceCode,
                 cashier_id: Number(els.cashierSelect?.value) || null,
                 payment_method: els.paymentSelect?.value || 'cash',
-                items: currentItems,
+                items: validItems,
                 surcharge_amount: Number(els.surchargeInput?.value) || 0,
                 discount_amount: Number(els.discountInput?.value) || 0,
                 tax_amount: Number(els.taxInput?.value) || 0,
@@ -496,5 +491,3 @@
         initEventListeners();
     }
 })();
-
-

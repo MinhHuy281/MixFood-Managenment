@@ -1,3 +1,4 @@
+// # File này chịu trách nhiệm xử lý giao diện Quản lý Kho hàng 3 khu vực: tự nhập kho, xuất tách Thùng -> Hộp/Quả/Lon chờ bán, báo cáo Xuất - Nhập - Tồn, kiểm kê kho và in phiếu.
 /**
  * MIXFOOD POS & INVENTORY 2026 - QUẢN LÝ KHO HÀNG & XUẤT - NHẬP - TỒN
  */
@@ -1340,7 +1341,6 @@
         });
     };
 
-
     const updatePackRuleModalPreview = () => {
         const unit = (document.querySelector('#inv-pack-rule-unit')?.value || 'Kg').trim();
         const size = document.querySelector('#inv-pack-rule-size')?.value || '10';
@@ -1666,7 +1666,6 @@
             });
         });
 
-
         // Pack Rule Sub-Modal bindings
         document.querySelector('#inv-pack-rule-close')?.addEventListener('click', () => {
             const m = document.querySelector('#modal-inv-pack-rule');
@@ -1738,8 +1737,15 @@
                     const b = item.querySelector('.nav-menu-btn') || item.querySelector(':scope > button');
                     if (b) b.setAttribute('aria-expanded', 'false');
                 });
-                const targetTab = btn.id === 'open-inventory-report-menu' ? 'xnt' : 'unpack';
-                window.openPosInventoryModal(targetTab);
+                const isReport = btn.id === 'open-inventory-report-menu';
+                const targetTab = isReport ? 'xnt' : 'unpack';
+                const featureName = isReport ? 'Xuất nhập tồn kho' : 'Quản lý kho hàng';
+                const doOpen = () => window.openPosInventoryModal(targetTab);
+                if (typeof window.requirePosPermission === 'function') {
+                    window.requirePosPermission('manage_inventory', doOpen, featureName);
+                } else {
+                    doOpen();
+                }
             });
         });
 

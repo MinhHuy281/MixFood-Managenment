@@ -1,3 +1,4 @@
+// # File này chịu trách nhiệm xử lý toàn bộ nghiệp vụ giao diện Bán hàng trung tâm (POS 4 cột): chọn bàn, gọi món, giỏ hàng, thanh toán, chuyển/ghép/tách bàn, đặt bàn và hoàn tác thanh toán.
 document.addEventListener('DOMContentLoaded', () => {
     const selectedTable = document.querySelector('#selected-table');
     const orderItems = document.querySelector('#order-items');
@@ -100,35 +101,107 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadTableOrdersFromSession = () => {
         try {
             const raw = sessionStorage.getItem(POS_STORAGE_KEY);
-            if (!raw) return;
-            const parsed = JSON.parse(raw);
-            Object.entries(parsed).forEach(([tId, data]) => {
-                const btn = document.querySelector(`.table[data-table-id="${tId}"]`);
-                if (!btn) return;
-                const restoredCart = new Map(Array.isArray(data.items) ? data.items : []);
-                const tData = {
-                    cart: restoredCart,
-                    itemsSentToKitchen: Boolean(data.itemsSentToKitchen),
-                    tableName: data.tableName || btn.dataset.tableName,
-                    area: data.area || btn.dataset.area,
-                    arrivalTime: data.arrivalTime || '',
-                    combinedWith: data.combinedWith || null,
-                    surchargeAmount: Number(data.surchargeAmount) || 0,
-                    orderDiscountAmount: Number(data.orderDiscountAmount) || 0,
-                    taxAmount: Number(data.taxAmount) || 0,
-                    surchargeRaw: data.surchargeRaw !== undefined ? String(data.surchargeRaw) : String(Number(data.surchargeAmount) || 0),
-                    discountRaw: data.discountRaw !== undefined ? String(data.discountRaw) : String(Number(data.orderDiscountAmount) || 0),
-                    vatRaw: data.vatRaw !== undefined ? String(data.vatRaw) : '0',
-                    couponCode: data.couponCode ? String(data.couponCode) : '',
-                };
-                tableOrders.set(String(tId), tData);
-            });
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                Object.entries(parsed).forEach(([tId, data]) => {
+                    const btn = document.querySelector(`.table[data-table-id="${tId}"]`);
+                    if (!btn) return;
+                    const restoredCart = new Map(Array.isArray(data.items) ? data.items : []);
+                    const tData = {
+                        cart: restoredCart,
+                        itemsSentToKitchen: Boolean(data.itemsSentToKitchen),
+                        tableName: data.tableName || btn.dataset.tableName,
+                        area: data.area || btn.dataset.area,
+                        arrivalTime: data.arrivalTime || '',
+                        combinedWith: data.combinedWith || null,
+                        surchargeAmount: Number(data.surchargeAmount) || 0,
+                        orderDiscountAmount: Number(data.orderDiscountAmount) || 0,
+                        taxAmount: Number(data.taxAmount) || 0,
+                        surchargeRaw: data.surchargeRaw !== undefined ? String(data.surchargeRaw) : String(Number(data.surchargeAmount) || 0),
+                        discountRaw: data.discountRaw !== undefined ? String(data.discountRaw) : String(Number(data.orderDiscountAmount) || 0),
+                        vatRaw: data.vatRaw !== undefined ? String(data.vatRaw) : '0',
+                        couponCode: data.couponCode ? String(data.couponCode) : '',
+                    };
+                    tableOrders.set(String(tId), tData);
+                });
+            }
+
+            // Nạp bổ sung các bàn đang mở từ cơ sở dữ liệu server nếu chưa có trong session
+            const serverRaw = document.querySelector('#pos-active-table-orders-data')?.textContent;
+            if (serverRaw) {
+                try {
+                    const serverOrders = JSON.parse(serverRaw);
+                    Object.entries(serverOrders).forEach(([tId, data]) => {
+                        if (!tableOrders.has(String(tId))) {
+                            const btn = document.querySelector(`.table[data-table-id="${tId}"]`);
+                            if (!btn) return;
+                            const restoredCart = new Map(Array.isArray(data.items) ? data.items : []);
+                            tableOrders.set(String(tId), {
+                                cart: restoredCart,
+                                itemsSentToKitchen: true,
+                                tableName: data.tableName || btn.dataset.tableName,
+                                area: data.area || btn.dataset.area,
+                                arrivalTime: data.arrivalTime || '',
+                                combinedWith: null,
+                                surchargeAmount: Number(data.surchargeAmount) || 0,
+                                orderDiscountAmount: Number(data.orderDiscountAmount) || 0,
+                                taxAmount: Number(data.taxAmount) || 0,
+                                surchargeRaw: String(Number(data.surchargeAmount) || 0),
+                                discountRaw: String(Number(data.orderDiscountAmount) || 0),
+                                vatRaw: '0',
+                                couponCode: '',
+                            });
+                        }
+                    });
+                } catch (e) {
+                    // Ignore parse error
+                }
+            }
         } catch (err) {
             // Ignore storage errors
         }
     };
 
-    const getCsrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+    const getCsrfToken = () => document.querySelector('[name="csrfmiddlewaretoken"]')?.value || (document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '');
+
+    const syncTableOrderToServer = async (tableId, isKitchenSend = false) => {
+        if (!tableId) return;
+        const tData = tableOrders.get(String(tableId));
+        if (!tData) return;
+
+        const itemsList = [];
+        tData.cart.forEach((item) => {
+            itemsList.push({
+                product_id: item.product_id,
+                name: item.name,
+                unit: item.unit || 'Phần',
+                price: Number(item.price) || 0,
+                quantity: Number(item.quantity) || 1,
+                discount_percent: Number(item.discount_percent) || 0,
+                note: item.note || ''
+            });
+        });
+
+        try {
+            await fetch('/sales/tables/order-sync/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    table_id: tableId,
+                    items: itemsList,
+                    surcharge_amount: tData.surchargeAmount || 0,
+                    discount_amount: tData.orderDiscountAmount || 0,
+                    tax_amount: tData.taxAmount || 0,
+                    is_kitchen_send: Boolean(isKitchenSend)
+                })
+            });
+        } catch (err) {
+            console.warn('Lỗi đồng bộ đơn bàn lên server:', err);
+        }
+    };
 
     const showToast = (msg) => {
         if (!systemNotice) return;
@@ -314,17 +387,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const hasUnsentItems = () => {
+        if (!cart || !cart.size) return false;
+        if (!itemsSentToKitchen) return true;
+        for (const item of cart.values()) {
+            const sentQty = Number(item.sent_quantity) || 0;
+            if (item.quantity > sentQty) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     const renderOpenAction = () => {
         if (!orderPrimaryAction) return;
         orderPrimaryAction.classList.remove('kitchen-action', 'payment-action');
         if (!cart.size) {
             orderPrimaryAction.textContent = 'Hủy bàn';
-        } else if (itemsSentToKitchen) {
-            orderPrimaryAction.textContent = 'Thanh toán';
-            orderPrimaryAction.classList.add('payment-action');
-        } else {
+        } else if (hasUnsentItems()) {
             orderPrimaryAction.textContent = 'Nhấn món > bếp';
             orderPrimaryAction.classList.add('kitchen-action');
+            if (orderStatus) {
+                orderStatus.textContent = itemsSentToKitchen ? 'Đang gọi thêm món' : 'Đang gọi món';
+                orderStatus.classList.remove('pending');
+            }
+        } else {
+            orderPrimaryAction.textContent = 'Thanh toán';
+            orderPrimaryAction.classList.add('payment-action');
+            if (orderStatus) {
+                orderStatus.textContent = 'Đang phục vụ món';
+                orderStatus.classList.add('pending');
+            }
         }
     };
 
@@ -539,6 +632,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setSecondaryActions(false, tableButton);
         setMenuUnlocked(shouldUnlockMenu);
         renderCart();
+        if (cart.size > 0) {
+            syncTableOrderToServer(selectedTableId, itemsSentToKitchen);
+        }
     };
 
     // =========================================================================
@@ -1315,6 +1411,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 closingDialog.hidden = false;
                 return;
             }
+            if (typeof window.openPosFeatureHub === 'function') {
+                window.openPosFeatureHub(actionButton.dataset.action);
+                return;
+            }
             showToast(systemMessages[actionButton.dataset.action]);
         });
     });
@@ -1817,6 +1917,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const menu = actionButton.closest('.pos-menu-item');
             menu.classList.remove('open');
             menu.querySelector(':scope > button').setAttribute('aria-expanded', 'false');
+            if (typeof window.openPosFeatureHub === 'function') {
+                window.openPosFeatureHub(actionButton.dataset.management);
+                return;
+            }
             showToast(managementMessages[actionButton.dataset.management]);
         });
     });
@@ -1838,6 +1942,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof window.openGuestCountTodayModal === 'function') {
                     window.openGuestCountTodayModal();
                 }
+                return;
+            }
+            if (typeof window.openPosFeatureHub === 'function') {
+                const mapReport = {
+                    'customer-revenue': 'customer_revenue',
+                    'purchases': 'purchases',
+                    'cash': 'cash_stats',
+                };
+                window.openPosFeatureHub(mapReport[actionButton.dataset.report] || actionButton.dataset.report);
                 return;
             }
             showToast(reportMessages[actionButton.dataset.report]);
@@ -1882,12 +1995,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const discountBadgeHtml = discountPct > 0
                 ? ` <span class="order-item-discount-tag">(-${discountPct}%)</span>`
                 : '';
+            const unsentQty = item.quantity - (Number(item.sent_quantity) || 0);
+            const unsentBadgeHtml = unsentQty > 0 && itemsSentToKitchen
+                ? ` <span class="order-item-unsent-tag" style="color: #f59e0b; font-size: 11px; font-weight: 700; background: rgba(245, 158, 11, 0.15); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">(+${unsentQty} chờ bếp)</span>`
+                : '';
             const row = document.createElement('div');
             row.className = 'order-item new-item';
             row.dataset.productId = productId;
             row.innerHTML = `
                 <div class="order-item-header">
-                    <span class="order-item-title" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+                    <span class="order-item-title" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}${unsentBadgeHtml}</span>
                     <span class="order-item-price-total">${formatMoney(netItemTotal)}</span>
                 </div>
                 <div class="order-item-meta-row">
@@ -1948,6 +2065,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (tableData) tableData.cart = cart;
                     saveTableOrdersToSession();
                     renderCart();
+                    renderOpenAction();
+                    syncTableOrderToServer(selectedTableId, false);
                 };
                 if (itemsSentToKitchen && typeof window.requirePosPermission === 'function') {
                     window.requirePosPermission('cancel_received_item', doRemove, 'Hủy món đã nhận');
@@ -1974,6 +2093,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (item.quantity > 1) {
                         item.quantity -= 1;
+                        if (item.sent_quantity > item.quantity) {
+                            item.sent_quantity = item.quantity;
+                        }
                     } else {
                         cart.delete(id);
                     }
@@ -1981,6 +2103,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (tableData) tableData.cart = cart;
                     saveTableOrdersToSession();
                     renderCart();
+                    renderOpenAction();
+                    syncTableOrderToServer(selectedTableId, false);
                 };
                 if (itemsSentToKitchen && typeof window.requirePosPermission === 'function') {
                     window.requirePosPermission('cancel_received_item', doDecrease, 'Hủy món đã nhận');
@@ -2001,6 +2125,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (tableData) tableData.cart = cart;
                     saveTableOrdersToSession();
                     renderCart();
+                    renderOpenAction();
+                    syncTableOrderToServer(selectedTableId, false);
                 }
             });
         });
@@ -2063,13 +2189,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Nếu bàn đã được mở trước đó (đang gọi món / đang phục vụ), chuyển thẳng vào bàn đó
             if (tableOrders.has(clickedId)) {
                 const tData = tableOrders.get(clickedId);
-                openSelectedTable(tableButton, { unlockMenu: !tData?.itemsSentToKitchen });
+                openSelectedTable(tableButton, { unlockMenu: true });
                 return;
             }
 
             // Nếu bàn đang ở trạng thái preview và nhấn lần 2 vào chính bàn đó -> Mở bàn luôn
             if (previewedTable === tableButton && !selectedTableId && tablePreviewArmed) {
-                openSelectedTable(tableButton);
+                openSelectedTable(tableButton, { unlockMenu: true });
                 return;
             }
 
@@ -2081,32 +2207,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelector('#open-menu')?.addEventListener('click', () => {
         if (!selectedTableId && previewedTable) {
-            openSelectedTable(previewedTable);
+            openSelectedTable(previewedTable, { unlockMenu: true });
         }
         if (selectedTableId) setMenuUnlocked(true);
     });
     document.querySelector('#collapse-order-menu')?.addEventListener('click', () => setMenuUnlocked(false));
     selectionPrimaryAction?.addEventListener('click', () => {
         if (!selectedTableId && previewedTable) {
-            openSelectedTable(previewedTable);
+            openSelectedTable(previewedTable, { unlockMenu: true });
             return;
         }
         clearSelectedTable();
     });
-    orderPrimaryAction?.addEventListener('click', () => {
+    orderPrimaryAction?.addEventListener('click', async () => {
         if (!cart.size) {
             clearSelectedTable();
             return;
         }
-        if (!itemsSentToKitchen) {
-            // Thêm món xong hết: Bàn chuyển sang MÀU XANH và nút chuyển thành Thanh toán
+        if (hasUnsentItems()) {
+            // Gửi các món (hoặc các món gọi thêm sau) sang Bếp
             itemsSentToKitchen = true;
+            cart.forEach((item) => {
+                item.sent_quantity = item.quantity;
+            });
             if (typeof window.recordPosKitchenReception === 'function') {
                 window.recordPosKitchenReception();
             }
             const tableData = tableOrders.get(selectedTableId);
             if (tableData) {
                 tableData.itemsSentToKitchen = true;
+                tableData.cart = cart;
             }
             saveTableOrdersToSession();
             const activeTable = document.querySelector(`.table[data-table-id="${selectedTableId}"]`);
@@ -2115,9 +2245,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeTable.classList.add('kitchen-sent', 'table-green', 'occupied');
                 updateTableLastPaidBadge(activeTable);
             }
+            await syncTableOrderToServer(selectedTableId, true);
             orderStatus.textContent = 'Đang phục vụ món';
             orderStatus.classList.add('pending');
             renderOpenAction();
+            renderCart();
             return;
         }
         openPaymentDialog();
@@ -2350,10 +2482,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.dish').forEach((dishButton) => {
         dishButton.addEventListener('click', () => {
-            if (!menuUnlocked || !selectedTableId) return;
+            if (!selectedTableId) {
+                if (previewedTable) {
+                    openSelectedTable(previewedTable, { unlockMenu: true });
+                } else {
+                    return;
+                }
+            }
+            if (!menuUnlocked) setMenuUnlocked(true);
             dialogProduct = dishButton;
             editingCartItemId = null;
-            document.querySelector('#dialog-title').textContent = `Bàn ${selectedTable.textContent} - Yêu cầu món mới`;
+            document.querySelector('#dialog-title').textContent = `Bàn ${selectedTable ? selectedTable.textContent : ''} - Yêu cầu món mới`;
             document.querySelector('#dialog-product-name').textContent = dishButton.dataset.dish;
             dialogQuantity.value = '1';
             dialogPrice.value = Number(dishButton.dataset.price).toLocaleString('vi-VN');
@@ -2397,6 +2536,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 price: customPrice,
                 discount_percent: discountPct,
                 quantity: quantity,
+                sent_quantity: existing ? (existing.sent_quantity || 0) : 0,
                 note: note,
             });
         } else {
@@ -2407,6 +2547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 price: customPrice,
                 discount_percent: discountPct || (existing ? existing.discount_percent || 0 : 0),
                 quantity: existing ? existing.quantity + quantity : quantity,
+                sent_quantity: existing ? (existing.sent_quantity || 0) : 0,
                 note: note || (existing ? existing.note : ''),
             });
         }
@@ -2417,6 +2558,8 @@ document.addEventListener('DOMContentLoaded', () => {
         saveTableOrdersToSession();
         editingCartItemId = null;
         renderCart();
+        renderOpenAction();
+        syncTableOrderToServer(selectedTableId, false);
         closeDialog();
     });
     document.querySelector('#dialog-cancel').addEventListener('click', closeDialog);
@@ -2435,6 +2578,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.querySelector(`.table[data-table-id="${tId}"]`);
         if (btn) {
             applyTableVisualState(btn, tData);
+        }
+        if (tData.cart && tData.cart.size > 0) {
+            syncTableOrderToServer(tId, tData.itemsSentToKitchen);
         }
     });
     updateAllTableLastPaidBadges();
@@ -2768,6 +2914,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableOrders.set(String(selectedTableId), tData);
         renderCart();
         saveTableOrdersToSession();
+        syncTableOrderToServer(selectedTableId, tData.itemsSentToKitchen);
         closeBillAdjustDialog();
     });
 

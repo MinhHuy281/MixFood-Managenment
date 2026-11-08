@@ -1,3 +1,4 @@
+<!-- # File này chịu trách nhiệm hiển thị giao diện trang Đăng nhập hệ thống (Login Page) cho nhân viên thu ngân và quản lý, tích hợp hiện/ẩn mật khẩu, đổi mật khẩu, quên mật khẩu và đăng ký nhân viên mới. -->
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Đăng nhập | MixFood POS Cloud{% endblock %}
@@ -7,7 +8,7 @@
 {% block content %}
 <div class="login-wrapper">
     <div class="login-container">
-        <!-- Left Side: Brand Showcase & Features -->
+        <!-- # Left Side: Brand Showcase & Features -->
         <div class="login-brand-side">
             <div class="brand-hero">
                 <div class="brand-badge-pill">
@@ -56,14 +57,14 @@
             </div>
         </div>
 
-        <!-- Right Side: Login Form Card -->
+        <!-- # Right Side: Login Form Card -->
         <div class="login-card-side">
             <div class="login-card-header">
                 <h2>Vào ca làm việc</h2>
                 <p>Nhập thông tin tài khoản thu ngân hoặc quản lý để bắt đầu</p>
             </div>
 
-            <form method="post" class="login-form">
+            <form method="post" class="login-form" data-allow-numeric-only="{% if allow_numeric_password_only %}1{% else %}0{% endif %}">
                 {% csrf_token %}
                 {% if form.errors %}
                 <div class="login-error-alert" role="alert">
@@ -72,9 +73,10 @@
                 </div>
                 {% endif %}
 
+                <!-- # Tên đăng nhập -->
                 <div class="login-field-group">
                     <label for="id_username">
-                        <span>Tên đăng nhập {% if allow_numeric_password_only %}<small style="font-weight: 500; color: #059669;">(Có thể bỏ trống nếu nhập mật khẩu số)</small>{% endif %}</span>
+                        <span>Tên đăng nhập {% if allow_numeric_password_only %}<small class="u-acco-6110f900">(Có thể bỏ trống nếu nhập mật khẩu số)</small>{% endif %}</span>
                     </label>
                     <div class="input-with-icon">
                         <span class="field-icon">
@@ -84,15 +86,31 @@
                     </div>
                 </div>
 
+                <!-- # Mật khẩu có nút Hiện/Ẩn, Đổi mật khẩu & Quên mật khẩu -->
                 <div class="login-field-group">
-                    <label for="id_password">
-                        <span>Mật khẩu</span>
-                    </label>
-                    <div class="input-with-icon">
+                    <div class="label-with-action">
+                        <label for="id_password"><span>Mật khẩu</span></label>
+                        <div class="pwd-action-links">
+                            <button type="button" class="btn-pwd-link" id="btn-open-change-pwd">Đổi mật khẩu</button>
+                            <span class="pwd-action-dot">•</span>
+                            <button type="button" class="btn-pwd-link" id="btn-open-forgot-pwd">Quên mật khẩu?</button>
+                        </div>
+                    </div>
+                    <div class="input-with-icon password-input-wrap">
                         <span class="field-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         </span>
                         {{ form.password }}
+                        <button type="button" class="btn-toggle-login-pwd" id="btn-toggle-login-pwd" aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                            <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg class="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                <line x1="1" y1="1" x2="23" y2="23"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -101,14 +119,12 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </button>
             </form>
-            {% if allow_numeric_password_only %}
-            <script>
-                document.addEventListener('DOMContentLoaded', () => {
-                    const uInput = document.getElementById('id_username');
-                    if (uInput) uInput.removeAttribute('required');
-                });
-            </script>
-            {% endif %}
+
+            <!-- # Action: Đăng ký nhân viên mới -->
+            <div class="login-register-prompt">
+                <span>Chưa có tài khoản ca làm việc?</span>
+                <button type="button" class="btn-open-register" id="btn-open-register">Tạo tài khoản mới</button>
+            </div>
 
             <div class="login-card-footer">
                 <span class="system-version">Hệ thống <strong>MixFood POS 2026</strong></span>
@@ -117,4 +133,177 @@
         </div>
     </div>
 </div>
+
+<!-- # MODAL 1: QUÊN MẬT KHẨU -->
+<div class="menu-modal-backdrop" id="modal-forgot-password" hidden>
+    <div class="menu-modal-dialog forgot-pwd-modal-container" role="dialog" aria-modal="true" aria-labelledby="forgot-pwd-title">
+        <div class="menu-modal-header forgot-pwd-modal-header">
+            <div class="modal-title-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <h3 id="forgot-pwd-title">Đặt lại Mật khẩu</h3>
+            </div>
+            <button type="button" class="dialog-close" id="btn-close-forgot-pwd" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="menu-alert-banner" id="forgot-pwd-alert" hidden></div>
+        <form id="form-forgot-pwd" class="forgot-pwd-modal-body" autocomplete="off">
+            <p class="modal-subtext">Xác minh Tên đăng nhập và Số điện thoại đã khai báo trong hồ sơ nhân viên để cấp lại mật khẩu mới.</p>
+            
+            <div class="auth-form-field">
+                <label for="fp-username">Tên đăng nhập <span class="required">*</span></label>
+                <input type="text" id="fp-username" class="auth-input" placeholder="Ví dụ: thungan1" required autocomplete="username">
+            </div>
+            
+            <div class="auth-form-field">
+                <label for="fp-phone">Số điện thoại liên hệ <span class="required">*</span></label>
+                <input type="text" id="fp-phone" class="auth-input" placeholder="Ví dụ: 0905123456" required>
+            </div>
+
+            <div class="auth-form-field">
+                <label for="fp-new-password">Mật khẩu mới <span class="required">*</span></label>
+                <input type="password" id="fp-new-password" class="auth-input" placeholder="Tối thiểu 4 ký tự" required autocomplete="new-password">
+            </div>
+
+            <div class="auth-form-field">
+                <label for="fp-confirm-password">Xác nhận mật khẩu mới <span class="required">*</span></label>
+                <input type="password" id="fp-confirm-password" class="auth-input" placeholder="Nhập lại mật khẩu mới" required autocomplete="new-password">
+            </div>
+
+            <div class="auth-modal-actions">
+                <button type="button" class="btn-auth-cancel" id="btn-cancel-forgot-pwd">Hủy bỏ</button>
+                <button type="submit" class="btn-auth-submit" id="btn-submit-forgot-pwd">Xác nhận đặt lại</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- # MODAL 2: TẠO TÀI KHOẢN / ĐĂNG KÝ NHÂN VIÊN MỚI -->
+<div class="menu-modal-backdrop" id="modal-register-user" hidden>
+    <div class="menu-modal-dialog register-user-modal-container" role="dialog" aria-modal="true" aria-labelledby="register-user-title">
+        <div class="menu-modal-header register-user-modal-header">
+            <div class="modal-title-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="8.5" cy="7" r="4"/>
+                    <line x1="20" y1="8" x2="20" y2="14"/>
+                    <line x1="23" y1="11" x2="17" y2="11"/>
+                </svg>
+                <h3 id="register-user-title">Đăng ký Tài khoản Nhân viên</h3>
+            </div>
+            <button type="button" class="dialog-close" id="btn-close-register-user" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="menu-alert-banner" id="register-user-alert" hidden></div>
+        <form id="form-register-user" class="register-user-modal-body" autocomplete="off">
+            <p class="modal-subtext">Đăng ký thông tin tài khoản nhân viên mới vào hệ thống chi nhánh MixFood Đà Nẵng.</p>
+            
+            <div class="auth-form-field">
+                <label for="reg-fullname">Họ và tên nhân viên <span class="required">*</span></label>
+                <input type="text" id="reg-fullname" class="auth-input" placeholder="Ví dụ: Nguyễn Văn An" required>
+            </div>
+
+            <div class="auth-form-field">
+                <label for="reg-username">Tên đăng nhập <span class="required">*</span></label>
+                <input type="text" id="reg-username" class="auth-input" placeholder="Ví dụ: thungan2" required autocomplete="username">
+            </div>
+
+            <div class="auth-form-field">
+                <label for="reg-password">Mật khẩu <span class="required">*</span></label>
+                <input type="password" id="reg-password" class="auth-input" placeholder="Tối thiểu 4 ký tự" required autocomplete="new-password">
+            </div>
+
+            <div class="auth-form-field">
+                <label for="reg-phone">Số điện thoại</label>
+                <input type="text" id="reg-phone" class="auth-input" placeholder="Ví dụ: 0905123456">
+            </div>
+
+            <div class="auth-form-field">
+                <label for="reg-department">Bộ phận / Vị trí làm việc <span class="required">*</span></label>
+                <select id="reg-department" class="auth-select" required>
+                    <option value="Cashier">Thu ngân (Bán hàng, In hóa đơn)</option>
+                    <option value="Waiter">Phục vụ (Order món, Gọi thêm)</option>
+                    <option value="Kitchen">Bếp / Chế biến</option>
+                    <option value="Manager">Quản lý ca</option>
+                    <option value="Accountant">Kế toán</option>
+                    <option value="Warehouse">Kho hàng</option>
+                </select>
+            </div>
+
+            <div class="auth-modal-actions">
+                <button type="button" class="btn-auth-cancel" id="btn-cancel-register-user">Hủy bỏ</button>
+                <button type="submit" class="btn-auth-submit" id="btn-submit-register-user">Đăng ký tài khoản</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- # MODAL 3: ĐỔI MẬT KHẨU TÀI KHOẢN -->
+<div class="menu-modal-backdrop" id="modal-change-password" hidden>
+    <div class="menu-modal-dialog change-pwd-modal-container" role="dialog" aria-modal="true" aria-labelledby="change-pwd-title">
+        <div class="menu-modal-header change-pwd-modal-header">
+            <div class="modal-title-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
+                    <path d="M21 2l-2 2m-1.5 1.5L4 19l-2 3 3-2 13.5-13.5M16 5l3 3"/>
+                    <circle cx="16.5" cy="7.5" r=".5" fill="#ffffff"/>
+                </svg>
+                <h3 id="change-pwd-title">Đổi Mật Khẩu Tài Khoản</h3>
+            </div>
+            <button type="button" class="dialog-close" id="btn-close-change-pwd" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="menu-alert-banner" id="change-pwd-alert" hidden></div>
+        <form id="form-change-pwd" class="change-pwd-modal-body" autocomplete="off">
+            <p class="modal-subtext">Nhập tên đăng nhập, mật khẩu hiện tại và mật khẩu mới để cập nhật mật khẩu làm việc.</p>
+            
+            <div class="auth-form-field">
+                <label for="cp-username">Tên đăng nhập <span class="required">*</span></label>
+                <input type="text" id="cp-username" class="auth-input" placeholder="Ví dụ: thungan1" required autocomplete="username">
+            </div>
+            
+            <div class="auth-form-field">
+                <label for="cp-old-password">Mật khẩu hiện tại <span class="required">*</span></label>
+                <div class="password-input-wrap">
+                    <input type="password" id="cp-old-password" class="auth-input" placeholder="Mật khẩu đang sử dụng" required autocomplete="current-password">
+                    <button type="button" class="btn-toggle-modal-pwd" data-target="cp-old-password" aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="auth-form-field">
+                <label for="cp-new-password">Mật khẩu mới <span class="required">*</span></label>
+                <div class="password-input-wrap">
+                    <input type="password" id="cp-new-password" class="auth-input" placeholder="Tối thiểu 4 ký tự" required autocomplete="new-password">
+                    <button type="button" class="btn-toggle-modal-pwd" data-target="cp-new-password" aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="auth-form-field">
+                <label for="cp-confirm-password">Xác nhận mật khẩu mới <span class="required">*</span></label>
+                <input type="password" id="cp-confirm-password" class="auth-input" placeholder="Nhập lại mật khẩu mới" required autocomplete="new-password">
+            </div>
+
+            <div class="auth-modal-actions">
+                <button type="button" class="btn-auth-cancel" id="btn-cancel-change-pwd">Hủy bỏ</button>
+                <button type="submit" class="btn-auth-submit" id="btn-submit-change-pwd">Xác nhận đổi mật khẩu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/accounts/login.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

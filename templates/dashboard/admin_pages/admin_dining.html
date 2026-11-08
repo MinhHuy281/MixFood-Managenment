@@ -1,0 +1,159 @@
+<!-- # File này chịu trách nhiệm hiển thị giao diện Quản lý Khu vực & Bàn ăn trên Mobile cho Admin (/admin/dining/), hỗ trợ thêm bàn, chỉnh sửa khu vực và đổi trạng thái bàn ăn từ xa. -->
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Khu vực & Bàn ăn - Admin Mobile | MixFood 2026{% endblock %}
+{% block body_class %}admin-subpage-body{% endblock %}
+{% block page_class %}admin-subpage-shell{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/admin_subpages.css' %}?v={% now 'U' %}">
+{% endblock %}
+
+{% block authenticated_header %}
+<!-- # Không nạp topbar POS desktop để giữ trọn vẹn diện tích cho Mobile Admin -->
+{% endblock %}
+
+{% block content %}
+<div class="admin-subpage-shell">
+    <!-- # Header Top Bar -->
+    <header class="admin-subpage-header">
+        <div class="admin-header-left">
+            <a href="{% url 'admin_live_dashboard' %}" class="admin-back-btn" title="Về Giám sát Live">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <div>
+                <h1 class="admin-subpage-title">Khu vực & Bàn ăn</h1>
+                <span class="admin-subpage-badge">{{ tables|length }} bàn</span>
+            </div>
+        </div>
+        <button type="button" class="admin-btn-add" id="btn-open-add-table">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Thêm bàn</span>
+        </button>
+    </header>
+
+    <!-- # Toolbar Lọc theo Khu vực bàn -->
+    <div class="admin-toolbar-wrap">
+        <div class="admin-filter-scroll">
+            <a href="{% url 'admin_dining' %}" class="admin-filter-pill {% if not selected_area %}active{% endif %}">
+                Tất cả khu vực
+            </a>
+            {% for a in areas %}
+            <a href="{% url 'admin_dining' %}?area={{ a.id }}" class="admin-filter-pill {% if selected_area == a.id|stringformat:'s' %}active{% endif %}">
+                {{ a.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- # Card List Bàn ăn -->
+    <div class="admin-content-area">
+        <div class="admin-card-list">
+            {% for tbl in tables %}
+            <div class="admin-card">
+                <div class="admin-card-top">
+                    <div>
+                        <h3 class="admin-card-title">
+                            <span>🪑</span>
+                            <span>{{ tbl.name }}</span>
+                        </h3>
+                        <span class="admin-card-subtitle">{{ tbl.area.name|default:'Chưa gán khu vực' }}</span>
+                    </div>
+                    {% if tbl.status == 'available' %}
+                    <span class="admin-card-badge badge-green">Bàn trống</span>
+                    {% elif tbl.status == 'occupied' %}
+                    <span class="admin-card-badge badge-yellow">Có khách</span>
+                    {% else %}
+                    <span class="admin-card-badge badge-blue">Đã đặt trước</span>
+                    {% endif %}
+                </div>
+
+                <div class="admin-card-details">
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Sức chứa tối đa</span>
+                        <span class="admin-detail-value">{{ tbl.capacity }} khách</span>
+                    </div>
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Thứ tự hiển thị</span>
+                        <span class="admin-detail-value">#{{ tbl.display_order }}</span>
+                    </div>
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Trạng thái</span>
+                        <span class="admin-detail-value">{{ tbl.get_status_display }}</span>
+                    </div>
+                </div>
+
+                <div class="admin-card-actions">
+                    <button type="button" class="admin-btn-action btn-action-edit btn-edit-table"
+                            data-id="{{ tbl.id }}"
+                            data-name="{{ tbl.name }}"
+                            data-area="{{ tbl.area_id }}"
+                            data-capacity="{{ tbl.capacity }}"
+                            data-status="{{ tbl.status }}">
+                        <span>✏️ Sửa bàn</span>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="admin-empty-state">
+                <p>Không có bàn nào trong khu vực này.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- # MODAL THÊM / SỬA BÀN ĂN -->
+<div class="admin-modal-backdrop" id="modal-table-form" hidden>
+    <div class="admin-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-table-title">
+        <div class="admin-modal-header">
+            <h3 id="modal-table-title">Thêm bàn ăn mới</h3>
+            <button type="button" class="admin-modal-close" data-dismiss="modal">&times;</button>
+        </div>
+        <form id="form-table-save">
+            {% csrf_token %}
+            <input type="hidden" name="table_id" id="inp-table-id" value="">
+            <div class="admin-modal-body">
+                <div class="admin-form-row">
+                    <label for="inp-table-name">Tên bàn (*)</label>
+                    <input type="text" name="name" id="inp-table-name" class="admin-form-input" required placeholder="ví dụ: Bàn 09, VIP 2...">
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-table-area">Khu vực / Tầng (*)</label>
+                    <select name="area_id" id="inp-table-area" class="admin-form-select">
+                        {% for a in areas %}
+                        <option value="{{ a.id }}">{{ a.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-table-capacity">Số lượng ghế ngồi (Khách)</label>
+                    <input type="number" name="capacity" id="inp-table-capacity" class="admin-form-input" value="4" min="1" max="100">
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-table-status">Trạng thái hiện tại</label>
+                    <select name="status" id="inp-table-status" class="admin-form-select">
+                        <option value="available">Bàn trống (Sẵn sàng phục vụ)</option>
+                        <option value="occupied">Đang có khách</option>
+                        <option value="reserved">Đã đặt trước</option>
+                    </select>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="admin-btn-cancel" data-dismiss="modal">Hủy</button>
+                <button type="submit" class="admin-btn-save">Lưu thông tin bàn</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard/admin_subpages.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

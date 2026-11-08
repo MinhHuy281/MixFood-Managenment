@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm cung cấp lệnh quản trị khởi tạo dữ liệu mẫu ban đầu (tài khoản, khu vực, bàn ăn, thực đơn, nguyên liệu và công thức).
 from django.core.management.base import BaseCommand
 
 from catalog.models import Category, Product
@@ -5,9 +6,11 @@ from dining.models import Area, DiningTable
 
 
 class Command(BaseCommand):
+    # Class này dùng để định nghĩa lệnh quản trị Django CLI (seed_demo) hỗ trợ khởi tạo và thiết lập dữ liệu hệ thống.
     help = 'Tạo dữ liệu demo danh mục, món ăn, khu vực và bàn cho môi trường phát triển.'
 
     def handle(self, *args, **options):
+        # Hàm này dùng để thực thi logic chính của lệnh quản trị Django CLI khi được gọi từ terminal. Input: *args, **options. Output: khởi tạo/cập nhật dữ liệu và in thông báo kết quả.
         categories = {
             'Khai vị': '#f5c92c',
             'Pad Thai': '#ef962f',

@@ -1,191 +1,191 @@
-<!-- Recipe Admin Modal (Định lượng nguyên liệu on POS Screen) -->
+<!-- # File này chịu trách nhiệm hiển thị hộp thoại Định lượng Nguyên liệu (Recipe BOM Modal) trên màn hình POS để thiết lập công thức món và tính giá vốn tự động. -->
 <div class="recipe-admin-modal-overlay" id="pos-recipe-admin-modal" hidden>
-    <div class="recipe-admin-modal-window" style="max-width: 1200px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
-        <!-- Topbar -->
-        <div class="recipe-modal-topbar" style="background: #0f172a; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center;">
-            <div class="recipe-modal-title" style="display: flex; align-items: center; gap: 10px;">
-                <span class="recipe-modal-icon" style="font-size: 22px;">⚖️</span>
+    <div class="recipe-admin-modal-window u-inve-039f1b1a">
+        <!-- # Topbar -->
+        <div class="recipe-modal-topbar u-inve-87106434">
+            <div class="recipe-modal-title u-inve-b512c985">
+                <span class="recipe-modal-icon u-inve-249bf020">⚖️</span>
                 <div>
-                    <span class="recipe-modal-title-text" style="font-size: 16px; font-weight: 800; color: #fff;">Định lượng nguyên liệu - Admin (BOM)</span>
-                    <span style="font-size: 12px; color: #94a3b8; display: block;">Thiết lập công thức trừ kho tự động khi thanh toán và tính giá vốn món ăn</span>
+                    <span class="recipe-modal-title-text u-inve-cde2c33c">Định lượng nguyên liệu - Admin (BOM)</span>
+                    <span class="u-inve-03ea6f4a">Thiết lập công thức trừ kho tự động khi thanh toán và tính giá vốn món ăn</span>
                 </div>
             </div>
-            <div class="recipe-modal-top-actions" style="display: flex; gap: 8px; align-items: center;">
-                <button type="button" class="btn-import-excel-ruby" id="modal-pos-btn-recipe-excel-import" style="padding: 6px 12px; font-size: 12.5px;">
+            <div class="recipe-modal-top-actions u-inve-b131259d">
+                <button type="button" class="btn-import-excel-ruby u-inve-8196e5d9" id="modal-pos-btn-recipe-excel-import">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     Nhập Excel
                 </button>
-                <a href="{% url 'inventory:recipe_export_excel' %}" class="btn-export-excel-classic" id="modal-pos-btn-recipe-export" style="padding: 6px 12px; font-size: 12.5px;">
+                <a href="{% url 'inventory:recipe_export_excel' %}" class="btn-export-excel-classic u-inve-8196e5d9" id="modal-pos-btn-recipe-export">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                     Xuất Excel
                 </a>
-                <button type="button" class="recipe-modal-close-btn" id="pos-recipe-modal-close" title="Đóng" style="font-size: 24px; color: #cbd5e1; background: none; border: none; cursor: pointer; line-height: 1;">&times;</button>
+                <button type="button" class="recipe-modal-close-btn u-inve-1920ffdd" id="pos-recipe-modal-close" title="Đóng">&times;</button>
             </div>
         </div>
 
-        <!-- Banner Toast -->
-        <div id="modal-pos-recipe-alert" class="menu-alert-banner" style="margin: 8px 18px 0;" hidden></div>
+        <!-- # Banner Toast -->
+        <div id="modal-pos-recipe-alert" class="menu-alert-banner u-inve-a191755d" hidden></div>
 
-        <!-- Body 2-Column Split -->
-        <div class="recipe-modal-body" style="padding: 0; background: #fff;">
-            <div class="recipe-split-grid" style="display: flex; min-height: 580px;">
-                <!-- Left Column: Danh sách món ăn -->
-                <div class="recipe-col-dishes" style="width: 320px; border-right: 1px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column;">
-                    <div class="recipe-col-header" style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #fff;">
-                        <span class="recipe-col-title" style="font-weight: 700; font-size: 13.5px; color: #1e293b;">Danh sách Món ăn</span>
-                        <span class="recipe-col-subtitle" id="modal-pos-recipe-dishes-count" style="font-size: 12px; font-weight: 600; background: #f1f5f9; padding: 2px 7px; border-radius: 10px; color: #64748b;">0 món</span>
+        <!-- # Body 2-Column Split -->
+        <div class="recipe-modal-body u-inve-d1db3586">
+            <div class="recipe-split-grid u-inve-980cbc1c">
+                <!-- # Left Column: Danh sách món ăn -->
+                <div class="recipe-col-dishes u-inve-2f7ce039">
+                    <div class="recipe-col-header u-inve-2f1ebfc0">
+                        <span class="recipe-col-title u-inve-3ad0cc5d">Danh sách Món ăn</span>
+                        <span class="recipe-col-subtitle u-inve-10ccaf68" id="modal-pos-recipe-dishes-count">0 món</span>
                     </div>
 
-                    <!-- Filters -->
-                    <div class="recipe-filter-wrap" style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; background: #fff; display: flex; flex-direction: column; gap: 8px;">
-                        <input type="text" id="modal-pos-recipe-dish-search" class="recipe-search-input" placeholder="🔍 Tìm mã hoặc tên món..." style="width: 100%; height: 34px; padding: 0 8px; font-size: 12.5px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                        <select id="modal-pos-recipe-cat-filter" class="recipe-cat-select" style="width: 100%; height: 32px; padding: 0 6px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <!-- # Filters -->
+                    <div class="recipe-filter-wrap u-inve-7c04231f">
+                        <input type="text" id="modal-pos-recipe-dish-search" class="recipe-search-input u-inve-64150062" placeholder="🔍 Tìm mã hoặc tên món...">
+                        <select id="modal-pos-recipe-cat-filter" class="recipe-cat-select u-inve-da2a610e">
                             <option value="">-- Tất cả danh mục --</option>
                         </select>
                     </div>
 
-                    <!-- Dish List -->
-                    <div class="recipe-dish-list" id="modal-pos-recipe-dish-list" style="flex: 1; max-height: 480px; overflow-y: auto; padding: 8px;">
-                        <!-- Populated dynamically via JS -->
+                    <!-- # Dish List -->
+                    <div class="recipe-dish-list u-inve-29701a24" id="modal-pos-recipe-dish-list">
+                        <!-- # Populated dynamically via JS -->
                     </div>
                 </div>
 
-                <!-- Right Column: Chi tiết công thức món đang chọn -->
-                <div class="recipe-col-detail" style="flex: 1; padding: 18px 22px; display: flex; flex-direction: column; overflow-y: auto;">
-                    <!-- Placeholder khi chưa chọn món -->
-                    <div id="modal-pos-recipe-no-selection" class="recipe-detail-empty" style="margin: auto; text-align: center; padding: 60px 20px;">
-                        <div class="empty-icon" style="font-size: 42px; margin-bottom: 10px;">🍳</div>
-                        <h3 style="font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">Chưa chọn món ăn</h3>
-                        <p style="font-size: 13px; color: #64748b; max-width: 380px; margin: 0 auto;">Vui lòng chọn một món ăn từ danh sách bên trái để xem hoặc thiết lập định lượng nguyên liệu.</p>
+                <!-- # Right Column: Chi tiết công thức món đang chọn -->
+                <div class="recipe-col-detail u-inve-c1b93733">
+                    <!-- # Placeholder khi chưa chọn món -->
+                    <div id="modal-pos-recipe-no-selection" class="recipe-detail-empty u-inve-3e42e52e">
+                        <div class="empty-icon u-inve-b932d876">🍳</div>
+                        <h3 class="u-inve-c945b69e">Chưa chọn món ăn</h3>
+                        <p class="u-inve-473337a9">Vui lòng chọn một món ăn từ danh sách bên trái để xem hoặc thiết lập định lượng nguyên liệu.</p>
                     </div>
 
-                    <!-- Content khi đã chọn món -->
-                    <div id="modal-pos-recipe-selection-wrap" hidden style="display: flex; flex-direction: column; gap: 14px;">
-                        <!-- Dish Overview Header -->
-                        <div class="recipe-dish-info-card" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <!-- # Content khi đã chọn món -->
+                    <div class="u-inve-f4b1613e" id="modal-pos-recipe-selection-wrap" hidden>
+                        <!-- # Dish Overview Header -->
+                        <div class="recipe-dish-info-card u-inve-48956bf1">
                             <div class="recipe-dish-info-main">
-                                <span class="badge-cat" id="modal-pos-recipe-cat-badge" style="font-size: 11px; padding: 1px 7px; border-radius: 4px; background: #e0f2fe; color: #0369a1; font-weight: 700;">Khai vị</span>
-                                <h3 class="recipe-dish-name" id="modal-pos-recipe-dish-name" style="font-size: 19px; font-weight: 800; color: #0f172a; margin: 2px 0;">Tên món ăn</h3>
-                                <span class="recipe-dish-code" id="modal-pos-recipe-dish-code" style="font-size: 12px; color: #64748b; font-family: monospace;">KV01</span>
+                                <span class="badge-cat u-inve-4739294b" id="modal-pos-recipe-cat-badge">Khai vị</span>
+                                <h3 class="recipe-dish-name u-inve-fc76169e" id="modal-pos-recipe-dish-name">Tên món ăn</h3>
+                                <span class="recipe-dish-code u-inve-13b00d06" id="modal-pos-recipe-dish-code">KV01</span>
                             </div>
-                            <div class="recipe-dish-kpi-group" style="display: flex; gap: 10px; align-items: center;">
-                                <div class="recipe-kpi-item" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; text-align: right;">
-                                    <span class="kpi-label" style="font-size: 10.5px; color: #64748b; font-weight: 600; display: block;">Đơn giá bán</span>
-                                    <span class="kpi-val text-primary" id="modal-pos-recipe-price" style="font-size: 14px; font-weight: 800; color: #0284c7;">0 đ</span>
+                            <div class="recipe-dish-kpi-group u-inve-c6235d4d">
+                                <div class="recipe-kpi-item u-inve-ddb34448">
+                                    <span class="kpi-label u-inve-c12f59e3">Đơn giá bán</span>
+                                    <span class="kpi-val text-primary u-inve-2c70141e" id="modal-pos-recipe-price">0 đ</span>
                                 </div>
-                                <div class="recipe-kpi-item" style="background: #fff; border: 1px solid #fed7aa; border-radius: 6px; padding: 6px 12px; text-align: right;">
-                                    <span class="kpi-label" style="font-size: 10.5px; color: #9a3412; font-weight: 600; display: block;">Giá vốn BOM</span>
-                                    <span class="kpi-val text-warning" id="modal-pos-recipe-cost" style="font-size: 14px; font-weight: 800; color: #ea580c;">0 đ</span>
+                                <div class="recipe-kpi-item u-inve-21b12548">
+                                    <span class="kpi-label u-inve-a68804d8">Giá vốn BOM</span>
+                                    <span class="kpi-val text-warning u-inve-99dc7aed" id="modal-pos-recipe-cost">0 đ</span>
                                 </div>
-                                <div class="recipe-kpi-item" style="background: #fff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 12px; text-align: right;">
-                                    <span class="kpi-label" style="font-size: 10.5px; color: #166534; font-weight: 600; display: block;">Lợi nhuận gộp</span>
-                                    <span class="kpi-val text-success" id="modal-pos-recipe-profit" style="font-size: 14px; font-weight: 800; color: #16a34a;">0 đ</span>
+                                <div class="recipe-kpi-item u-inve-9fa0cba0">
+                                    <span class="kpi-label u-inve-3faf369e">Lợi nhuận gộp</span>
+                                    <span class="kpi-val text-success u-inve-1cbcc30c" id="modal-pos-recipe-profit">0 đ</span>
                                 </div>
-                                <div class="recipe-kpi-item" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; text-align: right;">
-                                    <span class="kpi-label" style="font-size: 10.5px; color: #64748b; font-weight: 600; display: block;">Tỷ suất lãi</span>
-                                    <span class="kpi-val badge-margin" id="modal-pos-recipe-margin" style="font-size: 14px; font-weight: 800;">0%</span>
+                                <div class="recipe-kpi-item u-inve-ddb34448">
+                                    <span class="kpi-label u-inve-c12f59e3">Tỷ suất lãi</span>
+                                    <span class="kpi-val badge-margin u-inve-f681d690" id="modal-pos-recipe-margin">0%</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Quick Add Bar for Modal -->
-                        <div class="pos-recipe-quick-add" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px;">
-                            <div style="font-size: 12.5px; font-weight: 800; color: #166534; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <!-- # Quick Add Bar for Modal -->
+                        <div class="pos-recipe-quick-add u-inve-9d9be46e">
+                            <div class="u-inve-4f52141e">
                                 <span>⚡ Thêm nhanh định lượng nguyên liệu</span>
-                                <span id="pos-quick-add-calc-hint" style="font-size: 11.5px; font-weight: 600; color: #0284c7; background: #e0f2fe; padding: 1px 6px; border-radius: 4px;" hidden></span>
+                                <span class="u-inve-c94abbd8" id="pos-quick-add-calc-hint" hidden></span>
                             </div>
-                            <!-- Lọc nguyên liệu theo 3 Kho & Ô tìm kiếm nhanh (Alphabet) -->
-                            <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-                                <div class="pos-recipe-wh-filter-chips" style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
-                                    <span style="font-size: 11.5px; font-weight: 700; color: #475569;">Lọc kho:</span>
-                                    <button type="button" class="btn-pos-rec-wh-chip active" data-wh="all" style="padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; border: 1px solid #0f172a; background: #0f172a; color: #fff; cursor: pointer;">Tất cả</button>
-                                    <button type="button" class="btn-pos-rec-wh-chip" data-wh="fresh" style="padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; border: 1px solid #86efac; background: #f0fdf4; color: #166534; cursor: pointer;">🥦 Kho 1: Tươi sống</button>
-                                    <button type="button" class="btn-pos-rec-wh-chip" data-wh="dry" style="padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; border: 1px solid #fde68a; background: #fffbeb; color: #b45309; cursor: pointer;">🥫 Kho 2: Đồ khô</button>
-                                    <button type="button" class="btn-pos-rec-wh-chip" data-wh="beverage" style="padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; border: 1px solid #93c5fd; background: #eff6ff; color: #1d4ed8; cursor: pointer;">🍹 Kho 3: Đồ uống</button>
+                            <!-- # Lọc nguyên liệu theo 3 Kho & Ô tìm kiếm nhanh (Alphabet) -->
+                            <div class="u-inve-e80d2f3e">
+                                <div class="pos-recipe-wh-filter-chips u-inve-e02faf26">
+                                    <span class="u-inve-73805b0c">Lọc kho:</span>
+                                    <button type="button" class="btn-pos-rec-wh-chip active u-inve-3b3a2f6e" data-wh="all">Tất cả</button>
+                                    <button type="button" class="btn-pos-rec-wh-chip u-inve-53cad7ec" data-wh="fresh">🥦 Kho 1: Tươi sống</button>
+                                    <button type="button" class="btn-pos-rec-wh-chip u-inve-f4f6d7d7" data-wh="dry">🥫 Kho 2: Đồ khô</button>
+                                    <button type="button" class="btn-pos-rec-wh-chip u-inve-d5d569ca" data-wh="beverage">🍹 Kho 3: Đồ uống</button>
                                 </div>
-                                <div style="position: relative; width: 230px;">
-                                    <input type="text" id="pos-quick-add-ing-search" class="form-input" placeholder="🔍 Nhập tìm nguyên liệu (A-Z)..." style="height: 30px; width: 100%; padding: 0 24px 0 24px; font-size: 11.5px; border-radius: 5px; border: 1.5px solid #0284c7; background: #f0f9ff; font-weight: 600; color: #0369a1; outline: none;">
-                                    <span style="position: absolute; left: 7px; top: 7px; font-size: 11px; color: #0284c7; pointer-events: none;">🔍</span>
-                                    <button type="button" id="pos-quick-add-ing-search-clear" style="position: absolute; right: 6px; top: 4px; background: none; border: none; font-size: 14px; color: #64748b; cursor: pointer; display: none; line-height: 1;">&times;</button>
+                                <div class="u-inve-30ff1828">
+                                    <input type="text" id="pos-quick-add-ing-search" class="form-input u-inve-487d44be" placeholder="🔍 Nhập tìm nguyên liệu (A-Z)...">
+                                    <span class="u-inve-5774f10d">🔍</span>
+                                    <button class="u-inve-30296a13" type="button" id="pos-quick-add-ing-search-clear">&times;</button>
                                 </div>
                             </div>
 
-                            <form id="pos-quick-add-form" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr auto; gap: 8px; align-items: flex-end;">
+                            <form class="u-inve-16ae93d6" id="pos-quick-add-form">
                                 <div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                                        <label style="font-size: 11.5px; font-weight: 700; color: #334155; margin: 0;">Nguyên liệu kho <span class="text-danger">*</span></label>
-                                        <span id="pos-quick-add-ing-match-count" style="font-size: 10.5px; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 1px 5px; border-radius: 4px;" hidden></span>
+                                    <div class="u-inve-5dfede03">
+                                        <label class="u-inve-76f0507b">Nguyên liệu kho <span class="text-danger">*</span></label>
+                                        <span class="u-inve-7c128299" id="pos-quick-add-ing-match-count" hidden></span>
                                     </div>
-                                    <select id="pos-quick-add-ingredient" class="form-input" style="height: 36px; width: 100%; font-size: 13px;" required>
+                                    <select id="pos-quick-add-ingredient" class="form-input u-inve-5ffd239f" required>
                                         <option value="">-- Chọn nguyên liệu từ kho --</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label style="font-size: 11.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 3px;">Định lượng <span class="text-danger">*</span></label>
-                                    <input type="number" step="0.001" min="0.001" id="pos-quick-add-qty" class="form-input" style="height: 36px; width: 100%; text-align: right; font-weight: 700; color: #0284c7;" value="100" required>
+                                    <label class="u-inve-5d823b28">Định lượng <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.001" min="0.001" id="pos-quick-add-qty" class="form-input u-inve-dca64223" value="100" required>
                                 </div>
                                 <div>
-                                    <label style="font-size: 11.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 3px;">ĐVT món</label>
-                                    <input type="text" id="pos-quick-add-unit" class="form-input" style="height: 36px; width: 100%; text-align: center; font-weight: 700;" value="g" placeholder="g, ml...">
+                                    <label class="u-inve-5d823b28">ĐVT món</label>
+                                    <input type="text" id="pos-quick-add-unit" class="form-input u-inve-403a6f18" value="g" placeholder="g, ml...">
                                 </div>
                                 <div>
-                                    <label style="font-size: 11.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 3px;">Vốn ước tính</label>
-                                    <div id="pos-quick-add-cost-preview" style="height: 36px; line-height: 36px; font-weight: 800; color: #d97706; padding: 0 8px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right;">0 đ</div>
+                                    <label class="u-inve-5d823b28">Vốn ước tính</label>
+                                    <div class="u-inve-fb3c8520" id="pos-quick-add-cost-preview">0 đ</div>
                                 </div>
                                 <div>
-                                    <button type="submit" class="btn-ing-action btn-ing-add" style="height: 36px; padding: 0 16px; font-weight: 700; background: #16a34a; color: #fff; border: none; border-radius: 6px; cursor: pointer;">
+                                    <button type="submit" class="btn-ing-action btn-ing-add u-inve-3f9fb969">
                                         + Thêm
                                     </button>
                                 </div>
                             </form>
 
-                            <!-- Quick Unit Pills in POS Modal -->
-                            <div style="display: flex; gap: 4px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
-                                <span style="font-size: 11px; color: #64748b; font-weight: 600;">ĐVT:</span>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="g" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">g</button>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="kg" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">kg</button>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="ml" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">ml</button>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="lít" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">lít</button>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="chén" style="border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer; font-weight: 700;">chén (cơm)</button>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="cái" style="border: 1px solid #fed7aa; background: #fff7ed; color: #c2410c; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer; font-weight: 700;">cái (phồng tôm)</button>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="phần" style="border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer; font-weight: 700;">phần (xôi)</button>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="quả" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">quả</button>
-                                <button type="button" class="btn-pos-quick-unit" data-unit="con" style="border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer; font-weight: 700;">con (cá)</button>
+                            <!-- # Quick Unit Pills in POS Modal -->
+                            <div class="u-inve-61f8c717">
+                                <span class="u-inve-dae0bf1a">ĐVT:</span>
+                                <button type="button" class="btn-pos-quick-unit u-inve-3797c488" data-unit="g">g</button>
+                                <button type="button" class="btn-pos-quick-unit u-inve-3797c488" data-unit="kg">kg</button>
+                                <button type="button" class="btn-pos-quick-unit u-inve-3797c488" data-unit="ml">ml</button>
+                                <button type="button" class="btn-pos-quick-unit u-inve-3797c488" data-unit="lít">lít</button>
+                                <button type="button" class="btn-pos-quick-unit u-inve-0adee0c0" data-unit="chén">chén (cơm)</button>
+                                <button type="button" class="btn-pos-quick-unit u-inve-c79c7d12" data-unit="cái">cái (phồng tôm)</button>
+                                <button type="button" class="btn-pos-quick-unit u-inve-0adee0c0" data-unit="phần">phần (xôi)</button>
+                                <button type="button" class="btn-pos-quick-unit u-inve-3797c488" data-unit="quả">quả</button>
+                                <button type="button" class="btn-pos-quick-unit u-inve-0adee0c0" data-unit="con">con (cá)</button>
                             </div>
                         </div>
 
-                        <!-- Action Toolbar -->
-                        <div class="recipe-items-toolbar" style="display: flex; justify-content: space-between; align-items: center;">
+                        <!-- # Action Toolbar -->
+                        <div class="recipe-items-toolbar u-inve-948e6d6e">
                             <div class="recipe-items-title-wrap">
-                                <h4 style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">Nguyên liệu cấu thành (1 phần bán)</h4>
-                                <span class="text-muted" id="modal-pos-recipe-items-count" style="font-size: 12px;">0 nguyên liệu</span>
+                                <h4 class="u-inve-cc7e104e">Nguyên liệu cấu thành (1 phần bán)</h4>
+                                <span class="text-muted u-inve-345895de" id="modal-pos-recipe-items-count">0 nguyên liệu</span>
                             </div>
-                            <div class="recipe-items-actions" style="display: flex; gap: 6px;">
-                                <button type="button" class="btn-ing-action btn-ing-add" id="modal-pos-btn-add-recipe-item" style="font-size: 12px; padding: 5px 10px;">
+                            <div class="recipe-items-actions u-inve-4a5d9a10">
+                                <button type="button" class="btn-ing-action btn-ing-add u-inve-a9b32160" id="modal-pos-btn-add-recipe-item">
                                     + Form chi tiết
                                 </button>
-                                <button type="button" class="btn-ing-action btn-ing-del text-danger" id="modal-pos-btn-clear-recipe" style="font-size: 12px; padding: 5px 10px;">
+                                <button type="button" class="btn-ing-action btn-ing-del text-danger u-inve-a9b32160" id="modal-pos-btn-clear-recipe">
                                     Xóa công thức
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Ingredients Table -->
-                        <div class="recipe-table-scroll" style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
-                            <table class="ingredient-data-table recipe-items-table" style="width: 100%;">
+                        <!-- # Ingredients Table -->
+                        <div class="recipe-table-scroll u-inve-078d0374">
+                            <table class="ingredient-data-table recipe-items-table u-inve-199b6f0e">
                                 <thead>
-                                    <tr style="background: #f8fafc;">
-                                        <th style="width: 5%; text-align: center;">#</th>
-                                        <th style="width: 18%;">Nhóm</th>
-                                        <th style="width: 28%;">Tên mặt hàng / Nguyên liệu</th>
-                                        <th style="width: 14%; text-align: right;">Định lượng</th>
-                                        <th style="width: 10%; text-align: center;">ĐVT</th>
-                                        <th style="width: 13%; text-align: right;">Thành tiền</th>
-                                        <th style="width: 12%; text-align: center;">Thao tác</th>
+                                    <tr class="u-inve-a7cac501">
+                                        <th class="u-inve-5cff5813">#</th>
+                                        <th class="u-inve-55d8fd9d">Nhóm</th>
+                                        <th class="u-inve-599e194b">Tên mặt hàng / Nguyên liệu</th>
+                                        <th class="u-inve-c6f6704e">Định lượng</th>
+                                        <th class="u-inve-13863b84">ĐVT</th>
+                                        <th class="u-inve-7424fdc7">Thành tiền</th>
+                                        <th class="u-inve-8727f8b8">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="modal-pos-recipe-items-tbody">
-                                    <!-- Populated dynamically via JS -->
+                                    <!-- # Populated dynamically via JS -->
                                 </tbody>
                             </table>
                         </div>
@@ -196,92 +196,92 @@
     </div>
 </div>
 
-<!-- Submodal: Thêm nguyên liệu vào công thức (Form chi tiết) -->
+<!-- # Submodal: Thêm nguyên liệu vào công thức (Form chi tiết) -->
 <div class="dining-submodal-overlay" id="pos-submodal-recipe-item" hidden>
-    <div class="dining-submodal-card" style="max-width: 520px; border-radius: 12px;">
-        <div class="dining-submodal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 14px 20px;">
-            <h4 id="pos-submodal-recipe-item-title" style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">Thêm nguyên liệu vào món</h4>
-            <button type="button" class="btn-submodal-close" id="pos-submodal-recipe-item-close" style="font-size: 20px; cursor: pointer; color: #94a3b8; border: none; background: none;">&times;</button>
+    <div class="dining-submodal-card u-inve-fa16b713">
+        <div class="dining-submodal-header u-inve-bcf17be9">
+            <h4 class="u-inve-5d565ebe" id="pos-submodal-recipe-item-title">Thêm nguyên liệu vào món</h4>
+            <button type="button" class="btn-submodal-close u-inve-2399e4f6" id="pos-submodal-recipe-item-close">&times;</button>
         </div>
         <form id="pos-form-recipe-item">
-            <div class="dining-submodal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+            <div class="dining-submodal-body u-inve-66229021">
                 <div class="form-row">
-                    <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">Mặt hàng / Nguyên liệu kho <span class="text-danger">*</span></label>
-                    <select id="pos-recipe-item-ingredient" class="form-input" style="height: 38px; font-weight: 600;" required>
+                    <label class="u-inve-f0187f83">Mặt hàng / Nguyên liệu kho <span class="text-danger">*</span></label>
+                    <select id="pos-recipe-item-ingredient" class="form-input u-inve-824dd044" required>
                         <option value="">-- Chọn mặt hàng từ kho --</option>
                     </select>
                 </div>
-                <div class="form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-row-2col u-inve-bb5ff478">
                     <div class="form-col">
-                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">Định lượng tiêu hao <span class="text-danger">*</span></label>
-                        <input type="number" step="0.001" min="0.001" id="pos-recipe-item-qty" class="form-input" required value="100" style="height: 38px; text-align: right; font-weight: 700; color: #0284c7;">
+                        <label class="u-inve-f0187f83">Định lượng tiêu hao <span class="text-danger">*</span></label>
+                        <input type="number" step="0.001" min="0.001" id="pos-recipe-item-qty" class="form-input u-inve-35053e9e" required value="100">
                     </div>
                     <div class="form-col">
-                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">Đơn vị tính (ĐVT) <span class="text-danger">*</span></label>
-                        <input type="text" id="pos-recipe-item-unit" class="form-input" value="g" placeholder="g, ml, chén, quả..." style="height: 38px; text-align: center; font-weight: 700;">
+                        <label class="u-inve-f0187f83">Đơn vị tính (ĐVT) <span class="text-danger">*</span></label>
+                        <input type="text" id="pos-recipe-item-unit" class="form-input u-inve-7d9e0d78" value="g" placeholder="g, ml, chén, quả...">
                     </div>
                 </div>
 
-                <!-- Quick Unit Selection inside Modal -->
-                <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                    <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Chọn nhanh:</span>
-                    <button type="button" class="btn-pos-modal-unit-pill" data-unit="g" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">g</button>
-                    <button type="button" class="btn-pos-modal-unit-pill" data-unit="kg" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">kg</button>
-                    <button type="button" class="btn-pos-modal-unit-pill" data-unit="ml" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">ml</button>
-                    <button type="button" class="btn-pos-modal-unit-pill" data-unit="lít" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">lít</button>
-                    <button type="button" class="btn-pos-modal-unit-pill" data-unit="chén" style="border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer; font-weight: 700;">chén (cơm)</button>
-                    <button type="button" class="btn-pos-modal-unit-pill" data-unit="phần" style="border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer; font-weight: 700;">phần (xôi)</button>
-                    <button type="button" class="btn-pos-modal-unit-pill" data-unit="quả" style="border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer;">quả</button>
-                    <button type="button" class="btn-pos-modal-unit-pill" data-unit="con" style="border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; border-radius: 10px; padding: 1px 7px; font-size: 11px; cursor: pointer; font-weight: 700;">con (cá)</button>
+                <!-- # Quick Unit Selection inside Modal -->
+                <div class="u-inve-cc4e66c2">
+                    <span class="u-inve-746efa97">Chọn nhanh:</span>
+                    <button type="button" class="btn-pos-modal-unit-pill u-inve-3797c488" data-unit="g">g</button>
+                    <button type="button" class="btn-pos-modal-unit-pill u-inve-3797c488" data-unit="kg">kg</button>
+                    <button type="button" class="btn-pos-modal-unit-pill u-inve-3797c488" data-unit="ml">ml</button>
+                    <button type="button" class="btn-pos-modal-unit-pill u-inve-3797c488" data-unit="lít">lít</button>
+                    <button type="button" class="btn-pos-modal-unit-pill u-inve-0adee0c0" data-unit="chén">chén (cơm)</button>
+                    <button type="button" class="btn-pos-modal-unit-pill u-inve-0adee0c0" data-unit="phần">phần (xôi)</button>
+                    <button type="button" class="btn-pos-modal-unit-pill u-inve-3797c488" data-unit="quả">quả</button>
+                    <button type="button" class="btn-pos-modal-unit-pill u-inve-0adee0c0" data-unit="con">con (cá)</button>
                 </div>
 
                 <div class="form-row">
-                    <div class="recipe-cost-preview-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                        <div class="preview-line" style="display: flex; justify-content: space-between; font-size: 12.5px;">
+                    <div class="recipe-cost-preview-box u-inve-ac086c11">
+                        <div class="preview-line u-inve-d96c5cd9">
                             <span>Đơn giá vốn kho:</span>
                             <strong id="pos-recipe-preview-unit-cost">0 đ</strong>
                         </div>
-                        <div id="pos-recipe-modal-calc-hint" style="margin-top: 6px; padding: 4px 8px; background: #e0f2fe; color: #0369a1; border-radius: 4px; font-size: 11.5px; font-weight: 600;" hidden></div>
-                        <div class="preview-line" style="display: flex; justify-content: space-between; font-size: 13.5px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1;">
-                            <span style="font-weight: 700;">Chi phí vốn ước tính:</span>
-                            <strong class="text-primary" id="pos-recipe-preview-total-cost" style="font-size: 16px; color: #d97706; font-weight: 800;">0 đ</strong>
+                        <div class="u-inve-2ae9add1" id="pos-recipe-modal-calc-hint" hidden></div>
+                        <div class="preview-line u-inve-2eeefaec">
+                            <span class="u-inve-be8e63ca">Chi phí vốn ước tính:</span>
+                            <strong class="text-primary u-inve-465f8bd4" id="pos-recipe-preview-total-cost">0 đ</strong>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="dining-submodal-footer" style="padding: 12px 18px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between;">
-                <button type="button" class="btn-modal-cancel" id="pos-submodal-recipe-item-cancel" style="padding: 7px 14px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer;">Bỏ qua</button>
-                <button type="submit" class="btn-modal-save" id="pos-btn-save-recipe-item" style="background: #0284c7; color: #fff; padding: 7px 18px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">Lưu vào công thức</button>
+            <div class="dining-submodal-footer u-inve-e6d448dd">
+                <button type="button" class="btn-modal-cancel u-inve-6b72319b" id="pos-submodal-recipe-item-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-modal-save u-inve-cd4a8427" id="pos-btn-save-recipe-item">Lưu vào công thức</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Submodal: Nhập dữ liệu công thức từ Excel -->
+<!-- # Submodal: Nhập dữ liệu công thức từ Excel -->
 <div class="dining-submodal-overlay" id="pos-submodal-recipe-excel" hidden>
-    <div class="dining-submodal-card" style="max-width: 620px; border-radius: 12px;">
-        <div class="dining-submodal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 14px 20px;">
-            <h4 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">Nhập dữ liệu Công thức định lượng từ Excel</h4>
-            <button type="button" class="btn-submodal-close" id="pos-submodal-recipe-excel-close" style="font-size: 20px; cursor: pointer; color: #94a3b8; border: none; background: none;">&times;</button>
+    <div class="dining-submodal-card u-inve-83aa6d22">
+        <div class="dining-submodal-header u-inve-bcf17be9">
+            <h4 class="u-inve-5d565ebe">Nhập dữ liệu Công thức định lượng từ Excel</h4>
+            <button type="button" class="btn-submodal-close u-inve-2399e4f6" id="pos-submodal-recipe-excel-close">&times;</button>
         </div>
         <form id="pos-form-recipe-excel">
-            <div class="dining-submodal-body" style="padding: 20px;">
-                <p class="modal-help-text" style="margin-bottom: 12px; font-size: 13px; color: #64748b; line-height: 1.5;">
+            <div class="dining-submodal-body u-inve-32c16dc4">
+                <p class="modal-help-text u-inve-926d5d16">
                     Bạn có thể tải lên file <strong>.csv</strong> hoặc dán trực tiếp dữ liệu từ Excel.<br>
                     <strong>Cấu trúc cột:</strong> <code>Mã/Tên món | Mã/Tên nguyên liệu | Định lượng | ĐVT</code>
                 </p>
-                <div class="form-row" style="margin-bottom: 12px;">
-                    <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">Chọn file CSV/Excel</label>
+                <div class="form-row u-inve-7b754eef">
+                    <label class="u-inve-f0187f83">Chọn file CSV/Excel</label>
                     <input type="file" id="pos-recipe-excel-file" class="form-input" accept=".csv, text/csv">
                 </div>
                 <div class="form-row">
-                    <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">Hoặc dán trực tiếp dữ liệu</label>
-                    <textarea id="pos-recipe-excel-text" class="form-textarea" rows="6" style="width: 100%; font-family: monospace; font-size: 13px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Pad Thai tôm&#9;Tôm tươi&#9;100&#9;g&#10;Cơm chiên hải sản&#9;Gạo trắng&#9;1&#9;chén"></textarea>
+                    <label class="u-inve-f0187f83">Hoặc dán trực tiếp dữ liệu</label>
+                    <textarea id="pos-recipe-excel-text" class="form-textarea u-inve-3188f612" rows="6" placeholder="Pad Thai tôm&#9;Tôm tươi&#9;100&#9;g&#10;Cơm chiên hải sản&#9;Gạo trắng&#9;1&#9;chén"></textarea>
                 </div>
             </div>
-            <div class="dining-submodal-footer" style="padding: 12px 18px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
-                <button type="button" class="btn-modal-cancel" id="pos-submodal-recipe-excel-cancel" style="padding: 7px 14px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer;">Bỏ qua</button>
-                <button type="submit" class="btn-modal-save btn-modal-save-ruby" id="pos-btn-submit-recipe-excel" style="background: #991b1b; color: #fff; padding: 7px 18px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">Nhập dữ liệu</button>
+            <div class="dining-submodal-footer u-inve-49341f79">
+                <button type="button" class="btn-modal-cancel u-inve-6b72319b" id="pos-submodal-recipe-excel-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-modal-save btn-modal-save-ruby u-inve-ca441f48" id="pos-btn-submit-recipe-excel">Nhập dữ liệu</button>
             </div>
         </form>
     </div>

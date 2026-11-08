@@ -1,11 +1,11 @@
-"""
-Module quy đổi đơn vị định lượng BOM, Tách Thùng -> Hộp (Quầy chờ bán) và Lưu kho (UoM Conversion) MixFood 2026
-"""
+# File này chịu trách nhiệm quy đổi đơn vị đo lường nguyên liệu (UoM Conversion) giữa Định lượng món (BOM), Quầy chờ bán đã tách lẻ (prep_stock) và Kho tổng (current_stock).
+# Module quy đổi đơn vị định lượng BOM, Tách Thùng -> Hộp (Quầy chờ bán) và Lưu kho (UoM Conversion) MixFood 2026
 from decimal import Decimal
 import re
 
 
 def normalize_unit(unit_str):
+    # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ 'normalize_unit' trong module conversions.py. Input: unit_str. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
     if not unit_str:
         return ''
     u = unit_str.strip().lower()
@@ -14,11 +14,7 @@ def normalize_unit(unit_str):
 
 
 def _compute_base_sub_qty(ingredient, recipe_qty, recipe_unit):
-    """
-    Tính số lượng nguyên liệu theo đơn vị cơ sở đã tách lẻ (Hộp / Quả / Chai / Kg / Lít / Gói / Lon / Ổ).
-    Nếu mặt hàng lưu kho theo Thùng / Vỉ / Bao (pack_size > 1), hàm convert_recipe_to_stock_qty
-    sẽ chia tiếp cho pack_size để ra số Thùng / Vỉ cần trừ.
-    """
+    # Hàm này dùng để: Tính số lượng nguyên liệu theo đơn vị cơ sở đã tách lẻ (Hộp / Quả / Chai / Kg / Lít / Gói / Lon / Ổ). Nếu mặt hàng lưu kho theo Thùng / Vỉ / Bao (pack_size > 1), hàm convert_recipe_to_stock_qty sẽ chia tiếp cho pack_size để ra số Thùng / Vỉ cần trừ. (Input: ingredient, recipe_qty, recipe_unit; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     r_unit = normalize_unit(recipe_unit)
     s_unit = normalize_unit(getattr(ingredient, 'unit', ''))
     ing_name = (getattr(ingredient, 'name', '') or '').lower()
@@ -165,10 +161,7 @@ def _compute_base_sub_qty(ingredient, recipe_qty, recipe_unit):
 
 
 def convert_recipe_to_stock_qty(ingredient, recipe_qty, recipe_unit):
-    """
-    Quy đổi số lượng từ đơn vị định lượng món ăn sang đơn vị lưu kho tổng (ingredient.unit).
-    Hỗ trợ tự động cả trường hợp kho tổng lưu theo Thùng / Vỉ / Bao (chia cho pack_size).
-    """
+    # Hàm này dùng để: Quy đổi số lượng từ đơn vị định lượng món ăn sang đơn vị lưu kho tổng (ingredient.unit). Hỗ trợ tự động cả trường hợp kho tổng lưu theo Thùng / Vỉ / Bao (chia cho pack_size). (Input: ingredient, recipe_qty, recipe_unit; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     if recipe_qty is None:
         return Decimal('0')
     if not isinstance(recipe_qty, Decimal):
@@ -205,25 +198,21 @@ def convert_recipe_to_stock_qty(ingredient, recipe_qty, recipe_unit):
 
 
 def convert_recipe_to_prep_qty(ingredient, recipe_qty, recipe_unit):
-    """
-    Quy đổi số lượng từ đơn vị định lượng món ăn sang đơn vị chờ bán đã tách lẻ (ingredient.unpacked_unit).
-    Công thức phổ quát: prep_qty = stock_qty * pack_size.
-    Ví dụ:
-      - Phồng tôm (unit=Hộp, pack_size=10 phần): 10 cái -> stock_qty=0.1 Hộp -> prep_qty = 1 phần.
-      - Trứng gà (unit=Vỉ, pack_size=30 quả): 1 quả -> stock_qty=1/30 Vỉ -> prep_qty = 1 quả.
-      - Khoai tây (unit=Kg, pack_size=10 phần): 100g -> stock_qty=0.1 Kg -> prep_qty = 1 phần.
-    """
-    stock_qty = convert_recipe_to_stock_qty(ingredient, recipe_qty, recipe_unit)
+    # Hàm này dùng để: Quy đổi số lượng từ đơn vị định lượng món ăn sang đơn vị chờ bán đã tách lẻ (ingredient.unpacked_unit).
+    if recipe_qty is None:
+        return Decimal('0')
+    if not isinstance(recipe_qty, Decimal):
+        recipe_qty = Decimal(str(recipe_qty))
+    prep_qty = _compute_base_sub_qty(ingredient, recipe_qty, recipe_unit)
     pack_size = getattr(ingredient, 'pack_size', None) or Decimal('1')
-    if not isinstance(pack_size, Decimal):
-        pack_size = Decimal(str(pack_size))
-    if pack_size <= 0:
-        pack_size = Decimal('1')
-    return stock_qty * pack_size
+    if pack_size == int(pack_size):
+        if abs(prep_qty - round(prep_qty)) < Decimal('0.001'):
+            prep_qty = round(prep_qty)
+    return prep_qty
 
 
 def calculate_recipe_item_cost(ingredient, recipe_qty, recipe_unit):
-    """Tính giá vốn nguyên liệu trong công thức (VND) sau khi quy đổi đơn vị."""
+    # Hàm này dùng để: Tính giá vốn nguyên liệu trong công thức (VND) sau khi quy đổi đơn vị. (Input: ingredient, recipe_qty, recipe_unit; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     stock_qty = convert_recipe_to_stock_qty(ingredient, recipe_qty, recipe_unit)
     avg_cost = getattr(ingredient, 'average_cost', Decimal('0'))
     if not isinstance(avg_cost, Decimal):

@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm định tuyến URL cho màn hình Bán hàng trung tâm (POS Home), Kết ca làm việc và Báo cáo doanh thu.
 from django.urls import path
 
 from .views import close_shift, home, reports

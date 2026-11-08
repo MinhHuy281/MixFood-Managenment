@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm thực thi các dịch vụ nghiệp vụ Kho hàng: trừ kho tự động khi bán hàng POS, xác nhận nhập kho bình quân gia quyền, xuất tách Thùng -> Hộp chờ bán và kiểm kê cân đối kho.
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -16,11 +17,7 @@ from .models import (
 
 @transaction.atomic
 def deduct_for_sale(order_items, user, reference_id):
-    """
-    Tự động quét định lượng (BOM), áp dụng quy đổi đơn vị (UoM Conversion)
-    và ưu tiên trừ vào lượng hàng đã tách chờ bán tại Quầy/Bếp (prep_stock),
-    nếu thiếu mới trừ tiếp vào Kho tổng (current_stock).
-    """
+    # Hàm này dùng để: Tự động quét định lượng (BOM), áp dụng quy đổi đơn vị (UoM Conversion) và ưu tiên trừ vào lượng hàng đã tách chờ bán tại Quầy/Bếp (prep_stock), nếu thiếu mới trừ tiếp vào Kho tổng (current_stock). (Input: order_items, user, reference_id; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     required = {}
     for order_item in order_items:
         recipe_items = RecipeItem.objects.filter(
@@ -87,7 +84,10 @@ def deduct_for_sale(order_items, user, reference_id):
         if curr_prep >= req_prep and curr_prep > 0:
             # Trừ hoàn toàn từ lượng đã xuất ra chờ bán (prep_stock)
             ingredient.prep_stock = curr_prep - req_prep
+            if pack_size == int(pack_size):
+                ingredient.prep_stock = Decimal(str(int(round(float(ingredient.prep_stock)))))
             ingredient.save(update_fields=('prep_stock', 'updated_at'))
+            prep_fmt = f'{int(req_prep)}' if req_prep == int(req_prep) else f'{req_prep:.2f}'.rstrip('0').rstrip('.')
             transactions.append(StockTransaction.objects.create(
                 ingredient=ingredient,
                 transaction_type=StockTransaction.TransactionType.SALE,
@@ -96,7 +96,7 @@ def deduct_for_sale(order_items, user, reference_id):
                 balance_after=ingredient.current_stock,
                 reference_type='order_prep',
                 reference_id=reference_id,
-                note=f'Tự động xuất bán đơn #{reference_id} (Trừ {req_prep:.2f} {ingredient.unpacked_unit} chờ bán)',
+                note=f'Tự động xuất bán đơn #{reference_id} (Trừ {prep_fmt} {ingredient.unpacked_unit} chờ bán)',
                 created_by=user,
             ))
         elif curr_prep > 0:
@@ -149,6 +149,7 @@ def deduct_for_sale(order_items, user, reference_id):
 
 @transaction.atomic
 def receive_stock(receipt, user):
+    # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ 'receive_stock' trong module services.py. Input: receipt, user. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
     if receipt.status != StockReceipt.Status.DRAFT:
         raise ValidationError('Phiếu nhập không ở trạng thái nháp.')
     items = list(receipt.items.select_related('ingredient'))
@@ -180,9 +181,7 @@ def receive_stock(receipt, user):
 
 @transaction.atomic
 def restore_stock_for_cancelled_sale(order_id, user=None, reason=''):
-    """
-    Tự động hoàn trả lại đúng số NVL đã trừ vào Thẻ kho / Quầy chờ bán khi Hóa đơn bị Hủy hoặc Hoàn tác.
-    """
+    # Hàm này dùng để: Tự động hoàn trả lại đúng số NVL đã trừ vào Thẻ kho / Quầy chờ bán khi Hóa đơn bị Hủy hoặc Hoàn tác. (Input: order_id, user, reason; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     if not order_id:
         return []
 
@@ -217,7 +216,21 @@ def restore_stock_for_cancelled_sale(order_id, user=None, reason=''):
             restore_qty = abs(tx.quantity)
             pack_size = ing.pack_size if ing.pack_size and ing.pack_size > 0 else Decimal('1')
             if tx.reference_type == 'order_prep':
-                ing.prep_stock = (ing.prep_stock or Decimal('0')) + (restore_qty * pack_size)
+                exact_prep = None
+                if 'Trừ ' in (tx.note or ''):
+                    try:
+                        part = tx.note.split('Trừ ')[1].split(' ')[0]
+                        exact_prep = Decimal(part)
+                    except Exception:
+                        pass
+                if exact_prep is None:
+                    exact_prep = restore_qty * pack_size
+                if pack_size == int(pack_size):
+                    exact_prep = Decimal(str(int(round(float(exact_prep)))))
+
+                ing.prep_stock = (ing.prep_stock or Decimal('0')) + exact_prep
+                if pack_size == int(pack_size):
+                    ing.prep_stock = Decimal(str(int(round(float(ing.prep_stock)))))
                 ing.save(update_fields=('prep_stock', 'updated_at'))
             else:
                 ing.current_stock += restore_qty
@@ -243,11 +256,75 @@ def restore_stock_for_cancelled_sale(order_id, user=None, reason=''):
 
 
 def restore_stock_for_undone_sale(order_id, user=None, reason=''):
-    """Tương thích ngược: gọi restore_stock_for_cancelled_sale."""
+    # Hàm này dùng để: Tương thích ngược: gọi restore_stock_for_cancelled_sale. (Input: order_id, user, reason; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     return restore_stock_for_cancelled_sale(order_id, user=user, reason=reason)
 
 
+@transaction.atomic
+def adjust_stock_for_invoice_edit(order, user=None, reason=''):
+    # Hàm này dùng để: Tự động hoàn trả và trừ lại kho hàng khi sửa hóa đơn (thêm/bớt món, đổi số lượng món hoặc đồ uống).
+    if not order or not order.pk:
+        return []
+
+    # 1. Tìm toàn bộ giao dịch SALE đã xuất trước đó của đơn hàng này và hoàn trả lại kho
+    old_sale_txs = list(
+        StockTransaction.objects.filter(
+            reference_type__in=('order', 'order_prep'),
+            reference_id=order.pk,
+            transaction_type=StockTransaction.TransactionType.SALE,
+        ).select_related('ingredient')
+    )
+
+    if old_sale_txs:
+        ingredient_ids = list({tx.ingredient_id for tx in old_sale_txs})
+        locked = {
+            ing.pk: ing
+            for ing in Ingredient.objects.select_for_update().filter(pk__in=ingredient_ids)
+        }
+
+        for tx in old_sale_txs:
+            ing = locked.get(tx.ingredient_id)
+            if ing is not None:
+                restore_qty = abs(tx.quantity)
+                pack_size = ing.pack_size if ing.pack_size and ing.pack_size > 0 else Decimal('1')
+                if tx.reference_type == 'order_prep':
+                    exact_prep = None
+                    if 'Trừ ' in (tx.note or ''):
+                        try:
+                            part = tx.note.split('Trừ ')[1].split(' ')[0]
+                            exact_prep = Decimal(part)
+                        except Exception:
+                            pass
+                    if exact_prep is None:
+                        exact_prep = restore_qty * pack_size
+                    if pack_size == int(pack_size):
+                        exact_prep = Decimal(str(int(round(float(exact_prep)))))
+
+                    ing.prep_stock = (ing.prep_stock or Decimal('0')) + exact_prep
+                    if pack_size == int(pack_size):
+                        ing.prep_stock = Decimal(str(int(round(float(ing.prep_stock)))))
+                    ing.save(update_fields=('prep_stock', 'updated_at'))
+                else:
+                    ing.current_stock += restore_qty
+                    ing.save(update_fields=('current_stock', 'updated_at'))
+
+        # Xóa các giao dịch SALE cũ của đơn này để xuất lại chính xác theo đơn mới
+        StockTransaction.objects.filter(
+            reference_type__in=('order', 'order_prep'),
+            reference_id=order.pk,
+            transaction_type=StockTransaction.TransactionType.SALE,
+        ).delete()
+
+    # 2. Xuất kho lại cho các món mới của đơn hàng sau khi sửa
+    from sales.models import OrderItem
+    active_items = list(order.items.filter(status=OrderItem.Status.ACTIVE))
+    if active_items:
+        return deduct_for_sale(active_items, user, order.pk)
+    return []
+
+
 def generate_receipt_code():
+    # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ 'generate_receipt_code' trong module services.py. Input: không có tham số đầu vào trực tiếp. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
     today_str = timezone.localtime().strftime('%y%m%d')
     prefix = f'NK{today_str}-'
     latest = StockReceipt.objects.filter(receipt_code__startswith=prefix).order_by('-receipt_code').first()
@@ -262,6 +339,7 @@ def generate_receipt_code():
 
 
 def generate_issue_code():
+    # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ 'generate_issue_code' trong module services.py. Input: không có tham số đầu vào trực tiếp. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
     today_str = timezone.localtime().strftime('%y%m%d')
     prefix = f'XK{today_str}-'
     latest = StockIssue.objects.filter(issue_code__startswith=prefix).order_by('-issue_code').first()
@@ -276,6 +354,7 @@ def generate_issue_code():
 
 
 def generate_adjustment_code():
+    # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ 'generate_adjustment_code' trong module services.py. Input: không có tham số đầu vào trực tiếp. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
     today_str = timezone.localtime().strftime('%y%m%d')
     prefix = f'KK{today_str}-'
     latest = StockAdjustment.objects.filter(adjustment_code__startswith=prefix).order_by('-adjustment_code').first()
@@ -291,6 +370,7 @@ def generate_adjustment_code():
 
 @transaction.atomic
 def create_and_confirm_receipt(user, supplier, note, items_data, request=None):
+    # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'create_and_confirm_receipt' trong phân hệ inventory/services.py. Input: đối tượng HttpRequest (user, supplier, note, items_data, request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
     if not items_data:
         raise ValidationError('Phiếu nhập phải có ít nhất một nguyên liệu.')
 
@@ -376,6 +456,7 @@ def create_and_confirm_receipt(user, supplier, note, items_data, request=None):
 
 @transaction.atomic
 def create_and_confirm_issue(user, issue_type, receiver, note, items_data, request=None):
+    # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'create_and_confirm_issue' trong phân hệ inventory/services.py. Input: đối tượng HttpRequest (user, issue_type, receiver, note, items_data, request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
     if not items_data:
         raise ValidationError('Phiếu xuất phải có ít nhất một nguyên liệu.')
 
@@ -467,6 +548,7 @@ def create_and_confirm_issue(user, issue_type, receiver, note, items_data, reque
 
 @transaction.atomic
 def create_and_confirm_adjustment(user, note, items_data, request=None):
+    # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'create_and_confirm_adjustment' trong phân hệ inventory/services.py. Input: đối tượng HttpRequest (user, note, items_data, request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
     if not items_data:
         raise ValidationError('Phiếu kiểm kê phải có ít nhất một nguyên liệu.')
 

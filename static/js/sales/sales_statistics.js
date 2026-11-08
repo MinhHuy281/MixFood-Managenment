@@ -1,3 +1,4 @@
+// # File này chịu trách nhiệm xử lý hộp thoại Thống kê bán hàng đa chiều (theo nhân viên, phương thức thanh toán, khu vực, bàn, món ăn, nhóm món) và xuất/in bảng kiểm.
 /**
  * Sales Statistics Controller (Thống kê bán hàng)
  * Chuẩn hệ thống F&B POS SaaS 2026 và giao diện MixFood

@@ -1,100 +1,100 @@
-<!-- ========================================================================= -->
-<!-- MODAL: MẶT HÀNG - ADMIN (QUẢN LÝ NGUYÊN LIỆU & HÀNG HÓA KHO)             -->
-<!-- ========================================================================= -->
-<div class="ingredient-admin-modal-overlay" id="pos-ingredient-admin-modal" hidden style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
-    <div class="ingredient-admin-modal-window" style="background: #ffffff; width: 1100px; max-width: 95vw; height: 85vh; max-height: 800px; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-        
-        <!-- Topbar Header -->
-        <div class="ingredient-modal-topbar" style="background: #0f172a; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; color: #fff;">
-            <div class="ingredient-modal-title" style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 24px; background: rgba(255,255,255,0.1); width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">📦</span>
+<!-- # File này chịu trách nhiệm hiển thị hộp thoại Quản lý Mặt hàng Nguyên liệu (Ingredient Admin Modal) trên POS theo 3 Kho và cấu hình quy cách đóng gói Thùng -> Hộp. -->
+<!-- # MODAL: MẶT HÀNG - ADMIN (QUẢN LÝ NGUYÊN LIỆU & HÀNG HÓA KHO) -->
+<!-- # ========================================================================= -->
+<div class="ingredient-admin-modal-overlay u-cata-470d0360" id="pos-ingredient-admin-modal" hidden>
+    <div class="ingredient-admin-modal-window u-cata-53cd1ad2">
+
+        <!-- # Topbar Header -->
+        <div class="ingredient-modal-topbar u-cata-f3afbe71">
+            <div class="ingredient-modal-title u-cata-b512c985">
+                <span class="u-cata-fa135161">📦</span>
                 <div>
-                    <h3 style="font-size: 16.5px; font-weight: 800; margin: 0; color: #ffffff; letter-spacing: 0.3px;">Mặt hàng - Admin</h3>
-                    <span style="font-size: 12px; color: #94a3b8; display: block; margin-top: 2px;">Quản lý danh mục nguyên vật liệu, hàng hóa kho & giá vốn dùng cho định lượng BOM</span>
+                    <h3 class="u-cata-223d5e78">Mặt hàng - Admin</h3>
+                    <span class="u-cata-89874f60">Quản lý danh mục nguyên vật liệu, hàng hóa kho & giá vốn dùng cho định lượng BOM</span>
                 </div>
             </div>
-            <div class="ingredient-modal-top-actions" style="display: flex; gap: 8px; align-items: center;">
-                <button type="button" class="btn-import-excel-ruby" id="modal-pos-btn-ing-excel-import" style="padding: 7px 14px; font-size: 12.5px; font-weight: 700; background: #991b1b; color: #fff; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <div class="ingredient-modal-top-actions u-cata-b131259d">
+                <button type="button" class="btn-import-excel-ruby u-cata-355f1573" id="modal-pos-btn-ing-excel-import">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     Nhập dữ liệu từ Excel
                 </button>
-                <button type="button" class="ingredient-modal-close-btn" id="pos-ingredient-modal-close" title="Đóng" style="font-size: 26px; color: #94a3b8; background: none; border: none; cursor: pointer; line-height: 1; padding: 0 4px;">&times;</button>
+                <button type="button" class="ingredient-modal-close-btn u-cata-3471de03" id="pos-ingredient-modal-close" title="Đóng">&times;</button>
             </div>
         </div>
 
-        <!-- Banner Toast Notification -->
-        <div id="modal-pos-ing-alert" class="menu-alert-banner" style="margin: 10px 20px 0;" hidden></div>
+        <!-- # Banner Toast Notification -->
+        <div id="modal-pos-ing-alert" class="menu-alert-banner u-cata-75e7d484" hidden></div>
 
-        <!-- Main Content Area -->
-        <div class="ingredient-modal-body" style="padding: 16px 22px; flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f8fafc;">
-            
-            <!-- 3 KHO TABS SWITCHER -->
-            <div class="pos-wh-tabs-container" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; align-items: center; flex-wrap: wrap;">
-                <span style="font-size: 12.5px; font-weight: 800; color: #475569; margin-right: 4px;">🏢 KHU VỰC KHO:</span>
-                <button type="button" class="btn-pos-wh-tab active" data-wh="all" style="padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #0f172a; background: #0f172a; color: #ffffff; cursor: pointer;">
+        <!-- # Main Content Area -->
+        <div class="ingredient-modal-body u-cata-be4f2d19">
+
+            <!-- # 3 KHO TABS SWITCHER -->
+            <div class="pos-wh-tabs-container u-cata-31557cf0">
+                <span class="u-cata-09f8344b">🏢 KHU VỰC KHO:</span>
+                <button type="button" class="btn-pos-wh-tab active u-cata-da1e914d" data-wh="all">
                     🌐 Tất cả kho (<span id="modal-pos-wh-count-all">0</span>)
                 </button>
-                <button type="button" class="btn-pos-wh-tab" data-wh="fresh" style="padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #86efac; background: #f0fdf4; color: #166534; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <button type="button" class="btn-pos-wh-tab u-cata-e1efd74f" data-wh="fresh">
                     🥦 Kho 1: Tươi sống & Rau củ (<span id="modal-pos-wh-count-fresh">0</span>)
                 </button>
-                <button type="button" class="btn-pos-wh-tab" data-wh="dry" style="padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #fde68a; background: #fffbeb; color: #b45309; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <button type="button" class="btn-pos-wh-tab u-cata-1908f009" data-wh="dry">
                     🥫 Kho 2: Khô, Gia vị & Bao bì (<span id="modal-pos-wh-count-dry">0</span>)
                 </button>
-                <button type="button" class="btn-pos-wh-tab" data-wh="beverage" style="padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #93c5fd; background: #eff6ff; color: #1d4ed8; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <button type="button" class="btn-pos-wh-tab u-cata-5e58c55d" data-wh="beverage">
                     🍹 Kho 3: Đồ uống & Trái cây (<span id="modal-pos-wh-count-beverage">0</span>)
                 </button>
             </div>
 
-            <!-- Action Toolbar (Thêm, Sửa, Xóa) -->
-            <div class="ingredient-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
-                <div class="ingredient-search-wrap" style="display: flex; gap: 8px; flex: 1; max-width: 580px;">
-                    <div style="position: relative; flex: 1;">
-                        <input type="text" id="modal-pos-ing-search" class="ingredient-search-input" placeholder="🔍 Tìm tên mặt hàng hoặc mã..." style="width: 100%; height: 38px; padding: 0 12px 0 12px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;">
+            <!-- # Action Toolbar (Thêm, Sửa, Xóa) -->
+            <div class="ingredient-toolbar u-cata-ae27151c">
+                <div class="ingredient-search-wrap u-cata-e4f5ce42">
+                    <div class="u-cata-00df0fe7">
+                        <input type="text" id="modal-pos-ing-search" class="ingredient-search-input u-cata-18f5e8bf" placeholder="🔍 Tìm tên mặt hàng hoặc mã...">
                     </div>
-                    <select id="modal-pos-ing-group-filter" class="ingredient-group-select" style="min-width: 180px; height: 38px; padding: 0 10px; font-size: 12.5px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; font-weight: 600;">
+                    <select id="modal-pos-ing-group-filter" class="ingredient-group-select u-cata-f453a984">
                         <option value="">-- Tất cả nhóm --</option>
                     </select>
                 </div>
-                <div class="ingredient-action-buttons" style="display: flex; gap: 8px;">
-                    <button type="button" class="btn-ing-action btn-ing-add" id="modal-pos-btn-add-ing" style="height: 38px; padding: 0 18px; font-size: 13px; font-weight: 800; background: #f97316; color: #fff; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(249, 115, 22, 0.3);">
+                <div class="ingredient-action-buttons u-cata-13262f5a">
+                    <button type="button" class="btn-ing-action btn-ing-add u-cata-edfb6c04" id="modal-pos-btn-add-ing">
                         + Thêm mặt hàng
                     </button>
-                    <button type="button" class="btn-ing-action btn-ing-edit" id="modal-pos-btn-edit-ing" style="height: 38px; padding: 0 16px; font-size: 13px; font-weight: 700; background: #fff; color: #0284c7; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                    <button type="button" class="btn-ing-action btn-ing-edit u-cata-93d9ef32" id="modal-pos-btn-edit-ing">
                         ✏️ Sửa
                     </button>
-                    <button type="button" class="btn-ing-action btn-ing-del text-danger" id="modal-pos-btn-del-ing" style="height: 38px; padding: 0 16px; font-size: 13px; font-weight: 700; background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                    <button type="button" class="btn-ing-action btn-ing-del text-danger u-cata-113a3a3c" id="modal-pos-btn-del-ing">
                         🗑️ Xóa
                     </button>
                 </div>
             </div>
 
-            <!-- Data Table Container -->
-            <div class="ingredient-table-container" style="flex: 1; overflow-y: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <table class="ingredient-data-table" id="modal-pos-ing-table" style="width: 100%; border-collapse: collapse;">
+            <!-- # Data Table Container -->
+            <div class="ingredient-table-container u-cata-5b7f2b9b">
+                <table class="ingredient-data-table u-cata-91f0dac5" id="modal-pos-ing-table">
                     <thead>
-                        <tr style="background: #f1f5f9; position: sticky; top: 0; z-index: 2;">
-                            <th style="width: 12%; padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #cbd5e1;">Khu vực kho</th>
-                            <th style="width: 26%; padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #cbd5e1;">Tên mặt hàng / Mã</th>
-                            <th style="width: 7%; padding: 10px 8px; text-align: center; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #cbd5e1;">ĐVT</th>
-                            <th style="width: 16%; padding: 10px 10px; text-align: left; font-size: 12px; font-weight: 700; color: #b45309; border-bottom: 1px solid #cbd5e1;">Quy cách tách lẻ</th>
-                            <th style="width: 10%; padding: 10px 10px; text-align: right; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #cbd5e1;">Tồn kho</th>
-                            <th style="width: 15%; padding: 10px 10px; text-align: left; font-size: 12px; font-weight: 700; color: #0284c7; border-bottom: 1px solid #cbd5e1;">Suất chờ bán</th>
-                            <th style="width: 14%; padding: 10px 12px; text-align: right; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #cbd5e1;">Giá nhập chuẩn</th>
+                        <tr class="u-cata-705abfb2">
+                            <th class="u-cata-3d837ae9">Khu vực kho</th>
+                            <th class="u-cata-18adec10">Tên mặt hàng / Mã</th>
+                            <th class="u-cata-a1db9487">ĐVT</th>
+                            <th class="u-cata-b46e3d05">Quy cách tách lẻ</th>
+                            <th class="u-cata-9a57f007">Tồn kho</th>
+                            <th class="u-cata-5b9e4eb3">Suất chờ bán</th>
+                            <th class="u-cata-0cd0a49d">Giá nhập chuẩn</th>
                         </tr>
                     </thead>
                     <tbody id="modal-pos-ing-tbody">
-                        <!-- Populated dynamically via JS -->
+                        <!-- # Populated dynamically via JS -->
                     </tbody>
                 </table>
             </div>
 
-            <!-- Footer: Status count and Export Excel button -->
-            <div class="ingredient-modal-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px;">
+            <!-- # Footer: Status count and Export Excel button -->
+            <div class="ingredient-modal-footer u-cata-5016de6f">
                 <div class="ingredient-footer-status">
-                    <span id="modal-pos-ing-count" style="font-size: 13px; font-weight: 700; color: #64748b; background: #fff; padding: 4px 12px; border-radius: 12px; border: 1px solid #e2e8f0;">0 mặt hàng</span>
+                    <span class="u-cata-4f07f9dc" id="modal-pos-ing-count">0 mặt hàng</span>
                 </div>
                 <div class="ingredient-footer-actions">
-                    <a href="{% url 'catalog:ingredient_export_excel' %}" class="btn-export-excel-classic" id="modal-pos-btn-ing-export" style="text-decoration: none; padding: 7px 14px; font-size: 12.5px; font-weight: 600; background: #fff; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">
+                    <a href="{% url 'catalog:ingredient_export_excel' %}" class="btn-export-excel-classic u-cata-6d958a53" id="modal-pos-btn-ing-export">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                         Xuất ra Excel
                     </a>
@@ -104,54 +104,54 @@
     </div>
 </div>
 
-<!-- ========================================================================= -->
-<!-- SUBMODAL: THÊM / SỬA MẶT HÀNG (THIẾT KẾ ĐỒNG BỘ HIỆN ĐẠI THEO ẢNH USER) -->
-<!-- ========================================================================= -->
-<div class="dining-submodal-overlay" id="pos-submodal-ingredient" hidden style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 10000;">
-    <div class="dining-submodal-card" style="background: #ffffff; width: 540px; max-width: 95vw; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
-        
-        <!-- Submodal Header -->
-        <div class="dining-submodal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 18px;">📦</span>
-                <h4 id="pos-submodal-ing-title" style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">Thêm mặt hàng mới</h4>
+<!-- # ========================================================================= -->
+<!-- # SUBMODAL: THÊM / SỬA MẶT HÀNG (THIẾT KẾ ĐỒNG BỘ HIỆN ĐẠI THEO ẢNH USER) -->
+<!-- # ========================================================================= -->
+<div class="dining-submodal-overlay u-cata-cc58ebcd" id="pos-submodal-ingredient" hidden>
+    <div class="dining-submodal-card u-cata-bed5bd3e">
+
+        <!-- # Submodal Header -->
+        <div class="dining-submodal-header u-cata-89682d08">
+            <div class="u-cata-bd9db1cb">
+                <span class="u-cata-768e1f23">📦</span>
+                <h4 class="u-cata-5d565ebe" id="pos-submodal-ing-title">Thêm mặt hàng mới</h4>
             </div>
-            <button type="button" class="btn-submodal-close" id="pos-submodal-ing-close" style="font-size: 22px; cursor: pointer; color: #94a3b8; border: none; background: none; line-height: 1; padding: 0 4px;">&times;</button>
+            <button type="button" class="btn-submodal-close u-cata-aa7964ed" id="pos-submodal-ing-close">&times;</button>
         </div>
 
-        <form id="pos-form-ingredient" style="display: flex; flex-direction: column;">
+        <form class="u-cata-a4196e09" id="pos-form-ingredient">
             <input type="hidden" id="pos-ing-id">
-            
-            <!-- Submodal Body -->
-            <div class="dining-submodal-body" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; background: #ffffff;">
-                
-                <!-- Khu vực Kho Quản Lý (3 Kho) -->
-                <div class="ing-form-group" style="display: flex; flex-direction: column; gap: 6px;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
-                        Khu vực Kho lưu trữ <span class="text-danger" style="color: #ef4444;">*</span>
+
+            <!-- # Submodal Body -->
+            <div class="dining-submodal-body u-cata-7a3ccd4b">
+
+                <!-- # Khu vực Kho Quản Lý (3 Kho) -->
+                <div class="ing-form-group u-cata-eecb2be3">
+                    <label class="u-cata-85902042">
+                        Khu vực Kho lưu trữ <span class="text-danger u-cata-ecc5dd78">*</span>
                     </label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                        <label style="display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1.5px solid #86efac; background: #f0fdf4; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #166534;">
-                            <input type="radio" name="pos-ing-storage-area" value="fresh" checked style="accent-color: #16a34a;">
+                    <div class="u-cata-1c111cdf">
+                        <label class="u-cata-505351e1">
+                            <input class="u-cata-fb4bf204" type="radio" name="pos-ing-storage-area" value="fresh" checked>
                             <span>🥦 Kho 1: Tươi sống</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1.5px solid #fde68a; background: #fffbeb; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #b45309;">
-                            <input type="radio" name="pos-ing-storage-area" value="dry" style="accent-color: #d97706;">
+                        <label class="u-cata-da9bf1fe">
+                            <input class="u-cata-af064275" type="radio" name="pos-ing-storage-area" value="dry">
                             <span>🥫 Kho 2: Khô & Gia vị</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1.5px solid #93c5fd; background: #eff6ff; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #1d4ed8;">
-                            <input type="radio" name="pos-ing-storage-area" value="beverage" style="accent-color: #2563eb;">
+                        <label class="u-cata-294b51c0">
+                            <input class="u-cata-b0e0db18" type="radio" name="pos-ing-storage-area" value="beverage">
                             <span>🍹 Kho 3: Đồ uống & Quả</span>
                         </label>
                     </div>
                 </div>
 
-                <!-- Nhóm mặt hàng -->
-                <div class="ing-form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
+                <!-- # Nhóm mặt hàng -->
+                <div class="ing-form-group u-cata-d24beb37">
+                    <label class="u-cata-85902042">
                         Nhóm mặt hàng
                     </label>
-                    <input type="text" id="pos-ing-group" class="form-input" list="pos-ing-group-datalist" placeholder="Ví dụ: Nông sản, Pha chế, Thịt cá, Đồ khô..." style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; outline: none;">
+                    <input type="text" id="pos-ing-group" class="form-input u-cata-76e4a2f7" list="pos-ing-group-datalist" placeholder="Ví dụ: Nông sản, Pha chế, Thịt cá, Đồ khô...">
                     <datalist id="pos-ing-group-datalist">
                         <option value="Nông sản & Rau củ">
                         <option value="Thịt & Hải sản">
@@ -162,100 +162,100 @@
                     </datalist>
                 </div>
 
-                <!-- Tên mặt hàng -->
-                <div class="ing-form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
-                        Tên mặt hàng <span class="text-danger" style="color: #ef4444;">*</span>
+                <!-- # Tên mặt hàng -->
+                <div class="ing-form-group u-cata-d24beb37">
+                    <label class="u-cata-85902042">
+                        Tên mặt hàng <span class="text-danger u-cata-ecc5dd78">*</span>
                     </label>
-                    <input type="text" id="pos-ing-name" class="form-input" required placeholder="Ví dụ: Chanh quả, Đường trắng, Thịt bò phi lê..." style="width: 100%; height: 40px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-weight: 600; outline: none;">
+                    <input type="text" id="pos-ing-name" class="form-input u-cata-06ea6d51" required placeholder="Ví dụ: Chanh quả, Đường trắng, Thịt bò phi lê...">
                 </div>
 
-                <!-- 2 Cột: Mã mặt hàng & Đơn vị tính -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="ing-form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Mã mặt hàng</label>
-                            <button type="button" id="pos-btn-auto-ing-code" style="background: none; border: none; color: #0284c7; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 0;">
+                <!-- # 2 Cột: Mã mặt hàng & Đơn vị tính -->
+                <div class="u-cata-38f68199">
+                    <div class="ing-form-group u-cata-d24beb37">
+                        <div class="u-cata-948e6d6e">
+                            <label class="u-cata-85902042">Mã mặt hàng</label>
+                            <button class="u-cata-9c210798" type="button" id="pos-btn-auto-ing-code">
                                 ⚡ Tự sinh mã
                             </button>
                         </div>
-                        <input type="text" id="pos-ing-code" class="form-input" placeholder="Tự sinh nếu trống (MH001...)" style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-family: monospace; font-weight: 700; text-transform: uppercase; outline: none;">
+                        <input type="text" id="pos-ing-code" class="form-input u-cata-7ac6d649" placeholder="Tự sinh nếu trống (MH001...)">
                     </div>
-                    <div class="ing-form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
-                            Đơn vị tính (ĐVT) <span class="text-danger" style="color: #ef4444;">*</span>
+                    <div class="ing-form-group u-cata-d24beb37">
+                        <label class="u-cata-85902042">
+                            Đơn vị tính (ĐVT) <span class="text-danger u-cata-ecc5dd78">*</span>
                         </label>
-                        <input type="text" id="pos-ing-unit" class="form-input" value="Kg" required placeholder="Kg, Gram, Lít, Gói..." style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: 700; text-align: center; outline: none;">
+                        <input type="text" id="pos-ing-unit" class="form-input u-cata-859fc57f" value="Kg" required placeholder="Kg, Gram, Lít, Gói...">
                     </div>
                 </div>
 
-                <!-- Quick Unit Selection Chips -->
-                <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                    <span style="font-size: 11.5px; color: #94a3b8; font-weight: 600;">Chọn nhanh ĐVT:</span>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Thùng" style="border: 1px solid #fde68a; background: #fffbeb; color: #b45309; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 700;">Thùng</button>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Vỉ" style="border: 1px solid #fde68a; background: #fffbeb; color: #b45309; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 700;">Vỉ</button>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Hộp" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 600;">Hộp</button>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Kg" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 600;">Kg</button>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Lít" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 600;">Lít</button>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Quả" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 600;">Quả</button>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Gói" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 600;">Gói</button>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Lon" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 600;">Lon</button>
-                    <button type="button" class="btn-pos-ing-unit-chip" data-unit="Chai" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 600;">Chai</button>
+                <!-- # Quick Unit Selection Chips -->
+                <div class="u-cata-cc4e66c2">
+                    <span class="u-cata-719ae9ea">Chọn nhanh ĐVT:</span>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-ab792895" data-unit="Thùng">Thùng</button>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-ab792895" data-unit="Vỉ">Vỉ</button>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-503988c3" data-unit="Hộp">Hộp</button>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-503988c3" data-unit="Kg">Kg</button>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-503988c3" data-unit="Lít">Lít</button>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-503988c3" data-unit="Quả">Quả</button>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-503988c3" data-unit="Gói">Gói</button>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-503988c3" data-unit="Lon">Lon</button>
+                    <button type="button" class="btn-pos-ing-unit-chip u-cata-503988c3" data-unit="Chai">Chai</button>
                 </div>
 
-                <!-- Quy cách đóng gói & Tách lẻ chờ bán (1 ĐVT Kho = Bao nhiêu Phần / Hộp / Quả?) -->
-                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label style="font-size: 12.5px; font-weight: 800; color: #92400e; margin: 0;">
+                <!-- # Quy cách đóng gói & Tách lẻ chờ bán (1 ĐVT Kho = Bao nhiêu Phần / Hộp / Quả?) -->
+                <div class="u-cata-dc369d6b">
+                    <div class="u-cata-948e6d6e">
+                        <label class="u-cata-fec4ffca">
                             📦 Quy cách đóng gói & Tách lẻ chờ bán (1 ĐVT Kho tách ra bao nhiêu phần/hộp/quả?)
                         </label>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <span style="font-size: 11.5px; font-weight: 700; color: #b45309;">Số lượng tách ra từ 1 ĐVT kho:</span>
-                            <input type="number" id="pos-ing-pack-size" class="form-input" value="10" min="1" step="0.5" placeholder="VD: 10, 24, 30..." style="width: 100%; height: 36px; padding: 0 10px; border: 1px solid #f59e0b; border-radius: 6px; font-size: 14px; font-weight: 800; text-align: center; color: #b45309; background: #ffffff;">
+                    <div class="u-cata-bb5ff478">
+                        <div class="u-cata-5bcf4cf5">
+                            <span class="u-cata-8ca21c93">Số lượng tách ra từ 1 ĐVT kho:</span>
+                            <input type="number" id="pos-ing-pack-size" class="form-input u-cata-b9af983a" value="10" min="1" step="0.5" placeholder="VD: 10, 24, 30...">
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <span style="font-size: 11.5px; font-weight: 700; color: #0369a1;">Đơn vị lẻ sau khi tách (chờ bán):</span>
-                            <input type="text" id="pos-ing-unpacked-unit" class="form-input" value="phần" placeholder="phần, hộp, quả, lon..." style="width: 100%; height: 36px; padding: 0 10px; border: 1px solid #38bdf8; border-radius: 6px; font-size: 13.5px; font-weight: 800; text-align: center; color: #0284c7; background: #ffffff;">
+                        <div class="u-cata-5bcf4cf5">
+                            <span class="u-cata-1c6770bf">Đơn vị lẻ sau khi tách (chờ bán):</span>
+                            <input type="text" id="pos-ing-unpacked-unit" class="form-input u-cata-0b412ecf" value="phần" placeholder="phần, hộp, quả, lon...">
                         </div>
                     </div>
-                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-                        <span style="font-size: 11px; color: #92400e; font-weight: 600;">Mẫu nhanh:</span>
-                        <button type="button" class="btn-pos-ing-pack-preset" data-unit="Kg" data-size="10" data-sub="phần" style="border: 1px solid #86efac; background: #f0fdf4; color: #166534; border-radius: 10px; padding: 2px 7px; font-size: 11px; font-weight: 700; cursor: pointer;">1 Kg = 10 phần</button>
-                        <button type="button" class="btn-pos-ing-pack-preset" data-unit="Hộp" data-size="10" data-sub="phần" style="border: 1px solid #fde68a; background: #ffffff; color: #b45309; border-radius: 10px; padding: 2px 7px; font-size: 11px; font-weight: 700; cursor: pointer;">1 Hộp = 10 phần</button>
-                        <button type="button" class="btn-pos-ing-pack-preset" data-unit="Vỉ" data-size="30" data-sub="quả" style="border: 1px solid #fde68a; background: #ffffff; color: #b45309; border-radius: 10px; padding: 2px 7px; font-size: 11px; font-weight: 700; cursor: pointer;">1 Vỉ = 30 quả</button>
-                        <button type="button" class="btn-pos-ing-pack-preset" data-unit="Thùng" data-size="24" data-sub="hộp" style="border: 1px solid #fde68a; background: #ffffff; color: #b45309; border-radius: 10px; padding: 2px 7px; font-size: 11px; font-weight: 700; cursor: pointer;">1 Thùng = 24 hộp</button>
-                        <button type="button" class="btn-pos-ing-pack-preset" data-unit="Thùng" data-size="12" data-sub="hộp" style="border: 1px solid #fde68a; background: #ffffff; color: #b45309; border-radius: 10px; padding: 2px 7px; font-size: 11px; font-weight: 700; cursor: pointer;">1 Thùng = 12 hộp</button>
-                        <button type="button" class="btn-pos-ing-pack-preset" data-unit="Thùng" data-size="24" data-sub="lon" style="border: 1px solid #93c5fd; background: #eff6ff; color: #1d4ed8; border-radius: 10px; padding: 2px 7px; font-size: 11px; font-weight: 700; cursor: pointer;">1 Thùng = 24 lon</button>
+                    <div class="u-cata-dbbec4bc">
+                        <span class="u-cata-46d9ce9a">Mẫu nhanh:</span>
+                        <button type="button" class="btn-pos-ing-pack-preset u-cata-725c4f3c" data-unit="Kg" data-size="10" data-sub="phần">1 Kg = 10 phần</button>
+                        <button type="button" class="btn-pos-ing-pack-preset u-cata-39fe2814" data-unit="Hộp" data-size="10" data-sub="phần">1 Hộp = 10 phần</button>
+                        <button type="button" class="btn-pos-ing-pack-preset u-cata-39fe2814" data-unit="Vỉ" data-size="30" data-sub="quả">1 Vỉ = 30 quả</button>
+                        <button type="button" class="btn-pos-ing-pack-preset u-cata-39fe2814" data-unit="Thùng" data-size="24" data-sub="hộp">1 Thùng = 24 hộp</button>
+                        <button type="button" class="btn-pos-ing-pack-preset u-cata-39fe2814" data-unit="Thùng" data-size="12" data-sub="hộp">1 Thùng = 12 hộp</button>
+                        <button type="button" class="btn-pos-ing-pack-preset u-cata-76595cda" data-unit="Thùng" data-size="24" data-sub="lon">1 Thùng = 24 lon</button>
                     </div>
                 </div>
 
-                <!-- 2 Cột: Giá nhập & Cảnh báo tồn -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="ing-form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Giá nhập chuẩn (đ)</label>
-                        <input type="text" id="pos-ing-cost" class="form-input" value="0" placeholder="0" style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-weight: 700; text-align: right; color: #d97706; outline: none;">
+                <!-- # 2 Cột: Giá nhập & Cảnh báo tồn -->
+                <div class="u-cata-38f68199">
+                    <div class="ing-form-group u-cata-d24beb37">
+                        <label class="u-cata-85902042">Giá nhập chuẩn (đ)</label>
+                        <input type="text" id="pos-ing-cost" class="form-input u-cata-9b1530db" value="0" placeholder="0">
                     </div>
-                    <div class="ing-form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Cảnh báo tồn tối thiểu</label>
-                        <input type="number" step="0.001" min="0" id="pos-ing-min-stock" class="form-input" value="0.000" style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; text-align: right; font-weight: 600; outline: none;">
+                    <div class="ing-form-group u-cata-d24beb37">
+                        <label class="u-cata-85902042">Cảnh báo tồn tối thiểu</label>
+                        <input type="number" step="0.001" min="0" id="pos-ing-min-stock" class="form-input u-cata-5c797120" value="0.000">
                     </div>
                 </div>
 
-                <!-- Nhà cung cấp / Ghi chú -->
-                <div class="ing-form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Nhà cung cấp / Ghi chú</label>
-                    <input type="text" id="pos-ing-supplier" class="form-input" placeholder="Tên nhà phân phối / nhà cung cấp / xuất xứ..." style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; outline: none;">
+                <!-- # Nhà cung cấp / Ghi chú -->
+                <div class="ing-form-group u-cata-d24beb37">
+                    <label class="u-cata-85902042">Nhà cung cấp / Ghi chú</label>
+                    <input type="text" id="pos-ing-supplier" class="form-input u-cata-76e4a2f7" placeholder="Tên nhà phân phối / nhà cung cấp / xuất xứ...">
                 </div>
             </div>
 
-            <!-- Submodal Footer -->
-            <div class="dining-submodal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" class="btn-modal-cancel" id="pos-submodal-ing-cancel" style="padding: 8px 18px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 600; font-size: 13.5px; border-radius: 6px; cursor: pointer;">
+            <!-- # Submodal Footer -->
+            <div class="dining-submodal-footer u-cata-b4f0d389">
+                <button type="button" class="btn-modal-cancel u-cata-4d1105e3" id="pos-submodal-ing-cancel">
                     Bỏ qua
                 </button>
-                <button type="submit" class="btn-modal-save" id="pos-btn-save-ing" style="padding: 8px 24px; border: none; background: #f97316; color: #ffffff; font-weight: 800; font-size: 13.5px; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3); display: inline-flex; align-items: center; gap: 6px;">
+                <button type="submit" class="btn-modal-save u-cata-14c6fd61" id="pos-btn-save-ing">
                     ✓ Đồng ý
                 </button>
             </div>
@@ -263,33 +263,33 @@
     </div>
 </div>
 
-<!-- ========================================================================= -->
-<!-- SUBMODAL: NHẬP DỮ LIỆU TỪ EXCEL                                          -->
-<!-- ========================================================================= -->
-<div class="dining-submodal-overlay" id="pos-submodal-ing-excel" hidden style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 10000;">
-    <div class="dining-submodal-card" style="background: #ffffff; width: 600px; max-width: 95vw; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #e2e8f0;">
-        <div class="dining-submodal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
-            <h4 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">Nhập dữ liệu Mặt hàng từ Excel</h4>
-            <button type="button" class="btn-submodal-close" id="pos-submodal-ing-excel-close" style="font-size: 22px; cursor: pointer; color: #94a3b8; border: none; background: none;">&times;</button>
+<!-- # ========================================================================= -->
+<!-- # SUBMODAL: NHẬP DỮ LIỆU TỪ EXCEL -->
+<!-- # ========================================================================= -->
+<div class="dining-submodal-overlay u-cata-cc58ebcd" id="pos-submodal-ing-excel" hidden>
+    <div class="dining-submodal-card u-cata-20c28af2">
+        <div class="dining-submodal-header u-cata-89682d08">
+            <h4 class="u-cata-5d565ebe">Nhập dữ liệu Mặt hàng từ Excel</h4>
+            <button type="button" class="btn-submodal-close u-cata-75e019fb" id="pos-submodal-ing-excel-close">&times;</button>
         </div>
         <form id="pos-form-ing-excel">
-            <div class="dining-submodal-body" style="padding: 20px;">
-                <p class="modal-help-text" style="margin-bottom: 12px; font-size: 13px; color: #64748b; line-height: 1.5;">
+            <div class="dining-submodal-body u-cata-32c16dc4">
+                <p class="modal-help-text u-cata-926d5d16">
                     Bạn có thể tải lên file <strong>.csv</strong> hoặc sao chép và dán trực tiếp dữ liệu từ Excel (hàng phân cách bởi Tab hoặc dấu phẩy).<br>
                     <strong>Cấu trúc cột:</strong> <code>Nhóm | Tên mặt hàng | ĐVT | Giá nhập | Cảnh báo tồn</code>
                 </p>
-                <div class="form-row" style="margin-bottom: 12px;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Chọn file CSV/Excel</label>
-                    <input type="file" id="pos-ing-excel-file" class="form-input" accept=".csv, text/csv" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <div class="form-row u-cata-7b754eef">
+                    <label class="u-cata-bb7ffd14">Chọn file CSV/Excel</label>
+                    <input type="file" id="pos-ing-excel-file" class="form-input u-cata-8b86d4df" accept=".csv, text/csv">
                 </div>
                 <div class="form-row">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Hoặc dán trực tiếp dữ liệu vào đây</label>
-                    <textarea id="pos-ing-excel-text" class="form-textarea" rows="6" style="width: 100%; font-family: monospace; font-size: 13px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Pha chế&#9;Cà phê Trung Nguyên&#9;Kg&#9;120000&#9;0&#10;Gia vị&#9;Đường trắng&#9;Kg&#9;27000&#9;0"></textarea>
+                    <label class="u-cata-bb7ffd14">Hoặc dán trực tiếp dữ liệu vào đây</label>
+                    <textarea id="pos-ing-excel-text" class="form-textarea u-cata-3188f612" rows="6" placeholder="Pha chế&#9;Cà phê Trung Nguyên&#9;Kg&#9;120000&#9;0&#10;Gia vị&#9;Đường trắng&#9;Kg&#9;27000&#9;0"></textarea>
                 </div>
             </div>
-            <div class="dining-submodal-footer" style="padding: 14px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
-                <button type="button" class="btn-modal-cancel" id="pos-submodal-ing-excel-cancel" style="padding: 8px 16px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer;">Bỏ qua</button>
-                <button type="submit" class="btn-modal-save btn-modal-save-ruby" id="pos-btn-submit-ing-excel" style="background: #991b1b; color: #fff; font-weight: 700; padding: 8px 18px; border: none; border-radius: 6px; cursor: pointer;">Nhập dữ liệu</button>
+            <div class="dining-submodal-footer u-cata-e83ce03c">
+                <button type="button" class="btn-modal-cancel u-cata-b50372b1" id="pos-submodal-ing-excel-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-modal-save btn-modal-save-ruby u-cata-6cf23b67" id="pos-btn-submit-ing-excel">Nhập dữ liệu</button>
             </div>
         </form>
     </div>

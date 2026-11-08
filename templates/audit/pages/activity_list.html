@@ -1,4 +1,6 @@
+<!-- # File này chịu trách nhiệm hiển thị trang tra cứu Nhật ký hoạt động hệ thống (Activity Audit Log Page) độc lập với bộ lọc theo ngày, loại hành động và nhân viên. -->
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Nhật ký hoạt động - Admin | MixFood POS{% endblock %}
 
 {% block content %}
@@ -20,28 +22,28 @@
         </div>
     </div>
 
-    <!-- Filter Form -->
+    <!-- # Filter Form -->
     <form class="activity-modal-toolbar activity-page-toolbar" method="get">
         <div class="activity-date-range">
             <label for="page-date-from">Từ</label>
             <div class="date-input-wrap">
-                <input type="date" id="page-date-from" name="from_date" value="{{ from_date }}" class="pos-activity-date-input filter-input-date" onchange="this.form.submit()">
+                <input type="date" id="page-date-from" name="from_date" value="{{ from_date }}" class="pos-activity-date-input filter-input-date" data-auto-submit="1">
             </div>
             <label for="page-date-to">Đến</label>
             <div class="date-input-wrap">
-                <input type="date" id="page-date-to" name="to_date" value="{{ to_date }}" class="pos-activity-date-input filter-input-date" onchange="this.form.submit()">
+                <input type="date" id="page-date-to" name="to_date" value="{{ to_date }}" class="pos-activity-date-input filter-input-date" data-auto-submit="1">
             </div>
         </div>
 
         <div class="activity-filters">
-            <select name="action" class="activity-select" onchange="this.form.submit()">
+            <select name="action" class="activity-select" data-auto-submit="1">
                 <option value="">&lt;Loại hoạt động&gt;</option>
                 {% for value, label in actions %}
                 <option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
 
-            <select name="actor_id" class="activity-select" onchange="this.form.submit()">
+            <select name="actor_id" class="activity-select" data-auto-submit="1">
                 <option value="">&lt;Nhân viên&gt;</option>
                 {% for u in staff_users %}
                 <option value="{{ u.id }}" {% if selected_actor == u.id|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
@@ -55,39 +57,39 @@
             <input type="text" name="q" value="{{ search_query }}" placeholder="Tìm kiếm chi tiết, lý do..." class="activity-search-input">
             <button class="primary-button" type="submit">Lọc</button>
             {% if selected_action or selected_actor or search_query or is_order_log %}
-            <a href="{% url 'audit:activity' %}" class="secondary-button" style="text-decoration:none;">Xóa lọc</a>
+            <a href="{% url 'audit:activity' %}" class="secondary-button u-audi-8fdce8d5">Xóa lọc</a>
             {% endif %}
         </div>
     </form>
 
-    <!-- Table -->
+    <!-- # Table -->
     <div class="activity-modal-table-container page-table">
         <table class="activity-modal-table">
             <thead>
                 <tr>
-                    <th style="width: 175px;">Thời điểm</th>
-                    <th style="width: 175px;">Hoạt động</th>
+                    <th class="u-audi-66433d4d">Thời điểm</th>
+                    <th class="u-audi-66433d4d">Hoạt động</th>
                     <th>Chi tiết</th>
-                    <th style="width: 160px;">Thực hiện</th>
+                    <th class="u-audi-75342211">Thực hiện</th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in logs %}
                 <tr>
-                    <td class="text-muted" style="white-space: nowrap;">{{ log.formatted_time }}</td>
+                    <td class="text-muted u-audi-0ca50382">{{ log.formatted_time }}</td>
                     <td>
-                        <span class="activity-action-tag" style="color: {{ log.action_color }};">
+                        <span class="activity-action-tag" data-dyn-color="{{ log.action_color }}">
                             ● {{ log.get_action_display }}
                         </span>
                     </td>
                     <td class="activity-detail-cell">
-                        <span class="activity-desc" style="color: {{ log.action_color }}; font-weight: 500;">{{ log.description }}</span>
+                        <span class="activity-desc u-audi-d2abfb71" data-dyn-color="{{ log.action_color }}">{{ log.description }}</span>
                         {% if log.reason and log.action != 'edit_invoice' and log.action != 'delete_invoice' %}
                         <span class="activity-reason-pill">Lý do: {{ log.reason }}</span>
                         {% endif %}
                     </td>
                     <td>
-                        <strong class="activity-actor-name" style="color: {{ log.action_color }};">{{ log.display_actor }}</strong>
+                        <strong class="activity-actor-name" data-dyn-color="{{ log.action_color }}">{{ log.display_actor }}</strong>
                     </td>
                 </tr>
                 {% empty %}
@@ -107,4 +109,7 @@
         </a>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/audit/activity_list.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

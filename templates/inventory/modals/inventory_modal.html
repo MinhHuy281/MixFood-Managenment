@@ -1,4 +1,4 @@
-<!-- MODAL: QUẢN LÝ KHO HÀNG & XUẤT - NHẬP - TỒN (MIXFOOD POS) -->
+<!-- # File này chịu trách nhiệm hiển thị giao diện Quản lý Kho hàng 3 khu vực: Tự nhập kho, Xuất tách Thùng -> Hộp chờ bán, Báo cáo Xuất - Nhập - Tồn, Kiểm kê kho và Phiếu in. -->
 <div class="menu-modal-backdrop inv-modal-backdrop" id="modal-inventory-manager"
      data-api-dashboard="{% url 'inventory:dashboard_api' %}"
      data-api-receipts="{% url 'inventory:receipts_api' %}"
@@ -9,7 +9,7 @@
      data-api-manage-action="{% url 'inventory:manage_action_api' %}"
      role="dialog" aria-modal="true" aria-labelledby="inv-modal-title" hidden>
     <div class="menu-modal-dialog inv-manager-dialog">
-        <!-- Modal Topbar -->
+        <!-- # Modal Topbar -->
         <div class="menu-modal-header inv-manager-header">
             <div class="modal-title-wrap">
                 <span class="inv-header-icon">📦</span>
@@ -39,7 +39,7 @@
             </div>
         </div>
 
-        <!-- Navigation Tabs -->
+        <!-- # Navigation Tabs -->
         <div class="inv-tabs-nav">
             <button type="button" class="inv-tab-btn" data-tab="unpack">
                 <span class="inv-tab-icon">📦</span> Quản lý Kho hàng (Tách Thùng ➔ Hộp / Chờ bán)
@@ -61,104 +61,104 @@
             </button>
         </div>
 
-        <!-- Notification Banner -->
+        <!-- # Notification Banner -->
         <div id="inv-modal-toast" class="inv-toast-banner" hidden></div>
 
-        <!-- Modal Body Content -->
+        <!-- # Modal Body Content -->
         <div class="inv-manager-body">
 
-            <!-- =================================================================== -->
-            <!-- TAB 0: QUẢN LÝ KHO HÀNG (TÁCH THÙNG RA ĐỒ HỘP / SUẤT CHỜ BÁN)        -->
-            <!-- =================================================================== -->
-            <div class="inv-tab-panel" id="inv-panel-unpack" style="gap: 8px; flex: 1; min-height: 0;">
-                <!-- Thanh 1 (Thu gọn): Thống kê nhanh + Nút thao tác hàng loạt trên 1 dòng -->
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; background: linear-gradient(90deg, #f8fafc 0%, #fffbeb 100%); border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 12px; flex-wrap: wrap; flex-shrink: 0;">
-                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px;">
-                        <span style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 3px 9px; border-radius: 6px; font-weight: 700;">
+            <!-- # =================================================================== -->
+            <!-- # TAB 0: QUẢN LÝ KHO HÀNG (TÁCH THÙNG RA ĐỒ HỘP / SUẤT CHỜ BÁN) -->
+            <!-- # =================================================================== -->
+            <div class="inv-tab-panel u-inve-8d874035" id="inv-panel-unpack">
+                <!-- # Thanh 1 (Thu gọn): Thống kê nhanh + Nút thao tác hàng loạt trên 1 dòng -->
+                <div class="u-inve-3177ebb4">
+                    <div class="u-inve-92fc1f3b">
+                        <span class="u-inve-1574866a">
                             📦 Tổng: <strong id="unpack-kpi-total-items">0</strong>
                         </span>
-                        <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 3px 9px; border-radius: 6px; font-weight: 700;">
+                        <span class="u-inve-a33f9ddc">
                             🏢 Có Tồn Kho Tổng: <strong id="unpack-kpi-has-stock">0 mặt hàng</strong>
                         </span>
-                        <span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 3px 9px; border-radius: 6px; font-weight: 700;">
+                        <span class="u-inve-bec77342">
                             ⏳ Đang Chờ Bán: <strong id="unpack-kpi-has-prep">0 mặt hàng</strong>
                         </span>
-                        <span style="background: #eff6ff; color: #0369a1; border: 1px solid #bae6fd; padding: 3px 9px; border-radius: 6px; font-weight: 700;">
+                        <span class="u-inve-d0d54ee1">
                             💰 Giá trị kho: <strong id="unpack-kpi-total-val">0 đ</strong>
                         </span>
                     </div>
-                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                        <button type="button" class="inv-btn-primary btn-receipt-emerald" id="unpack-btn-batch-receipt" style="padding: 5px 11px; font-size: 12px;" title="Nhập kho tất cả các dòng bạn vừa điền ở cột Tự nhập kho">
+                    <div class="u-inve-45d0e13a">
+                        <button type="button" class="inv-btn-primary btn-receipt-emerald u-inve-deade740" id="unpack-btn-batch-receipt" title="Nhập kho tất cả các dòng bạn vừa điền ở cột Tự nhập kho">
                             📥 Xác nhận Nhập kho các dòng đã điền
                         </button>
-                        <button type="button" class="inv-btn-primary btn-issue-amber" id="unpack-btn-batch-unpack" style="padding: 5px 11px; font-size: 12px;" title="Xuất tách ra hộp/lon/phần chờ bán cho tất cả các dòng vừa điền">
+                        <button type="button" class="inv-btn-primary btn-issue-amber u-inve-deade740" id="unpack-btn-batch-unpack" title="Xuất tách ra hộp/lon/phần chờ bán cho tất cả các dòng vừa điền">
                             📤 Xuất tách Hàng loạt các dòng đã điền
                         </button>
-                        <button type="button" class="inv-btn-secondary" id="unpack-btn-reset-zero" style="padding: 5px 10px; font-size: 12px; border-color: #fca5a5; color: #dc2626; background: #fef2f2;" title="Đưa toàn bộ số lượng nhập hàng, tồn kho và chờ bán về 0">
+                        <button type="button" class="inv-btn-secondary u-inve-c398782e" id="unpack-btn-reset-zero" title="Đưa toàn bộ số lượng nhập hàng, tồn kho và chờ bán về 0">
                             🔄 Đưa kho về 0
                         </button>
                     </div>
                 </div>
 
-                <!-- Thanh 2 (Thu gọn): Chọn Kho + Nút Nước ngọt & Bia + Tìm kiếm & Lọc nhóm trên 1 dòng -->
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #ffffff; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; flex-wrap: wrap; flex-shrink: 0;">
-                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                        <button type="button" class="unpack-wh-tab-btn active" data-wh="all" style="padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #0f172a; background: #0f172a; color: #ffffff; cursor: pointer;">
+                <!-- # Thanh 2 (Thu gọn): Chọn Kho + Nút Nước ngọt & Bia + Tìm kiếm & Lọc nhóm trên 1 dòng -->
+                <div class="u-inve-177f5f1a">
+                    <div class="u-inve-cc4e66c2">
+                        <button type="button" class="unpack-wh-tab-btn active u-inve-ce11ef31" data-wh="all">
                             🌐 Tất cả (<span id="unpack-wh-count-all">0</span>)
                         </button>
-                        <button type="button" class="unpack-wh-tab-btn" data-wh="fresh" style="padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #86efac; background: #f0fdf4; color: #166534; cursor: pointer;">
+                        <button type="button" class="unpack-wh-tab-btn u-inve-6199b755" data-wh="fresh">
                             🥦 Kho 1: Tươi sống (<span id="unpack-wh-count-fresh">0</span>)
                         </button>
-                        <button type="button" class="unpack-wh-tab-btn" data-wh="dry" style="padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #fde68a; background: #fffbeb; color: #b45309; cursor: pointer;">
+                        <button type="button" class="unpack-wh-tab-btn u-inve-112b3aa2" data-wh="dry">
                             🥫 Kho 2: Khô & Đồ hộp (<span id="unpack-wh-count-dry">0</span>)
                         </button>
-                        <button type="button" class="unpack-wh-tab-btn" data-wh="beverage" style="padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #93c5fd; background: #eff6ff; color: #1d4ed8; cursor: pointer;">
+                        <button type="button" class="unpack-wh-tab-btn u-inve-6c1f0cd8" data-wh="beverage">
                             🍹 Kho 3: Đồ uống & Quả (<span id="unpack-wh-count-beverage">0</span>)
                         </button>
-                        <button type="button" class="unpack-wh-tab-btn" data-wh="drinks_beer" style="padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; border: 1.5px solid #38bdf8; background: #e0f2fe; color: #0369a1; cursor: pointer;">
+                        <button type="button" class="unpack-wh-tab-btn u-inve-ff52312b" data-wh="drinks_beer">
                             🍺 Nước ngọt & Bia (Thùng ➔ 24 Lon/Chai)
                         </button>
                     </div>
 
-                    <div style="display: flex; gap: 6px; align-items: center; flex: 1; min-width: 320px; max-width: 560px; justify-content: flex-end;">
-                        <input type="text" id="unpack-search-query" class="inv-input-search" style="flex: 1; height: 30px; font-size: 12px; min-width: 160px;" placeholder="🔍 Tìm tên hoặc mã (phồng tôm, trứng, bia, pepsi, 7up, tương ớt...)">
-                        <select id="unpack-select-group" class="inv-input-select" style="height: 30px; font-size: 12px; max-width: 155px;">
+                    <div class="u-inve-b295081c">
+                        <input type="text" id="unpack-search-query" class="inv-input-search u-inve-47b21392" placeholder="🔍 Tìm tên hoặc mã (phồng tôm, trứng, bia, pepsi, 7up, tương ớt...)">
+                        <select id="unpack-select-group" class="inv-input-select u-inve-8784808c">
                             <option value="">-- Tất cả nhóm --</option>
                         </select>
-                        <label class="inv-checkbox-label" style="font-size: 11.5px; white-space: nowrap;">
+                        <label class="inv-checkbox-label u-inve-c80646e5">
                             <input type="checkbox" id="unpack-chk-has-stock">
                             <span>Có tồn</span>
                         </label>
                     </div>
                 </div>
 
-                <!-- Bảng Quản lý Kho Tổng & Tách Thùng -> Đồ Hộp / Lon / Phần (Mở rộng chiều cao tối đa) -->
-                <div class="inv-table-container" style="flex: 1; min-height: 480px; overflow: auto;">
-                    <table class="inv-data-table" id="inv-unpack-table" style="table-layout: fixed; width: 100%;">
+                <!-- # Bảng Quản lý Kho Tổng & Tách Thùng -> Đồ Hộp / Lon / Phần (Mở rộng chiều cao tối đa) -->
+                <div class="inv-table-container u-inve-aa64d6e9">
+                    <table class="inv-data-table u-inve-bafa8f03" id="inv-unpack-table">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width: 38px; padding: 7px 4px;">STT</th>
-                                <th style="width: 96px; padding: 7px 6px;">Kho</th>
-                                <th style="width: 24%; padding: 7px 8px;">Tên mặt hàng & Mã</th>
-                                <th style="width: 225px; padding: 7px 6px;">Quy cách đóng gói<br><span style="font-size: 10px; font-weight: 500; color: #64748b;">(Sửa trực tiếp hoặc bấm ⚙️)</span></th>
-                                <th class="text-right" style="width: 95px; padding: 7px 6px;">Tồn Kho Tổng<br><span style="font-size: 10px; font-weight: 500; color: #64748b;">(Chưa tách)</span></th>
-                                <th style="width: 155px; padding: 7px 6px; background: #ecfdf5; color: #065f46;">📥 Tự nhập vào Kho<br><span style="font-size: 10px; font-weight: 500;">(Theo ĐVT Kho Tổng)</span></th>
-                                <th style="width: 175px; padding: 7px 6px; background: #fffbeb; color: #92400e;">📤 Xuất tách ra Bán<br><span style="font-size: 10px; font-weight: 500;">(Thùng/Vỉ ➔ Hộp/Lon/Phần)</span></th>
-                                <th style="width: 185px; padding: 7px 8px; background: #f0f9ff; color: #0369a1;">⏳ Đang chờ bán<br><span style="font-size: 10px; font-weight: 500;">(Hộp / Lon / Quả / Phần)</span></th>
+                                <th class="text-center u-inve-74b8a323">STT</th>
+                                <th class="u-inve-a5d88023">Kho</th>
+                                <th class="u-inve-8ae4a23b">Tên mặt hàng & Mã</th>
+                                <th class="u-inve-7c4f3904">Quy cách đóng gói<br><span class="u-inve-c9e81133">(Sửa trực tiếp hoặc bấm ⚙️)</span></th>
+                                <th class="text-right u-inve-cee9fab9">Tồn Kho Tổng<br><span class="u-inve-c9e81133">(Chưa tách)</span></th>
+                                <th class="u-inve-6344802e">📥 Tự nhập vào Kho<br><span class="u-inve-a6d51fdd">(Theo ĐVT Kho Tổng)</span></th>
+                                <th class="u-inve-35e11ad3">📤 Xuất tách ra Bán<br><span class="u-inve-a6d51fdd">(Thùng/Vỉ ➔ Hộp/Lon/Phần)</span></th>
+                                <th class="u-inve-66040451">⏳ Đang chờ bán<br><span class="u-inve-a6d51fdd">(Hộp / Lon / Quả / Phần)</span></th>
                             </tr>
                         </thead>
                         <tbody id="inv-unpack-tbody">
-                            <!-- Populated via JS -->
+                            <!-- # Populated via JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- =================================================================== -->
-            <!-- TAB 1: BÁO CÁO XUẤT - NHẬP - TỒN                                    -->
-            <!-- =================================================================== -->
+            <!-- # =================================================================== -->
+            <!-- # TAB 1: BÁO CÁO XUẤT - NHẬP - TỒN -->
+            <!-- # =================================================================== -->
             <div class="inv-tab-panel active" id="inv-panel-xnt">
-                <!-- KPI Overview Cards -->
+                <!-- # KPI Overview Cards -->
                 <div class="inv-kpi-grid">
                     <div class="inv-kpi-card card-val">
                         <div class="kpi-icon-wrap bg-blue-soft">💰</div>
@@ -197,29 +197,29 @@
                     </div>
                 </div>
 
-                <!-- 3 KHO TABS SWITCHER (QUẢN LÝ KHO RIÊNG BIỆT) -->
-                <div class="inv-warehouse-filter-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; background: #ffffff; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; align-items: center; flex-wrap: wrap;">
-                    <span style="font-size: 13px; font-weight: 800; color: #475569; margin-right: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                <!-- # 3 KHO TABS SWITCHER (QUẢN LÝ KHO RIÊNG BIỆT) -->
+                <div class="inv-warehouse-filter-tabs u-inve-6861be8b">
+                    <span class="u-inve-b2260137">
                         <span>🏢</span> KHU VỰC KHO:
                     </span>
-                    <button type="button" class="inv-wh-tab-btn active" data-wh="all" style="padding: 7px 15px; border-radius: 8px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #0f172a; background: #0f172a; color: #ffffff; cursor: pointer; transition: all 0.15s ease;">
+                    <button type="button" class="inv-wh-tab-btn active u-inve-8b4e2a33" data-wh="all">
                         🌐 Tất cả kho (<span id="inv-wh-count-all">0</span>)
                     </button>
-                    <button type="button" class="inv-wh-tab-btn" data-wh="fresh" style="padding: 7px 15px; border-radius: 8px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #86efac; background: #f0fdf4; color: #166534; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;">
+                    <button type="button" class="inv-wh-tab-btn u-inve-e2340c35" data-wh="fresh">
                         🥦 Kho 1: Tươi sống & Rau củ (<span id="inv-wh-count-fresh">0</span>)
-                        <span style="background: #dcfce7; color: #15803d; font-size: 10.5px; padding: 1px 6px; border-radius: 10px; font-weight: 800;">Kiểm kê hằng ngày</span>
+                        <span class="u-inve-d758e3fb">Kiểm kê hằng ngày</span>
                     </button>
-                    <button type="button" class="inv-wh-tab-btn" data-wh="dry" style="padding: 7px 15px; border-radius: 8px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #fde68a; background: #fffbeb; color: #b45309; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;">
+                    <button type="button" class="inv-wh-tab-btn u-inve-63af64d7" data-wh="dry">
                         🥫 Kho 2: Khô, Gia vị & Bao bì (<span id="inv-wh-count-dry">0</span>)
-                        <span style="background: #fef3c7; color: #b45309; font-size: 10.5px; padding: 1px 6px; border-radius: 10px; font-weight: 800;">Định kỳ</span>
+                        <span class="u-inve-3a767fe9">Định kỳ</span>
                     </button>
-                    <button type="button" class="inv-wh-tab-btn" data-wh="beverage" style="padding: 7px 15px; border-radius: 8px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #93c5fd; background: #eff6ff; color: #1d4ed8; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;">
+                    <button type="button" class="inv-wh-tab-btn u-inve-28aa90a7" data-wh="beverage">
                         🍹 Kho 3: Đồ uống & Trái cây (<span id="inv-wh-count-beverage">0</span>)
-                        <span style="background: #dbeafe; color: #1e40af; font-size: 10.5px; padding: 1px 6px; border-radius: 10px; font-weight: 800;">Thùng/Lon & Quả</span>
+                        <span class="u-inve-f6d814f7">Thùng/Lon & Quả</span>
                     </button>
                 </div>
 
-                <!-- Filters Bar -->
+                <!-- # Filters Bar -->
                 <div class="inv-filter-toolbar">
                     <div class="inv-date-presets">
                         <button type="button" class="inv-preset-btn" data-preset="today">Hôm nay</button>
@@ -253,30 +253,30 @@
                     </div>
                 </div>
 
-                <!-- Main XNT Table -->
+                <!-- # Main XNT Table -->
                 <div class="inv-table-container">
                     <table class="inv-data-table" id="inv-xnt-table">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width: 40px;">STT</th>
-                                <th style="width: 135px;">Khu vực kho</th>
-                                <th style="width: 85px;">Mã hàng</th>
+                                <th class="text-center u-inve-479236c4">STT</th>
+                                <th class="u-inve-4b4fc6cf">Khu vực kho</th>
+                                <th class="u-inve-a4a5ac1d">Mã hàng</th>
                                 <th>Tên nguyên liệu / mặt hàng</th>
-                                <th class="text-center" style="width: 50px;">ĐVT</th>
-                                <th class="text-right" style="width: 85px;">Giá vốn</th>
-                                <th class="text-right" style="width: 75px;">Tồn đầu</th>
-                                <th class="text-right text-emerald" style="width: 75px;">Nhập kỳ</th>
-                                <th class="text-right text-indigo" style="width: 75px;">Xuất bán</th>
-                                <th class="text-right text-amber" style="width: 75px;">Xuất khác</th>
-                                <th class="text-right" style="width: 65px;">Cân đối</th>
-                                <th class="text-right text-bold" style="width: 80px;">Tồn cuối</th>
-                                <th class="text-right text-bold text-blue" style="width: 100px;">Giá trị tồn</th>
-                                <th style="width: 140px; color: #0284c7;">Suất chờ bán</th>
-                                <th class="text-center" style="width: 95px;">Trạng thái</th>
+                                <th class="text-center u-inve-ae1f13b3">ĐVT</th>
+                                <th class="text-right u-inve-a4a5ac1d">Giá vốn</th>
+                                <th class="text-right u-inve-a190bdb2">Tồn đầu</th>
+                                <th class="text-right text-emerald u-inve-a190bdb2">Nhập kỳ</th>
+                                <th class="text-right text-indigo u-inve-a190bdb2">Xuất bán</th>
+                                <th class="text-right text-amber u-inve-a190bdb2">Xuất khác</th>
+                                <th class="text-right u-inve-de7faf05">Cân đối</th>
+                                <th class="text-right text-bold u-inve-588c2dd8">Tồn cuối</th>
+                                <th class="text-right text-bold text-blue u-inve-e3d221c5">Giá trị tồn</th>
+                                <th class="u-inve-70cc0af1">Suất chờ bán</th>
+                                <th class="text-center u-inve-683ede6d">Trạng thái</th>
                             </tr>
                         </thead>
                         <tbody id="inv-xnt-tbody">
-                            <!-- Populated via JS -->
+                            <!-- # Populated via JS -->
                         </tbody>
                         <tfoot id="inv-xnt-tfoot">
                             <tr class="inv-tfoot-row">
@@ -296,9 +296,9 @@
                 </div>
             </div>
 
-            <!-- =================================================================== -->
-            <!-- TAB 2: QUẢN LÝ PHIẾU NHẬP KHO                                      -->
-            <!-- =================================================================== -->
+            <!-- # =================================================================== -->
+            <!-- # TAB 2: QUẢN LÝ PHIẾU NHẬP KHO -->
+            <!-- # =================================================================== -->
             <div class="inv-tab-panel" id="inv-panel-receipts">
                 <div class="inv-panel-sub-header">
                     <div class="inv-sub-search">
@@ -314,27 +314,27 @@
                     <table class="inv-data-table" id="inv-receipts-table">
                         <thead>
                             <tr>
-                                <th style="width: 120px;">Mã phiếu</th>
-                                <th style="width: 140px;">Thời gian</th>
+                                <th class="u-inve-b15addac">Mã phiếu</th>
+                                <th class="u-inve-14175304">Thời gian</th>
                                 <th>Nhà cung cấp</th>
-                                <th class="text-center" style="width: 100px;">Số mặt hàng</th>
-                                <th class="text-right text-emerald" style="width: 130px;">Tổng tiền (đ)</th>
-                                <th style="width: 140px;">Người lập</th>
+                                <th class="text-center u-inve-e3d221c5">Số mặt hàng</th>
+                                <th class="text-right text-emerald u-inve-e3141199">Tổng tiền (đ)</th>
+                                <th class="u-inve-14175304">Người lập</th>
                                 <th>Ghi chú</th>
-                                <th class="text-center" style="width: 110px;">Trạng thái</th>
-                                <th class="text-center" style="width: 110px;">Thao tác</th>
+                                <th class="text-center u-inve-3e280fa7">Trạng thái</th>
+                                <th class="text-center u-inve-3e280fa7">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="inv-receipts-tbody">
-                            <!-- Populated via JS -->
+                            <!-- # Populated via JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- =================================================================== -->
-            <!-- TAB 3: QUẢN LÝ PHIẾU XUẤT KHO                                      -->
-            <!-- =================================================================== -->
+            <!-- # =================================================================== -->
+            <!-- # TAB 3: QUẢN LÝ PHIẾU XUẤT KHO -->
+            <!-- # =================================================================== -->
             <div class="inv-tab-panel" id="inv-panel-issues">
                 <div class="inv-panel-sub-header">
                     <div class="inv-sub-search">
@@ -357,27 +357,27 @@
                     <table class="inv-data-table" id="inv-issues-table">
                         <thead>
                             <tr>
-                                <th style="width: 120px;">Mã phiếu</th>
-                                <th style="width: 140px;">Thời gian</th>
-                                <th style="width: 160px;">Loại xuất</th>
+                                <th class="u-inve-b15addac">Mã phiếu</th>
+                                <th class="u-inve-14175304">Thời gian</th>
+                                <th class="u-inve-75342211">Loại xuất</th>
                                 <th>Người / Bộ phận nhận</th>
-                                <th class="text-center" style="width: 100px;">Số mặt hàng</th>
-                                <th class="text-right text-amber" style="width: 130px;">Tổng giá trị (đ)</th>
-                                <th style="width: 140px;">Người lập</th>
+                                <th class="text-center u-inve-e3d221c5">Số mặt hàng</th>
+                                <th class="text-right text-amber u-inve-e3141199">Tổng giá trị (đ)</th>
+                                <th class="u-inve-14175304">Người lập</th>
                                 <th>Ghi chú</th>
-                                <th class="text-center" style="width: 110px;">Thao tác</th>
+                                <th class="text-center u-inve-3e280fa7">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="inv-issues-tbody">
-                            <!-- Populated via JS -->
+                            <!-- # Populated via JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- =================================================================== -->
-            <!-- TAB 4: KIỂM KÊ & CÂN ĐỐI KHO                                       -->
-            <!-- =================================================================== -->
+            <!-- # =================================================================== -->
+            <!-- # TAB 4: KIỂM KÊ & CÂN ĐỐI KHO -->
+            <!-- # =================================================================== -->
             <div class="inv-tab-panel" id="inv-panel-adjustments">
                 <div class="inv-panel-sub-header inv-adj-header-bar">
                     <div class="inv-adj-note-wrap">
@@ -393,19 +393,19 @@
                     </div>
                 </div>
 
-                <!-- BỘ LỌC KIỂM KÊ THEO 3 KHO (HẰNG NGÀY / ĐỊNH KỲ) -->
-                <div class="inv-adj-warehouse-filter" style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <span style="font-size: 13px; font-weight: 800; color: #475569;">Chọn kho cần kiểm kê:</span>
-                    <button type="button" class="btn-adj-wh-filter active" data-wh="all" style="padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #0f172a; background: #0f172a; color: #fff; cursor: pointer;">
+                <!-- # BỘ LỌC KIỂM KÊ THEO 3 KHO (HẰNG NGÀY / ĐỊNH KỲ) -->
+                <div class="inv-adj-warehouse-filter u-inve-38abee20">
+                    <span class="u-inve-fe567613">Chọn kho cần kiểm kê:</span>
+                    <button type="button" class="btn-adj-wh-filter active u-inve-4b5417c1" data-wh="all">
                         Tất cả (<span id="adj-count-all">0</span>)
                     </button>
-                    <button type="button" class="btn-adj-wh-filter" data-wh="fresh" style="padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #86efac; background: #f0fdf4; color: #166534; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                    <button type="button" class="btn-adj-wh-filter u-inve-e1efd74f" data-wh="fresh">
                         🥦 Kho 1: Tươi sống & Rau củ (HẰNG NGÀY - <span id="adj-count-fresh">0</span>)
                     </button>
-                    <button type="button" class="btn-adj-wh-filter" data-wh="dry" style="padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #fde68a; background: #fffbeb; color: #b45309; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                    <button type="button" class="btn-adj-wh-filter u-inve-1908f009" data-wh="dry">
                         🥫 Kho 2: Khô & Gia vị (ĐỊNH KỲ - <span id="adj-count-dry">0</span>)
                     </button>
-                    <button type="button" class="btn-adj-wh-filter" data-wh="beverage" style="padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #93c5fd; background: #eff6ff; color: #1d4ed8; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                    <button type="button" class="btn-adj-wh-filter u-inve-5e58c55d" data-wh="beverage">
                         🍹 Kho 3: Đồ uống & Quả (<span id="adj-count-beverage">0</span>)
                     </button>
                 </div>
@@ -418,40 +418,40 @@
                     <table class="inv-data-table" id="inv-adj-table">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width: 45px;">STT</th>
-                                <th style="width: 100px;">Mã hàng</th>
+                                <th class="text-center u-inve-eba08259">STT</th>
+                                <th class="u-inve-e3d221c5">Mã hàng</th>
                                 <th>Tên nguyên liệu / mặt hàng</th>
-                                <th style="width: 120px;">Nhóm</th>
-                                <th class="text-center" style="width: 55px;">ĐVT</th>
-                                <th class="text-right" style="width: 95px;">Đơn giá vốn</th>
-                                <th class="text-right text-bold" style="width: 110px;">Tồn hệ thống</th>
-                                <th class="text-center" style="width: 130px;">Tồn thực tế kiểm kê</th>
-                                <th class="text-right" style="width: 110px;">Chênh lệch</th>
-                                <th class="text-right" style="width: 120px;">Giá trị chênh lệch</th>
+                                <th class="u-inve-b15addac">Nhóm</th>
+                                <th class="text-center u-inve-a7436d68">ĐVT</th>
+                                <th class="text-right u-inve-683ede6d">Đơn giá vốn</th>
+                                <th class="text-right text-bold u-inve-3e280fa7">Tồn hệ thống</th>
+                                <th class="text-center u-inve-e3141199">Tồn thực tế kiểm kê</th>
+                                <th class="text-right u-inve-3e280fa7">Chênh lệch</th>
+                                <th class="text-right u-inve-b15addac">Giá trị chênh lệch</th>
                             </tr>
                         </thead>
                         <tbody id="inv-adj-tbody">
-                            <!-- Populated via JS -->
+                            <!-- # Populated via JS -->
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Lịch sử các lần kiểm kê trước -->
+                <!-- # Lịch sử các lần kiểm kê trước -->
                 <div class="inv-adj-history-section">
                     <h4 class="inv-section-title">Lịch sử các đợt kiểm kê gần đây</h4>
                     <div id="inv-adj-history-list" class="inv-history-list">
-                        <!-- Populated via JS -->
+                        <!-- # Populated via JS -->
                     </div>
                 </div>
             </div>
 
-            <!-- =================================================================== -->
-            <!-- TAB 5: SỔ CHI TIẾT THẺ KHO (BIẾN ĐỘNG)                              -->
-            <!-- =================================================================== -->
+            <!-- # =================================================================== -->
+            <!-- # TAB 5: SỔ CHI TIẾT THẺ KHO (BIẾN ĐỘNG) -->
+            <!-- # =================================================================== -->
             <div class="inv-tab-panel" id="inv-panel-ledger">
                 <div class="inv-filter-toolbar">
-                    <div class="inv-search-group" style="width: 100%;">
-                        <select id="inv-ledger-ingredient" class="inv-input-select" style="min-width: 240px;">
+                    <div class="inv-search-group u-inve-199b6f0e">
+                        <select id="inv-ledger-ingredient" class="inv-input-select u-inve-351b3caa">
                             <option value="">-- Tất cả nguyên liệu --</option>
                         </select>
                         <select id="inv-ledger-type" class="inv-input-select">
@@ -470,33 +470,32 @@
                     <table class="inv-data-table" id="inv-ledger-table">
                         <thead>
                             <tr>
-                                <th style="width: 140px;">Thời gian</th>
-                                <th style="width: 110px;">Mã hàng</th>
+                                <th class="u-inve-14175304">Thời gian</th>
+                                <th class="u-inve-3e280fa7">Mã hàng</th>
                                 <th>Tên nguyên liệu</th>
-                                <th class="text-center" style="width: 60px;">ĐVT</th>
-                                <th style="width: 160px;">Loại biến động</th>
-                                <th class="text-right text-bold" style="width: 110px;">Số lượng</th>
-                                <th class="text-right" style="width: 100px;">Đơn giá vốn</th>
-                                <th class="text-right text-bold text-blue" style="width: 110px;">Tồn sau GD</th>
-                                <th style="width: 140px;">Người thực hiện</th>
+                                <th class="text-center u-inve-902c6d16">ĐVT</th>
+                                <th class="u-inve-75342211">Loại biến động</th>
+                                <th class="text-right text-bold u-inve-3e280fa7">Số lượng</th>
+                                <th class="text-right u-inve-e3d221c5">Đơn giá vốn</th>
+                                <th class="text-right text-bold text-blue u-inve-3e280fa7">Tồn sau GD</th>
+                                <th class="u-inve-14175304">Người thực hiện</th>
                                 <th>Chi tiết / Ghi chú</th>
                             </tr>
                         </thead>
                         <tbody id="inv-ledger-tbody">
-                            <!-- Populated via JS -->
+                            <!-- # Populated via JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-        </div> <!-- /.inv-manager-body -->
-    </div> <!-- /.inv-manager-dialog -->
-</div> <!-- /#modal-inventory-manager -->
+        </div> <!-- # /.inv-manager-body -->
+    </div> <!-- # /.inv-manager-dialog -->
+</div> <!-- # /#modal-inventory-manager -->
 
-
-<!-- =============================================================================== -->
-<!-- SUB-MODAL: LẬP PHIẾU NHẬP KHO MỚI                                               -->
-<!-- =============================================================================== -->
+<!-- # =============================================================================== -->
+<!-- # SUB-MODAL: LẬP PHIẾU NHẬP KHO MỚI -->
+<!-- # =============================================================================== -->
 <div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-new-receipt" role="dialog" aria-modal="true" hidden>
     <div class="menu-modal-dialog inv-form-dialog">
         <div class="menu-modal-header inv-form-header bg-emerald-header">
@@ -530,25 +529,25 @@
                 </div>
             </div>
 
-            <!-- Dynamic Items Table -->
+            <!-- # Dynamic Items Table -->
             <div class="inv-form-items-wrap">
                 <div class="inv-items-toolbar">
-                    <strong style="color: #1e293b; font-size: 13.5px;">Danh sách nguyên vật liệu nhập</strong>
+                    <strong class="u-inve-5eb6ab32">Danh sách nguyên vật liệu nhập</strong>
                     <button type="button" class="inv-btn-secondary" id="inv-rec-btn-add-row">+ Thêm mặt hàng</button>
                 </div>
                 <table class="inv-form-items-table">
                     <thead>
                         <tr>
-                            <th style="width: 35%;">Nguyên liệu / Mặt hàng</th>
-                            <th class="text-center" style="width: 10%;">ĐVT</th>
-                            <th class="text-right" style="width: 18%;">Số lượng nhập</th>
-                            <th class="text-right" style="width: 22%;">Đơn giá nhập (đ)</th>
-                            <th class="text-right" style="width: 20%;">Thành tiền (đ)</th>
-                            <th class="text-center" style="width: 5%;"></th>
+                            <th class="u-inve-3af624f1">Nguyên liệu / Mặt hàng</th>
+                            <th class="text-center u-inve-1c30ab94">ĐVT</th>
+                            <th class="text-right u-inve-55d8fd9d">Số lượng nhập</th>
+                            <th class="text-right u-inve-03d93c8f">Đơn giá nhập (đ)</th>
+                            <th class="text-right u-inve-f6f6b116">Thành tiền (đ)</th>
+                            <th class="text-center u-inve-1d8db72a"></th>
                         </tr>
                     </thead>
                     <tbody id="inv-rec-items-tbody">
-                        <!-- Dynamic Rows -->
+                        <!-- # Dynamic Rows -->
                     </tbody>
                 </table>
             </div>
@@ -568,10 +567,9 @@
     </div>
 </div>
 
-
-<!-- =============================================================================== -->
-<!-- SUB-MODAL: LẬP PHIẾU XUẤT KHO MỚI                                               -->
-<!-- =============================================================================== -->
+<!-- # =============================================================================== -->
+<!-- # SUB-MODAL: LẬP PHIẾU XUẤT KHO MỚI -->
+<!-- # =============================================================================== -->
 <div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-new-issue" role="dialog" aria-modal="true" hidden>
     <div class="menu-modal-dialog inv-form-dialog">
         <div class="menu-modal-header inv-form-header bg-amber-header">
@@ -585,7 +583,7 @@
             <div class="inv-form-meta-row">
                 <div class="inv-field-group">
                     <label>Loại xuất kho:</label>
-                    <select id="inv-iss-type" class="inv-input-select" style="width: 100%;">
+                    <select id="inv-iss-type" class="inv-input-select u-inve-199b6f0e">
                         <option value="manual">Xuất thủ công</option>
                         <option value="waste">Xuất hủy / hỏng / hết hạn</option>
                         <option value="internal">Xuất dùng nội bộ (Quầy / Bếp)</option>
@@ -596,32 +594,32 @@
                     <label>Người / Bộ phận nhận:</label>
                     <input type="text" id="inv-iss-receiver" class="inv-input-text" placeholder="VD: Bếp chính, Quầy pha chế, NV Kho..." value="Bếp chính">
                 </div>
-                <div class="inv-field-group" style="grid-column: span 2;">
+                <div class="inv-field-group u-inve-8107c247">
                     <label>Ghi chú lý do xuất:</label>
                     <input type="text" id="inv-iss-note" class="inv-input-text" placeholder="VD: Xuất nguyên liệu chuẩn bị ca tối, hủy do hư hỏng...">
                 </div>
             </div>
 
-            <!-- Dynamic Items Table -->
+            <!-- # Dynamic Items Table -->
             <div class="inv-form-items-wrap">
                 <div class="inv-items-toolbar">
-                    <strong style="color: #1e293b; font-size: 13.5px;">Danh sách nguyên vật liệu xuất</strong>
+                    <strong class="u-inve-5eb6ab32">Danh sách nguyên vật liệu xuất</strong>
                     <button type="button" class="inv-btn-secondary" id="inv-iss-btn-add-row">+ Thêm mặt hàng</button>
                 </div>
                 <table class="inv-form-items-table">
                     <thead>
                         <tr>
-                            <th style="width: 35%;">Nguyên liệu / Mặt hàng</th>
-                            <th class="text-center" style="width: 10%;">ĐVT</th>
-                            <th class="text-right" style="width: 15%;">Tồn hiện có</th>
-                            <th class="text-right" style="width: 18%;">Số lượng xuất</th>
-                            <th class="text-right" style="width: 18%;">Đơn giá vốn</th>
-                            <th class="text-right" style="width: 18%;">Thành tiền (đ)</th>
-                            <th class="text-center" style="width: 5%;"></th>
+                            <th class="u-inve-3af624f1">Nguyên liệu / Mặt hàng</th>
+                            <th class="text-center u-inve-1c30ab94">ĐVT</th>
+                            <th class="text-right u-inve-c7ee8088">Tồn hiện có</th>
+                            <th class="text-right u-inve-55d8fd9d">Số lượng xuất</th>
+                            <th class="text-right u-inve-55d8fd9d">Đơn giá vốn</th>
+                            <th class="text-right u-inve-55d8fd9d">Thành tiền (đ)</th>
+                            <th class="text-center u-inve-1d8db72a"></th>
                         </tr>
                     </thead>
                     <tbody id="inv-iss-items-tbody">
-                        <!-- Dynamic Rows -->
+                        <!-- # Dynamic Rows -->
                     </tbody>
                 </table>
             </div>
@@ -641,10 +639,9 @@
     </div>
 </div>
 
-
-<!-- =============================================================================== -->
-<!-- SUB-MODAL: XEM CHI TIẾT & IN PHIẾU NHẬP / XUẤT KHO                             -->
-<!-- =============================================================================== -->
+<!-- # =============================================================================== -->
+<!-- # SUB-MODAL: XEM CHI TIẾT & IN PHIẾU NHẬP / XUẤT KHO -->
+<!-- # =============================================================================== -->
 <div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-view-slip" role="dialog" aria-modal="true" hidden>
     <div class="menu-modal-dialog inv-slip-dialog">
         <div class="menu-modal-header inv-slip-header">
@@ -661,101 +658,99 @@
             </div>
         </div>
         <div class="inv-slip-body" id="inv-slip-print-area">
-            <!-- Populated via JS for print -->
+            <!-- # Populated via JS for print -->
         </div>
     </div>
 </div>
 
-
-
-<!-- =============================================================================== -->
-<!-- SUB-MODAL: THIẾT LẬP QUY CÁCH ĐÓNG GÓI & TÁCH LẺ (THÙNG/VỈ ➔ HỘP/QUẢ/PHẦN)     -->
-<!-- =============================================================================== -->
-<div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-pack-rule" role="dialog" aria-modal="true" hidden style="z-index: 10020;">
-    <div class="menu-modal-dialog inv-form-dialog" style="max-width: 540px; width: 95vw; border-radius: 12px; overflow: hidden;">
-        <div class="menu-modal-header inv-form-header" style="background: #0f172a; color: #ffffff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
-            <div class="modal-title-wrap" style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 20px; background: rgba(255,255,255,0.12); width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">📦</span>
+<!-- # =============================================================================== -->
+<!-- # SUB-MODAL: THIẾT LẬP QUY CÁCH ĐÓNG GÓI & TÁCH LẺ (THÙNG/VỈ ➔ HỘP/QUẢ/PHẦN) -->
+<!-- # =============================================================================== -->
+<div class="menu-modal-backdrop inv-sub-backdrop u-inve-520ab4f7" id="modal-inv-pack-rule" role="dialog" aria-modal="true" hidden>
+    <div class="menu-modal-dialog inv-form-dialog u-inve-e44853ff">
+        <div class="menu-modal-header inv-form-header u-inve-36c58f47">
+            <div class="modal-title-wrap u-inve-b512c985">
+                <span class="u-inve-07a66733">📦</span>
                 <div>
-                    <h3 style="margin: 0; font-size: 15.5px; font-weight: 800; color: #ffffff;">Chỉnh sửa Quy cách Đóng gói & Tách lẻ</h3>
-                    <span id="inv-pack-rule-subtitle" style="font-size: 12px; color: #94a3b8; display: block; margin-top: 2px;">Cấu hình 1 đơn vị kho tổng tách ra bao nhiêu phần / hộp / quả chờ bán</span>
+                    <h3 class="u-inve-a7a06bb8">Chỉnh sửa Quy cách Đóng gói & Tách lẻ</h3>
+                    <span class="u-inve-89874f60" id="inv-pack-rule-subtitle">Cấu hình 1 đơn vị kho tổng tách ra bao nhiêu phần / hộp / quả chờ bán</span>
                 </div>
             </div>
-            <button type="button" class="dialog-close" id="inv-pack-rule-close" style="color: #94a3b8; font-size: 24px; background: none; border: none; cursor: pointer;">&times;</button>
+            <button type="button" class="dialog-close u-inve-e4f2ef90" id="inv-pack-rule-close">&times;</button>
         </div>
 
-        <form id="inv-pack-rule-form" style="margin: 0;">
+        <form class="u-inve-e2b74ba6" id="inv-pack-rule-form">
             <input type="hidden" id="inv-pack-rule-ing-id">
-            <div class="inv-form-body" style="padding: 18px 22px; display: flex; flex-direction: column; gap: 15px; background: #ffffff;">
-                
-                <!-- Thông tin mặt hàng đang chọn -->
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+            <div class="inv-form-body u-inve-2e5c1fff">
+
+                <!-- # Thông tin mặt hàng đang chọn -->
+                <div class="u-inve-81532481">
                     <div>
-                        <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">Mặt hàng đang chỉnh sửa:</span>
-                        <div style="font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 2px;" id="inv-pack-rule-item-name">-</div>
+                        <span class="u-inve-b879d995">Mặt hàng đang chỉnh sửa:</span>
+                        <div class="u-inve-05cda5d9" id="inv-pack-rule-item-name">-</div>
                     </div>
-                    <span id="inv-pack-rule-item-code" style="font-family: monospace; font-size: 12px; font-weight: 800; background: #e2e8f0; color: #334155; padding: 3px 8px; border-radius: 6px;">-</span>
+                    <span class="u-inve-d820ee76" id="inv-pack-rule-item-code">-</span>
                 </div>
 
-                <!-- Bước 1: Đơn vị tính Kho Tổng -->
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155;">
+                <!-- # Bước 1: Đơn vị tính Kho Tổng -->
+                <div class="u-inve-eecb2be3">
+                    <label class="u-inve-f295dec5">
                         1. Đơn vị lưu Kho Tổng (ĐVT Nhập hàng):
                     </label>
-                    <input type="text" id="inv-pack-rule-unit" class="inv-input-text" required placeholder="VD: Thùng, Vỉ, Hộp, Kg, Lít..." style="height: 38px; padding: 0 12px; font-size: 14px; font-weight: 800; color: #0f172a;">
-                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-                        <span style="font-size: 11px; color: #64748b; font-weight: 600;">Chọn nhanh:</span>
-                        <button type="button" class="chip-pack-main-unit" data-val="Thùng" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; cursor: pointer;">Thùng</button>
-                        <button type="button" class="chip-pack-main-unit" data-val="Vỉ" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; cursor: pointer;">Vỉ</button>
-                        <button type="button" class="chip-pack-main-unit" data-val="Hộp" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; cursor: pointer;">Hộp</button>
-                        <button type="button" class="chip-pack-main-unit" data-val="Kg" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; cursor: pointer;">Kg</button>
-                        <button type="button" class="chip-pack-main-unit" data-val="Lít" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; cursor: pointer;">Lít</button>
-                        <button type="button" class="chip-pack-main-unit" data-val="Bao" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; cursor: pointer;">Bao</button>
-                        <button type="button" class="chip-pack-main-unit" data-val="Két" style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; cursor: pointer;">Két</button>
+                    <input type="text" id="inv-pack-rule-unit" class="inv-input-text u-inve-c03f06fa" required placeholder="VD: Thùng, Vỉ, Hộp, Kg, Lít...">
+                    <div class="u-inve-dbbec4bc">
+                        <span class="u-inve-dae0bf1a">Chọn nhanh:</span>
+                        <button type="button" class="chip-pack-main-unit u-inve-8d8a94fb" data-val="Thùng">Thùng</button>
+                        <button type="button" class="chip-pack-main-unit u-inve-8d8a94fb" data-val="Vỉ">Vỉ</button>
+                        <button type="button" class="chip-pack-main-unit u-inve-8d8a94fb" data-val="Hộp">Hộp</button>
+                        <button type="button" class="chip-pack-main-unit u-inve-8d8a94fb" data-val="Kg">Kg</button>
+                        <button type="button" class="chip-pack-main-unit u-inve-8d8a94fb" data-val="Lít">Lít</button>
+                        <button type="button" class="chip-pack-main-unit u-inve-8d8a94fb" data-val="Bao">Bao</button>
+                        <button type="button" class="chip-pack-main-unit u-inve-8d8a94fb" data-val="Két">Két</button>
                     </div>
                 </div>
 
-                <!-- Bước 2: Số lượng tách ra & Đơn vị lẻ chờ bán -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <label id="inv-pack-rule-qty-label" style="font-size: 13px; font-weight: 700; color: #b45309;">
+                <!-- # Bước 2: Số lượng tách ra & Đơn vị lẻ chờ bán -->
+                <div class="u-inve-38f68199">
+                    <div class="u-inve-eecb2be3">
+                        <label class="u-inve-2fe93075" id="inv-pack-rule-qty-label">
                             2. Số lượng tách ra (từ 1 ĐVT kho):
                         </label>
-                        <input type="number" id="inv-pack-rule-size" class="inv-input-text" min="1" step="0.5" required placeholder="VD: 10, 24, 30..." style="height: 40px; padding: 0 12px; font-size: 16px; font-weight: 900; color: #d97706; text-align: center; border: 2px solid #f59e0b; background: #fffbeb;">
+                        <input type="number" id="inv-pack-rule-size" class="inv-input-text u-inve-fc5180a4" min="1" step="0.5" required placeholder="VD: 10, 24, 30...">
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <label style="font-size: 13px; font-weight: 700; color: #0369a1;">
+                    <div class="u-inve-eecb2be3">
+                        <label class="u-inve-8c99060f">
                             3. Đơn vị lẻ chờ bán sau khi tách:
                         </label>
-                        <input type="text" id="inv-pack-rule-sub" class="inv-input-text" required placeholder="VD: phần, hộp, quả, lon..." style="height: 40px; padding: 0 12px; font-size: 15px; font-weight: 800; color: #0284c7; text-align: center; border: 2px solid #38bdf8; background: #f0f9ff;">
+                        <input type="text" id="inv-pack-rule-sub" class="inv-input-text u-inve-5ca723f2" required placeholder="VD: phần, hộp, quả, lon...">
                     </div>
                 </div>
 
-                <!-- Các mẫu quy cách nhanh phổ biến -->
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <span style="font-size: 11.5px; color: #475569; font-weight: 700;">⚡ Chọn nhanh quy cách phổ biến:</span>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                        <button type="button" class="chip-pack-preset" data-unit="Kg" data-size="10" data-sub="phần" style="border: 1px solid #86efac; background: #f0fdf4; color: #166534; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">🥦 1 Kg = 10 phần</button>
-                        <button type="button" class="chip-pack-preset" data-unit="Hộp" data-size="10" data-sub="phần" style="border: 1px solid #fde68a; background: #fffbeb; color: #b45309; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">🍤 1 Hộp = 10 phần (Phồng tôm)</button>
-                        <button type="button" class="chip-pack-preset" data-unit="Vỉ" data-size="30" data-sub="quả" style="border: 1px solid #fde68a; background: #fffbeb; color: #b45309; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">🥚 1 Vỉ = 30 quả (Trứng)</button>
-                        <button type="button" class="chip-pack-preset" data-unit="Thùng" data-size="24" data-sub="hộp" style="border: 1px solid #fde68a; background: #fffbeb; color: #b45309; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">🥫 1 Thùng = 24 hộp</button>
-                        <button type="button" class="chip-pack-preset" data-unit="Thùng" data-size="12" data-sub="hộp" style="border: 1px solid #fde68a; background: #fffbeb; color: #b45309; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">🥫 1 Thùng = 12 hộp</button>
-                        <button type="button" class="chip-pack-preset" data-unit="Thùng" data-size="48" data-sub="hộp" style="border: 1px solid #fde68a; background: #fffbeb; color: #b45309; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">🥛 1 Thùng = 48 hộp (Sữa đặc)</button>
-                        <button type="button" class="chip-pack-preset" data-unit="Thùng" data-size="4" data-sub="hộp (can 5L)" style="border: 1px solid #fde68a; background: #fffbeb; color: #b45309; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">🛢️ 1 Thùng = 4 can 5L (Dầu ăn)</button>
-                        <button type="button" class="chip-pack-preset" data-unit="Thùng" data-size="24" data-sub="lon" style="border: 1px solid #93c5fd; background: #eff6ff; color: #1d4ed8; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">🍺 1 Thùng = 24 lon</button>
+                <!-- # Các mẫu quy cách nhanh phổ biến -->
+                <div class="u-inve-eecb2be3">
+                    <span class="u-inve-3fe7f480">⚡ Chọn nhanh quy cách phổ biến:</span>
+                    <div class="u-inve-e8afafb1">
+                        <button type="button" class="chip-pack-preset u-inve-5c137440" data-unit="Kg" data-size="10" data-sub="phần">🥦 1 Kg = 10 phần</button>
+                        <button type="button" class="chip-pack-preset u-inve-6f99c14b" data-unit="Hộp" data-size="10" data-sub="phần">🍤 1 Hộp = 10 phần (Phồng tôm)</button>
+                        <button type="button" class="chip-pack-preset u-inve-6f99c14b" data-unit="Vỉ" data-size="30" data-sub="quả">🥚 1 Vỉ = 30 quả (Trứng)</button>
+                        <button type="button" class="chip-pack-preset u-inve-6f99c14b" data-unit="Thùng" data-size="24" data-sub="hộp">🥫 1 Thùng = 24 hộp</button>
+                        <button type="button" class="chip-pack-preset u-inve-6f99c14b" data-unit="Thùng" data-size="12" data-sub="hộp">🥫 1 Thùng = 12 hộp</button>
+                        <button type="button" class="chip-pack-preset u-inve-6f99c14b" data-unit="Thùng" data-size="48" data-sub="hộp">🥛 1 Thùng = 48 hộp (Sữa đặc)</button>
+                        <button type="button" class="chip-pack-preset u-inve-6f99c14b" data-unit="Thùng" data-size="4" data-sub="hộp (can 5L)">🛢️ 1 Thùng = 4 can 5L (Dầu ăn)</button>
+                        <button type="button" class="chip-pack-preset u-inve-aa54db64" data-unit="Thùng" data-size="24" data-sub="lon">🍺 1 Thùng = 24 lon</button>
                     </div>
                 </div>
 
-                <!-- Preview Box -->
-                <div style="background: linear-gradient(90deg, #eff6ff 0%, #f0fdf4 100%); border: 1.5px dashed #38bdf8; border-radius: 8px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 12.5px; font-weight: 700; color: #334155;">Quy cách sau khi lưu:</span>
-                    <strong id="inv-pack-rule-live-preview" style="font-size: 14.5px; font-weight: 900; color: #0284c7;">📦 1 Kg = 10 phần</strong>
+                <!-- # Preview Box -->
+                <div class="u-inve-f7f34574">
+                    <span class="u-inve-2e818f6d">Quy cách sau khi lưu:</span>
+                    <strong class="u-inve-7cc96299" id="inv-pack-rule-live-preview">📦 1 Kg = 10 phần</strong>
                 </div>
             </div>
 
-            <div class="inv-form-footer" style="padding: 12px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="inv-form-footer u-inve-e47dd0c1">
                 <button type="button" class="inv-btn-secondary" id="inv-pack-rule-cancel">Huỷ</button>
-                <button type="submit" class="inv-btn-primary" style="background: #0284c7; color: #fff; font-weight: 800; padding: 8px 20px;">
+                <button type="submit" class="inv-btn-primary u-inve-49b42646">
                     ✓ Lưu quy cách đóng gói
                 </button>
             </div>

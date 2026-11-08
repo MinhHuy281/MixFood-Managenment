@@ -1,0 +1,123 @@
+<!-- # File này chịu trách nhiệm hiển thị giao diện Nhật ký hoạt động toàn diện trên Mobile cho Admin (/admin/activity/), hỗ trợ tra cứu lịch sử thao tác của nhân viên theo thời gian thực. -->
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Nhật ký hoạt động - Admin Mobile | MixFood 2026{% endblock %}
+{% block body_class %}admin-subpage-body{% endblock %}
+{% block page_class %}admin-subpage-shell{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/admin_subpages.css' %}?v={% now 'U' %}">
+{% endblock %}
+
+{% block authenticated_header %}
+<!-- # Không nạp topbar POS desktop để giữ trọn vẹn diện tích cho Mobile Admin -->
+{% endblock %}
+
+{% block content %}
+<div class="admin-subpage-shell">
+    <!-- # Header Top Bar -->
+    <header class="admin-subpage-header">
+        <div class="admin-header-left">
+            <a href="{% url 'admin_live_dashboard' %}" class="admin-back-btn" title="Về Giám sát Live">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <div>
+                <h1 class="admin-subpage-title">Nhật ký hoạt động</h1>
+                <span class="admin-subpage-badge">{{ total_count }} bản ghi</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- # Toolbar Tìm kiếm & Lọc -->
+    <div class="admin-toolbar-wrap">
+        <form method="get" action="{% url 'admin_activity' %}" class="admin-search-form">
+            <span class="admin-search-icon">🔍</span>
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Tìm theo nhân viên, nội dung..." class="admin-search-input">
+            {% if action_filter %}
+            <input type="hidden" name="action" value="{{ action_filter }}">
+            {% endif %}
+            {% if date_filter %}
+            <input type="hidden" name="date" value="{{ date_filter }}">
+            {% endif %}
+        </form>
+
+        <!-- # Bộ lọc Thời gian -->
+        <div class="admin-filter-scroll">
+            <a href="{% url 'admin_activity' %}?date=today{% if action_filter %}&action={{ action_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if date_filter == 'today' %}active{% endif %}">
+                📅 Hôm nay
+            </a>
+            <a href="{% url 'admin_activity' %}?date=7days{% if action_filter %}&action={{ action_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if date_filter == '7days' %}active{% endif %}">
+                🗓️ 7 ngày qua
+            </a>
+            <a href="{% url 'admin_activity' %}?date=all{% if action_filter %}&action={{ action_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if date_filter == 'all' %}active{% endif %}">
+                🌐 Toàn thời gian
+            </a>
+        </div>
+
+        <!-- # Bộ lọc Loại thao tác -->
+        <div class="admin-filter-scroll">
+            <a href="{% url 'admin_activity' %}?date={{ date_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if not action_filter %}active{% endif %}">
+                Tất cả thao tác
+            </a>
+            <a href="{% url 'admin_activity' %}?action=sensitive&date={{ date_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if action_filter == 'sensitive' %}active{% endif %}" style="{% if action_filter == 'sensitive' %}color: #f87171; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.15);{% endif %}">
+                ⚠️ Thao tác nhạy cảm
+            </a>
+            <a href="{% url 'admin_activity' %}?action=LOGIN&date={{ date_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if action_filter == 'LOGIN' %}active{% endif %}">
+                🔑 Đăng nhập
+            </a>
+            <a href="{% url 'admin_activity' %}?action=ORDER_CREATE&date={{ date_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if action_filter == 'ORDER_CREATE' %}active{% endif %}">
+                🍽️ Mở bàn / Gọi món
+            </a>
+            <a href="{% url 'admin_activity' %}?action=INVOICE_CREATE&date={{ date_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if action_filter == 'INVOICE_CREATE' %}active{% endif %}">
+                🧾 Thanh toán
+            </a>
+            <a href="{% url 'admin_activity' %}?action=STOCK_RECEIPT&date={{ date_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if action_filter == 'STOCK_RECEIPT' %}active{% endif %}">
+                📦 Kho hàng
+            </a>
+        </div>
+    </div>
+
+    <!-- # Danh sách Nhật ký Card -->
+    <div class="admin-content-area">
+        <div class="admin-card-list">
+            {% for log in logs %}
+            <div class="admin-card">
+                <div class="admin-card-top">
+                    <div>
+                        <h3 class="admin-card-title">
+                            <span>{% if log.action in 'CANCEL_ITEM,RETURN_ITEM,EDIT_PRICE,DELETE_INVOICE' %}⚠️{% elif log.action == 'LOGIN' %}🔑{% elif log.action == 'INVOICE_CREATE' %}💵{% else %}📝{% endif %}</span>
+                            <span>{% if log.actor %}{{ log.actor.profile.full_name|default:log.actor.username }}{% else %}Hệ thống{% endif %}</span>
+                        </h3>
+                        <span class="admin-card-subtitle">{% if log.actor %}@{{ log.actor.username }}{% else %}system{% endif %} • {{ log.created_at|date:'H:i:s d/m/Y' }}</span>
+                    </div>
+                    <span class="admin-card-badge {% if log.action in 'CANCEL_ITEM,RETURN_ITEM,EDIT_PRICE,DELETE_INVOICE' %}badge-red{% elif log.action == 'INVOICE_CREATE' %}badge-green{% elif log.action == 'LOGIN' %}badge-blue{% elif log.action == 'STOCK_RECEIPT' %}badge-yellow{% else %}badge-purple{% endif %}">
+                        {{ log.get_action_display }}
+                    </span>
+                </div>
+
+                <div style="font-size: 13px; color: #f1f5f9; line-height: 1.45; word-break: break-word;">
+                    {{ log.description }}
+                </div>
+
+                {% if log.ip_address %}
+                <div style="display: flex; justify-content: flex-end; font-size: 11px; color: #64748b; margin-top: 2px;">
+                    <span>IP: {{ log.ip_address }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="admin-empty-state">
+                <p>Không có hoạt động nào được ghi nhận theo tiêu chí tìm kiếm.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard/admin_subpages.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

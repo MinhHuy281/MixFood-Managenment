@@ -1,0 +1,447 @@
+/* # File này chịu trách nhiệm định nghĩa toàn bộ quy tắc Responsive (Mobile & Tablet từ 360px đến 768px), bảo toàn 100% giao diện Desktop (>= 1024px), chống tràn ngang, hỗ trợ Hamburger Menu trượt và tối ưu vùng chạm Touch UX (44x44px). */
+
+/* ==========================================================================
+   0. NGUYÊN TẮC BẢO TOÀN DESKTOP (>= 769px):
+   Ẩn hoàn toàn nút Hamburger và tiêu đề ngăn kéo Mobile trên màn hình lớn
+   ========================================================================== */
+.mobile-hamburger-btn,
+.mobile-drawer-header,
+.mobile-nav-backdrop {
+    display: none;
+}
+
+/* ==========================================================================
+   1. BREAKPOINT TABLET & MOBILE CHUNG: @media (max-width: 768px)
+   Áp dụng cho kích thước màn hình từ 360px đến 768px
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* --- 1.1. Khắc phục triệt để lỗi tràn ngang (Horizontal Scrollbar) --- */
+    html,
+    body {
+        overflow-x: hidden !important;
+        max-width: 100vw;
+        height: auto !important;
+    }
+
+    img,
+    video,
+    canvas,
+    svg.responsive-media,
+    .banner {
+        max-width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    /* Cuộn mượt trên cảm ứng cho mọi khung bảng dữ liệu dài */
+    .table-scroll,
+    .dishes-table-scroll,
+    .modal-dishes-table-scroll,
+    .invoice-report-table-scroll,
+    .user-admin-table-wrap,
+    .role-permission-table-wrap,
+    .activity-table-wrap,
+    .inv-table-scroll,
+    .rev-time-table-wrap,
+    .sales-stats-table-wrap,
+    .dining-table-scroll {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+
+    /* --- 1.2. Chuyển đổi bố cục (Layout Stacking) & Container 100% --- */
+    .page-shell,
+    .page-shell:not(.pos-shell),
+    .menu-admin-page-container,
+    .ingredient-admin-page-container,
+    .dining-admin-page-container,
+    .activity-page-container,
+    .login-wrapper,
+    .password-change-page-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+        box-sizing: border-box !important;
+    }
+
+    .pos-window {
+        height: auto !important;
+        min-height: 100vh;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+    }
+
+    /* Chuyển toàn bộ các Grid/Flex nhiều cột (2, 3, 4 cột) về 1 cột duy nhất */
+    .pos-layout,
+    .pos-layout.menu-visible,
+    .menu-workspace-grid,
+    .menu-modal-workspace,
+    .dining-workspace-grid,
+    .recipe-split-grid,
+    .user-admin-bottom-split,
+    .login-container,
+    .area-grid,
+    .form-row-2,
+    .form-row-3,
+    .inv-summary-cards,
+    .wh-kpi-strip {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+        height: auto !important;
+        gap: 14px !important;
+    }
+
+    .table-sidebar,
+    .order-column,
+    .menu-column,
+    .records-column,
+    .dishes-table-card,
+    .dish-form-card,
+    .modal-dishes-table-card,
+    .modal-dish-form-card,
+    .recipe-col-dishes,
+    .recipe-col-detail {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Header các trang quản lý xếp dọc gọn gàng */
+    .list-header,
+    .catalog-header,
+    .menu-admin-page-header,
+    .ingredient-page-header,
+    .dining-admin-page-header,
+    .invoice-report-filters-bar,
+    .activity-modal-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .header-right,
+    .header-actions,
+    .ingredient-page-top-actions,
+    .dining-header-right {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    /* --- 1.3. Giảm tỉ lệ kích thước font chữ tiêu đề (H1, H2, H3) --- */
+    h1,
+    .list-header h1,
+    .catalog-header h1,
+    .menu-admin-page-header h1,
+    .ingredient-page-title,
+    .dining-header-left h1,
+    .brand-heading h1 {
+        font-size: 20px !important;
+        line-height: 1.3 !important;
+        word-break: break-word;
+    }
+
+    h2,
+    .login-card-header h2,
+    .password-change-card h2,
+    .area-card h2 {
+        font-size: 17px !important;
+        line-height: 1.35 !important;
+    }
+
+    h3,
+    .menu-modal-header h3 {
+        font-size: 15px !important;
+        line-height: 1.35 !important;
+    }
+
+    /* --- 1.4. Điều hướng & Menu Mobile (Hamburger Slide-in Drawer) --- */
+    .topbar,
+    .pos-menubar {
+        position: sticky;
+        top: 0;
+        z-index: 10020;
+        height: auto !important;
+        min-height: 56px;
+        padding: 8px 14px !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+    }
+
+    .store-name,
+    .store-tag {
+        display: none !important;
+    }
+
+    /* Nút bấm Menu 3 gạch (Hamburger icon) đạt chuẩn 44x44px */
+    .mobile-hamburger-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        color: #ffffff;
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
+        margin-left: auto;
+        z-index: 10035;
+        transition: background 0.2s ease, transform 0.15s ease;
+    }
+
+    .mobile-hamburger-btn:active {
+        transform: scale(0.95);
+    }
+
+    .mobile-hamburger-btn .close-icon {
+        display: none;
+        font-size: 26px;
+    }
+
+    .mobile-hamburger-btn.is-active .hamburger-icon {
+        display: none;
+    }
+
+    .mobile-hamburger-btn.is-active .close-icon {
+        display: inline-block;
+    }
+
+    /* Lớp nền mờ khi mở Menu Mobile */
+    .mobile-nav-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(4px);
+        z-index: 10025;
+    }
+
+    .mobile-nav-backdrop[hidden] {
+        display: none !important;
+    }
+
+    /* Ẩn thanh menu dàn ngang của Desktop và chuyển thành ngăn kéo trượt (Slide-in Drawer) */
+    .topnav,
+    .pos-nav {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: min(320px, 86vw) !important;
+        height: 100vh !important;
+        background: #0f172a !important;
+        border-left: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: -12px 0 35px rgba(0, 0, 0, 0.55);
+        padding: 16px 14px 32px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        overflow-y: auto !important;
+        z-index: 10030 !important;
+        transform: translateX(105%);
+        visibility: hidden;
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s;
+    }
+
+    .topnav.is-open,
+    .pos-nav.is-open {
+        transform: translateX(0);
+        visibility: visible;
+    }
+
+    .mobile-drawer-header {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 6px 14px;
+        margin-bottom: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        color: #f8fafc;
+        font-size: 13px;
+        letter-spacing: 0.04em;
+    }
+
+    .mobile-drawer-close {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        font-size: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pos-menu-item {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pos-menu-item > .nav-menu-btn,
+    .topnav > a {
+        width: 100% !important;
+        min-height: 44px !important;
+        padding: 10px 14px !important;
+        justify-content: space-between !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Dropdown bên trong ngăn kéo Mobile hiển thị dạng danh sách phẳng dễ chạm */
+    .pos-menu-item .pos-dropdown {
+        position: static !important;
+        width: 100% !important;
+        margin-top: 6px !important;
+        box-shadow: none !important;
+        background: rgba(15, 23, 42, 0.75) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    /* --- 1.5. Trải nghiệm chạm (Touch UX >= 44px x 44px) --- */
+    button,
+    .primary-button,
+    .secondary-button,
+    .nav-menu-btn,
+    .dropdown-action,
+    .cat-pill,
+    .btn-dish-action,
+    .btn-cat-action,
+    .btn-user-crud,
+    .btn-perm-confirm,
+    .btn-perm-cancel,
+    .btn-reason-confirm,
+    .btn-reason-cancel,
+    .logout-btn,
+    input[type="text"],
+    input[type="number"],
+    input[type="password"],
+    input[type="date"],
+    input[type="search"],
+    select {
+        min-height: 44px !important;
+    }
+
+    .dialog-close,
+    .modal-close,
+    .btn-submodal-close,
+    .btn-toggle-pwd,
+    .btn-user-area-help {
+        min-width: 44px !important;
+        min-height: 44px !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* --- 1.6. Co giãn toàn bộ các Modal / Dialog vừa khít màn hình nhỏ --- */
+    .menu-modal-dialog,
+    .modern-dialog-container,
+    .user-admin-modal-container,
+    .role-permission-modal-container,
+    .permission-request-modal-container,
+    .activity-admin-modal-container,
+    .invoice-report-container,
+    .inv-manager-dialog,
+    .sales-stats-modal-container,
+    .rev-time-modal-container,
+    .dining-submodal-card {
+        width: calc(100vw - 20px) !important;
+        max-width: calc(100vw - 20px) !important;
+        max-height: 92vh !important;
+        margin: 10px auto !important;
+        box-sizing: border-box !important;
+    }
+
+    .user-form-row,
+    .perm-req-field-row {
+        grid-template-columns: 1fr !important;
+        gap: 6px !important;
+    }
+}
+
+/* ==========================================================================
+   2. BREAKPOINT ĐIỆN THOẠI NHỎ: @media (max-width: 480px)
+   Tối ưu sâu cho màn hình từ 360px đến 480px
+   ========================================================================== */
+@media (max-width: 480px) {
+    .page-shell,
+    .page-shell:not(.pos-shell),
+    .menu-admin-page-container,
+    .ingredient-admin-page-container,
+    .dining-admin-page-container,
+    .activity-page-container {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    h1,
+    .list-header h1,
+    .catalog-header h1,
+    .menu-admin-page-header h1,
+    .ingredient-page-title {
+        font-size: 18px !important;
+    }
+
+    h2 {
+        font-size: 16px !important;
+    }
+
+    /* Sơ đồ bàn ăn hiển thị 2 cột rõ ràng trên màn hình 360px */
+    .table-grid,
+    .managed-tables {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    /* Các nút thao tác cuối form trải đều 100% chiều ngang để bấm ngón cái dễ dàng */
+    .form-actions-row,
+    .modal-form-actions,
+    .user-form-actions,
+    .role-permission-actions,
+    .perm-req-actions,
+    .inv-reason-popup-actions,
+    .dialog-actions {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    .form-actions-row > *,
+    .modal-form-actions > *,
+    .user-form-actions > *,
+    .role-permission-actions > *,
+    .perm-req-actions > *,
+    .inv-reason-popup-actions > *,
+    .dialog-actions > * {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .account-menu .user-chip span:not(.avatar-dot) {
+        display: none;
+    }
+}

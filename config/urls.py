@@ -1,24 +1,60 @@
-"""
-URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+# File này chịu trách nhiệm định tuyến URL gốc (Root URLconf), kết nối URL của tất cả các phân hệ chức năng và cấu hình trang xử lý lỗi 403/404/500.
 from django.contrib import admin
 from django.urls import include, path
 
+from dashboard.admin_views import (
+    admin_activity_view,
+    admin_dining_save_api,
+    admin_dining_view,
+    admin_inventory_save_api,
+    admin_inventory_view,
+    admin_live_api,
+    admin_live_dashboard,
+    admin_login_view,
+    admin_logout_view,
+    admin_menu_save_api,
+    admin_menu_view,
+    admin_permissions_save_api,
+    admin_permissions_view,
+    admin_recipes_view,
+    admin_table_detail_api,
+    admin_users_delete_api,
+    admin_users_save_api,
+    admin_users_view,
+)
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # Admin Live Remote Dashboard (100% Mobile & Real-time Live User Monitoring)
+    path('admin/login/', admin_login_view, name='admin_login'),
+    path('admin/logout/', admin_logout_view, name='admin_logout'),
+    path('admin/', admin_live_dashboard, name='admin_live_dashboard'),
+    path('admin/live-api/', admin_live_api, name='admin_live_api'),
+    path('admin/table-detail/<int:table_id>/', admin_table_detail_api, name='admin_table_detail_api'),
+
+    # Phân hệ Quản trị Admin Mobile riêng biệt (100% Mobile-first, không dính phiên POS)
+    path('admin/users/', admin_users_view, name='admin_users'),
+    path('admin/api/users/save/', admin_users_save_api, name='admin_users_save_api'),
+    path('admin/api/users/delete/<int:user_id>/', admin_users_delete_api, name='admin_users_delete_api'),
+
+    path('admin/permissions/', admin_permissions_view, name='admin_permissions'),
+    path('admin/api/permissions/save/', admin_permissions_save_api, name='admin_permissions_save_api'),
+
+    path('admin/activity/', admin_activity_view, name='admin_activity'),
+
+    path('admin/inventory/', admin_inventory_view, name='admin_inventory'),
+    path('admin/api/inventory/save/', admin_inventory_save_api, name='admin_inventory_save_api'),
+
+    path('admin/menu/', admin_menu_view, name='admin_menu'),
+    path('admin/api/menu/save/', admin_menu_save_api, name='admin_menu_save_api'),
+
+    path('admin/recipes/', admin_recipes_view, name='admin_recipes'),
+
+    path('admin/dining/', admin_dining_view, name='admin_dining'),
+    path('admin/api/dining/save/', admin_dining_save_api, name='admin_dining_save_api'),
+
+    # Django Models Admin gốc (vẫn bảo toàn nguyên vẹn tại /admin/django/)
+    path('admin/django/', admin.site.urls),
+
     path('accounts/', include('accounts.urls', namespace='accounts')),
     path('catalog/', include('catalog.urls', namespace='catalog')),
     path('dining/', include('dining.urls', namespace='dining')),

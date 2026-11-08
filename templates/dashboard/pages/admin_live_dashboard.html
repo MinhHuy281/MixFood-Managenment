@@ -1,0 +1,390 @@
+<!-- # File này chịu trách nhiệm hiển thị giao diện Admin Live Remote Dashboard (/admin/) chuẩn Mobile-First 100%, hỗ trợ theo dõi trực tiếp hoạt động của User theo thời gian thực và quản trị hệ thống từ xa. -->
+{% extends 'base.html' %}
+{% load static %}
+{% load menu_tags %}
+{% block title %}Admin Live Monitor - MixFood 2026{% endblock %}
+{% block body_class %}admin-live-body{% endblock %}
+{% block page_class %}admin-live-shell{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/admin_live.css' %}?v={% now 'U' %}">
+{% endblock %}
+
+{% block authenticated_header %}
+<!-- # Không nạp topbar mặc định của trang thường để tối ưu 100% diện tích cho màn hình di động Admin -->
+{% endblock %}
+
+{% block content %}
+<div class="admin-live-wrapper" id="admin-live-app">
+    <!-- # HEADER APP BAR (Tối ưu cho Smartphone) -->
+    <header class="admin-live-header">
+        <div class="header-main-row">
+            <div class="admin-brand-wrap">
+                <span class="live-status-dot pulse" title="Kết nối trực tiếp thời gian thực"></span>
+                <div class="brand-text-block">
+                    <h1>MIXFOOD ADMIN</h1>
+                    <span class="brand-sub">Live Monitor • POS 13255</span>
+                </div>
+            </div>
+
+            <div class="header-action-group">
+                <div class="live-clock-badge" id="live-clock">
+                    {{ current_time|date:'H:i:s' }}
+                </div>
+                <button type="button" class="btn-live-toggle active" id="btn-toggle-sync" title="Bật/Tắt tự động cập nhật">
+                    <span class="icon-radar">📡</span>
+                    <span class="toggle-text">Live Sync</span>
+                </button>
+                <button type="button" class="btn-live-audio active" id="btn-toggle-sound" title="Bật/Tắt âm báo khi có thao tác nhạy cảm">
+                    <span class="icon-audio" id="audio-icon">🔔</span>
+                </button>
+                <a href="{% url 'admin_logout' %}" class="btn-admin-logout" title="Đăng xuất Admin">
+                    <span>🚪</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- # 4 KPI CARDS TRỰC QUAN (Swipe mượt trên điện thoại) -->
+        <div class="kpi-scroll-container">
+            <!-- # Card 1: Doanh thu thực tế đã thu hôm nay -->
+            <div class="kpi-card card-revenue">
+                <div class="kpi-icon-wrap">💰</div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Doanh thu hôm nay</span>
+                    <strong class="kpi-value" id="kpi-val-revenue">{{ kpi_revenue_today }}</strong>
+                    <small class="kpi-sub" id="kpi-sub-invoices">{{ kpi_paid_count }} hóa đơn đã thu</small>
+                </div>
+            </div>
+
+            <!-- # Card 2: Bàn đang phục vụ -->
+            <div class="kpi-card card-tables">
+                <div class="kpi-icon-wrap">🪑</div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Bàn đang có khách</span>
+                    <strong class="kpi-value" id="kpi-val-tables">{{ kpi_occupied_count }}/{{ kpi_total_tables }}</strong>
+                    <small class="kpi-sub" id="kpi-sub-pending">Chờ thu: <span id="kpi-val-pending">{{ kpi_pending_amount }}</span></small>
+                </div>
+            </div>
+
+            <!-- # Card 3: Cảnh báo thao tác nhạy cảm -->
+            <div class="kpi-card card-sensitive {% if kpi_sensitive_count > 0 %}has-alert{% endif %}" id="card-sensitive">
+                <div class="kpi-icon-wrap">⚠️</div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Cảnh báo nhạy cảm</span>
+                    <strong class="kpi-value" id="kpi-val-sensitive">{{ kpi_sensitive_count }}</strong>
+                    <small class="kpi-sub">Hủy món, sửa giá, xóa đơn</small>
+                </div>
+            </div>
+
+            <!-- # Card 4: Trạng thái hệ thống -->
+            <div class="kpi-card card-user">
+                <div class="kpi-icon-wrap">🛡️</div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Quyền quản trị</span>
+                    <strong class="kpi-value">{{ user.get_full_name|default:user.username }}</strong>
+                    <small class="kpi-sub">Server: 127.0.0.1 (Đang mở)</small>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- # THANH ĐIỀU HƯỚNG TAB CHÍNH (Segmented Control) -->
+    <nav class="admin-tab-bar" aria-label="Điều hướng giám sát">
+        <button type="button" class="tab-btn active" data-tab="tab-feed">
+            <span class="tab-icon">📡</span>
+            <span class="tab-title">Live Feed</span>
+            <span class="tab-badge" id="feed-unread-badge" hidden>0</span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="tab-tables">
+            <span class="tab-icon">🪑</span>
+            <span class="tab-title">Sơ đồ bàn</span>
+            <span class="tab-indicator" id="table-active-dot"></span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="tab-kpis">
+            <span class="tab-icon">📊</span>
+            <span class="tab-title">Doanh số</span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="tab-hub">
+            <span class="tab-icon">⚡</span>
+            <span class="tab-title">Quản trị</span>
+        </button>
+    </nav>
+
+    <!-- # NỘI DUNG CHÍNH CỦA CÁC TAB -->
+    <main class="admin-tab-content">
+        <!-- ================================================================= -->
+        <!-- TAB 1: DÒNG SỰ KIỆN LIVE FEED THỜI GIAN THỰC -->
+        <!-- ================================================================= -->
+        <section class="tab-pane active" id="tab-feed">
+            <div class="feed-filter-bar">
+                <div class="filter-chips-scroll">
+                    <button type="button" class="chip-filter active" data-filter="all">Tất cả</button>
+                    <button type="button" class="chip-filter chip-sensitive" data-filter="sensitive">⚠️ Cảnh báo nhạy cảm</button>
+                    <button type="button" class="chip-filter" data-filter="payment">💰 Thanh toán</button>
+                    <button type="button" class="chip-filter" data-filter="table">🪑 Bàn & Đơn</button>
+                    <button type="button" class="chip-filter" data-filter="menu">📑 Thực đơn</button>
+                </div>
+
+                <div class="feed-search-wrap">
+                    <input type="search" id="feed-search-input" placeholder="Tìm tên nhân viên, hành động, lý do..." autocomplete="off">
+                </div>
+            </div>
+
+            <!-- # Danh sách các sự kiện được cập nhật liên tục -->
+            <div class="live-feed-list" id="live-feed-list">
+                {% for log in recent_logs %}
+                <article class="feed-item {% if log.action in 'cancel_item,return_item,edit_price,delete_invoice,edit_invoice,delete_order' %}item-sensitive{% endif %}"
+                         data-id="{{ log.id }}"
+                         data-action="{{ log.action }}"
+                         data-actor="{{ log.display_actor }}"
+                         data-sensitive="{% if log.action in 'cancel_item,return_item,edit_price,delete_invoice,edit_invoice,delete_order' %}true{% else %}false{% endif %}">
+                    <div class="feed-item-header">
+                        <div class="feed-actor-info">
+                            <span class="feed-actor-avatar">{{ log.display_actor|slice:":1"|upper }}</span>
+                            <div>
+                                <strong class="feed-actor-name">{{ log.display_actor }}</strong>
+                                <span class="feed-time-text">{{ log.formatted_time }}</span>
+                            </div>
+                        </div>
+                        <span class="feed-action-badge" data-dyn-bg="{{ log.action_color }}">{{ log.get_action_display }}</span>
+                    </div>
+
+                    <div class="feed-item-body">
+                        <p class="feed-description">{{ log.description }}</p>
+                        {% if log.reason %}
+                        <div class="feed-reason-box">
+                            <span class="reason-label">Lý do:</span>
+                            <span class="reason-val">{{ log.reason }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </article>
+                {% empty %}
+                <div class="feed-empty-state">
+                    <span class="empty-icon">📡</span>
+                    <p>Chưa có thao tác nào được ghi nhận hôm nay.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 2: SƠ ĐỒ BÀN ĂN & ĐƠN HÀNG TRỰC TIẾP -->
+        <!-- ================================================================= -->
+        <section class="tab-pane" id="tab-tables">
+            <div class="tables-tab-header">
+                <div class="area-filter-scroll" id="area-filter-chips">
+                    <button type="button" class="area-chip active" data-area="all">Tất cả khu vực</button>
+                    {% for area in areas %}
+                    <button type="button" class="area-chip" data-area="{{ area.id }}">{{ area.name }}</button>
+                    {% endfor %}
+                </div>
+                <div class="tables-summary-line">
+                    Nhấn vào bàn đang có khách để xem nhanh hóa đơn và các món đang ăn.
+                </div>
+            </div>
+
+            <div class="live-tables-grid" id="live-tables-container">
+                {% for area in areas %}
+                    {% for table in area.tables.all %}
+                    <div class="admin-table-card table-status-{{ table.status }}"
+                         data-table-id="{{ table.id }}"
+                         data-area-id="{{ area.id }}"
+                         data-status="{{ table.status }}">
+                        <div class="table-card-top">
+                            <span class="table-badge-name">{{ table.name }}</span>
+                            <span class="table-badge-status">{{ table.get_status_display }}</span>
+                        </div>
+                        <div class="table-card-body">
+                            <small class="table-area-text">{{ area.name }} • {{ table.capacity }} chỗ</small>
+                            <div class="table-order-preview">
+                                {% if table.status == 'occupied' %}
+                                <div class="occupied-indicator">
+                                    <span class="badge-active-pulse"></span>
+                                    <span>Đang gọi món</span>
+                                </div>
+                                <span class="table-view-detail-hint">Bấm xem chi tiết &gt;</span>
+                                {% elif table.status == 'reserved' %}
+                                <span class="text-muted">Đã đặt trước</span>
+                                {% else %}
+                                <span class="text-available">Bàn sẵn sàng</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 3: DOANH SỐ & TIẾN ĐỘ CA BÁN HÀNG -->
+        <!-- ================================================================= -->
+        <section class="tab-pane" id="tab-kpis">
+            <div class="kpis-tab-content">
+                <div class="metric-block-card">
+                    <h3>Tổng hợp doanh thu ca hiện tại</h3>
+                    <div class="metric-big-number" id="detail-rev-today">{{ kpi_revenue_today }}</div>
+                    <p class="metric-note">Doanh thu thực tế đã thanh toán và in hóa đơn thành công trong ngày.</p>
+                </div>
+
+                <div class="metric-grid-2col">
+                    <div class="sub-metric-card">
+                        <span class="sub-label">Số hóa đơn hoàn tất</span>
+                        <strong class="sub-value" id="detail-paid-count">{{ kpi_paid_count }} đơn</strong>
+                    </div>
+                    <div class="sub-metric-card">
+                        <span class="sub-label">Tạm tính chờ thu</span>
+                        <strong class="sub-value text-amber" id="detail-pending-amount">{{ kpi_pending_amount }}</strong>
+                    </div>
+                    <div class="sub-metric-card">
+                        <span class="sub-label">Tỷ lệ kín bàn</span>
+                        <strong class="sub-value text-primary" id="detail-occupied-ratio">{{ kpi_occupied_count }}/{{ kpi_total_tables }} bàn</strong>
+                    </div>
+                    <div class="sub-metric-card">
+                        <span class="sub-label">Thao tác nhạy cảm</span>
+                        <strong class="sub-value text-danger" id="detail-sensitive-count">{{ kpi_sensitive_count }} lượt</strong>
+                    </div>
+                </div>
+
+                <div class="quick-nav-reports">
+                    <a href="{% url 'sales:invoices' %}" class="btn-goto-report">
+                        <span>🧾 Xem toàn bộ Sổ hóa đơn thanh toán</span>
+                        <span>&rarr;</span>
+                    </a>
+                    <a href="{% url 'dashboard:reports' %}" class="btn-goto-report">
+                        <span>📊 Mở Báo cáo doanh thu & cuối ngày</span>
+                        <span>&rarr;</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 4: TRUNG TÂM QUẢN TRỊ ADMIN (FULL SUPERPOWERS) -->
+        <!-- ================================================================= -->
+        <section class="tab-pane" id="tab-hub">
+            <div class="admin-hub-grid">
+                <div class="hub-section-title">QUẢN LÝ NGƯỜI DÙNG & BẢO MẬT</div>
+                <div class="hub-links-group">
+                    <a href="{% url 'admin_users' %}" class="hub-tile">
+                        <span class="hub-tile-icon">👤</span>
+                        <div class="hub-tile-text">
+                            <strong>Người dùng hệ thống</strong>
+                            <small>Thêm, sửa, đặt lại mật khẩu nhân viên</small>
+                        </div>
+                    </a>
+                    <a href="{% url 'admin_permissions' %}" class="hub-tile">
+                        <span class="hub-tile-icon">🛡️</span>
+                        <div class="hub-tile-text">
+                            <strong>Phân quyền sử dụng (11 quyền)</strong>
+                            <small>Cấu hình quyền hủy món, sửa giá, khóa tính năng</small>
+                        </div>
+                    </a>
+                    <a href="{% url 'admin_activity' %}" class="hub-tile">
+                        <span class="hub-tile-icon">📋</span>
+                        <div class="hub-tile-text">
+                            <strong>Nhật ký hoạt động toàn diện</strong>
+                            <small>Tra cứu lịch sử thao tác toàn thời gian & xuất Excel</small>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="hub-section-title">KINH DOANH & KHO HÀNG</div>
+                <div class="hub-links-group">
+                    <a href="{% url 'admin_inventory' %}" class="hub-tile">
+                        <span class="hub-tile-icon">📦</span>
+                        <div class="hub-tile-text">
+                            <strong>Quản lý kho hàng 3 khu vực</strong>
+                            <small>Tồn kho thực tế, xuất tách Thùng -> Hộp chờ bán</small>
+                        </div>
+                    </a>
+                    <a href="{% url 'admin_menu' %}" class="hub-tile">
+                        <span class="hub-tile-icon">🍽️</span>
+                        <div class="hub-tile-text">
+                            <strong>Thực đơn & Bảng giá món</strong>
+                            <small>Cài đặt danh mục món, giá bán 1-2-3</small>
+                        </div>
+                    </a>
+                    <a href="{% url 'admin_recipes' %}" class="hub-tile">
+                        <span class="hub-tile-icon">⚖️</span>
+                        <div class="hub-tile-text">
+                            <strong>Định lượng nguyên liệu (BOM)</strong>
+                            <small>Cấu hình công thức chế biến & trừ kho tự động</small>
+                        </div>
+                    </a>
+                    <a href="{% url 'admin_dining' %}" class="hub-tile">
+                        <span class="hub-tile-icon">🪑</span>
+                        <div class="hub-tile-text">
+                            <strong>Khu vực & Bàn ăn</strong>
+                            <small>Sơ đồ bàn, thêm tầng và số lượng chỗ ngồi</small>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="hub-section-title">HỆ THỐNG GỐC DJANGO</div>
+                <div class="hub-links-group">
+                    <a href="/admin/django/" class="hub-tile hub-tile-django" target="_blank" rel="noopener">
+                        <span class="hub-tile-icon">⚙️</span>
+                        <div class="hub-tile-text">
+                            <strong>Django Models Admin gốc</strong>
+                            <small>Quản trị trực tiếp Database CSDL các bảng</small>
+                        </div>
+                    </a>
+                    <a href="{% url 'dashboard:home' %}" class="hub-tile hub-tile-pos">
+                        <span class="hub-tile-icon">🖥️</span>
+                        <div class="hub-tile-text">
+                            <strong>Chuyển sang Màn hình Bán hàng POS</strong>
+                            <small>Mở giao diện thu ngân và phục vụ tại quán</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- # MODAL XEM CHI TIẾT ĐƠN HÀNG CỦA BÀN ĐANG PHỤC VỤ (MOBILE POPUP) -->
+    <div class="admin-modal-backdrop" id="modal-table-detail" hidden>
+        <div class="admin-modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-table-detail-title">
+            <div class="admin-modal-header">
+                <div>
+                    <h3 id="modal-table-detail-title">Chi tiết bàn</h3>
+                    <small class="text-muted" id="modal-table-detail-sub">Đang tải...</small>
+                </div>
+                <button type="button" class="btn-admin-modal-close" id="btn-close-table-modal" aria-label="Đóng">&times;</button>
+            </div>
+
+            <div class="admin-modal-body" id="modal-table-detail-body">
+                <div class="table-modal-loading">Đang tải chi tiết các món...</div>
+            </div>
+
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-modal-action-close" id="btn-modal-cancel">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- # BOTTOM NAVIGATION BAR CHO SMARTPHONE (< 768px) -->
+    <nav class="admin-bottom-nav">
+        <button type="button" class="bottom-nav-item active" data-tab="tab-feed">
+            <span class="bottom-nav-icon">📡</span>
+            <span class="bottom-nav-label">Live Feed</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="tab-tables">
+            <span class="bottom-nav-icon">🪑</span>
+            <span class="bottom-nav-label">Sơ đồ bàn</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="tab-kpis">
+            <span class="bottom-nav-icon">📊</span>
+            <span class="bottom-nav-label">Doanh số</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="tab-hub">
+            <span class="bottom-nav-icon">⚡</span>
+            <span class="bottom-nav-label">Quản trị</span>
+        </button>
+    </nav>
+</div>
+
+<!-- # Core Admin Live Script -->
+<script src="{% static 'js/dashboard/admin_live.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm định tuyến URL cho trang quản lý Khu vực & Điểm bàn, các API thêm/sửa/xóa và nhập/xuất Excel.
 from django.urls import path
 
 from . import views

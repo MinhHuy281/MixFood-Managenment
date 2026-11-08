@@ -1,3 +1,4 @@
+<!-- # File này chịu trách nhiệm hiển thị trang Danh sách Hóa đơn bán hàng độc lập với bộ lọc tra cứu đa tiêu chí, phân trang và xuất Excel. -->
 {% extends 'base.html' %}
 {% load static %}
 {% load menu_tags %}
@@ -5,7 +6,7 @@
 
 {% block content %}
 <div class="invoice-report-page-container">
-    <!-- Page Header -->
+    <!-- # Page Header -->
     <div class="invoice-report-page-header">
         <div class="header-left">
             <p class="eyebrow">BÁO CÁO / DOANH THU BÁN HÀNG</p>
@@ -24,7 +25,7 @@
         </div>
     </div>
 
-    <!-- Filter Bar Card -->
+    <!-- # Filter Bar Card -->
     <div class="invoice-report-filters-card">
         <form method="get" action="{% url 'sales:invoices' %}" id="page-invoice-filter-form" class="invoice-report-filters">
             <div class="filter-group date-filter">
@@ -94,26 +95,26 @@
         </form>
     </div>
 
-    <!-- Data Table Card -->
+    <!-- # Data Table Card -->
     <div class="invoice-report-card">
         <div class="invoice-report-table-wrap">
             <table class="invoice-report-table">
                 <thead>
                     <tr>
-                        <th style="width: 80px;">Số HĐ</th>
-                        <th style="width: 145px;">Thời gian</th>
-                        <th style="width: 110px;">Nhân viên</th>
-                        <th style="width: 95px;" class="text-right">Tiền món</th>
-                        <th style="width: 70px;" class="text-right">Tiền giờ</th>
-                        <th style="width: 70px;" class="text-right">Phụ thu</th>
-                        <th style="width: 85px;" class="text-right">Giảm giá</th>
-                        <th style="width: 60px;" class="text-right">VAT</th>
-                        <th style="width: 105px;" class="text-right">Thành tiền</th>
-                        <th style="width: 120px;">Kiểu thanh toán</th>
-                        <th style="width: 95px;">Khu vực</th>
-                        <th style="width: 80px;">Điểm bàn</th>
+                        <th class="u-sale-588c2dd8">Số HĐ</th>
+                        <th class="u-sale-bbe67bc2">Thời gian</th>
+                        <th class="u-sale-3e280fa7">Nhân viên</th>
+                        <th class="text-right u-sale-683ede6d">Tiền món</th>
+                        <th class="text-right u-sale-40430a3c">Tiền giờ</th>
+                        <th class="text-right u-sale-40430a3c">Phụ thu</th>
+                        <th class="text-right u-sale-a4a5ac1d">Giảm giá</th>
+                        <th class="text-right u-sale-902c6d16">VAT</th>
+                        <th class="text-right u-sale-62019642">Thành tiền</th>
+                        <th class="u-sale-b15addac">Kiểu thanh toán</th>
+                        <th class="u-sale-683ede6d">Khu vực</th>
+                        <th class="u-sale-588c2dd8">Điểm bàn</th>
                         <th>Các món / Ghi chú</th>
-                        <th style="width: 85px;" class="text-center">Thao tác</th>
+                        <th class="text-center u-sale-a4a5ac1d">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -170,7 +171,7 @@
                                 <span class="order-note-text">- {{ order.note }}</span>
                             {% endif %}
                         </td>
-                        <td class="text-center" style="width: 85px;">
+                        <td class="text-center u-sale-a4a5ac1d">
                             <button type="button" class="btn-inv-row-edit" data-code="{{ invoice.invoice_code }}" title="Sửa hóa đơn #{{ invoice.invoice_code }}">
                                 ✏️ Sửa
                             </button>
@@ -191,7 +192,7 @@
             </table>
         </div>
 
-        <!-- Footer / Pagination & Summary -->
+        <!-- # Footer / Pagination & Summary -->
         <div class="invoice-report-footer">
             <div class="footer-pagination">
                 {% if invoices.has_previous %}
@@ -229,26 +230,6 @@
 </div>
 
 {% include 'sales/modals/invoice_edit_modal.html' %}
-<script src="{% static 'js/invoice_editor.js' %}?v={% now 'U' %}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.invoice-row-clickable').forEach(tr => {
-        const code = tr.dataset.code;
-        tr.addEventListener('dblclick', () => {
-            if (window.openInvoiceEditor) window.openInvoiceEditor(code);
-        });
-        tr.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            if (window.openInvoiceEditor) window.openInvoiceEditor(code);
-        });
-    });
-    document.querySelectorAll('.btn-inv-row-edit').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const code = btn.dataset.code;
-            if (window.openInvoiceEditor) window.openInvoiceEditor(code);
-        });
-    });
-});
-</script>
+<script src="{% static 'js/sales/invoice_editor.js' %}?v={% now 'U' %}"></script>
+<script src="{% static 'js/sales/invoice_list.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

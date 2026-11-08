@@ -1,0 +1,188 @@
+<!-- # File này chịu trách nhiệm hiển thị giao diện Quản lý Người dùng hệ thống trên Mobile cho Admin (/admin/users/), hỗ trợ tra cứu, phân quyền bộ phận và khóa tài khoản từ xa. -->
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Người dùng hệ thống - Admin Mobile | MixFood 2026{% endblock %}
+{% block body_class %}admin-subpage-body{% endblock %}
+{% block page_class %}admin-subpage-shell{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/admin_subpages.css' %}?v={% now 'U' %}">
+{% endblock %}
+
+{% block authenticated_header %}
+<!-- # Không nạp topbar POS desktop để giữ trọn vẹn diện tích cho Mobile Admin -->
+{% endblock %}
+
+{% block content %}
+<div class="admin-subpage-shell">
+    <!-- # Header Top Bar -->
+    <header class="admin-subpage-header">
+        <div class="admin-header-left">
+            <a href="{% url 'admin_live_dashboard' %}" class="admin-back-btn" title="Về Giám sát Live">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <div>
+                <h1 class="admin-subpage-title">Người dùng hệ thống</h1>
+                <span class="admin-subpage-badge">{{ users|length }} tài khoản</span>
+            </div>
+        </div>
+        <button type="button" class="admin-btn-add" id="btn-open-add-user">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Thêm mới</span>
+        </button>
+    </header>
+
+    <!-- # Toolbar Tìm kiếm & Lọc -->
+    <div class="admin-toolbar-wrap">
+        <form method="get" action="{% url 'admin_users' %}" class="admin-search-form">
+            <span class="admin-search-icon">🔍</span>
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Tìm theo tên, username..." class="admin-search-input">
+            {% if selected_dept %}
+            <input type="hidden" name="dept" value="{{ selected_dept }}">
+            {% endif %}
+        </form>
+
+        <div class="admin-filter-scroll">
+            <a href="{% url 'admin_users' %}{% if search_query %}?q={{ search_query }}{% endif %}" class="admin-filter-pill {% if not selected_dept %}active{% endif %}">
+                Tất cả bộ phận
+            </a>
+            {% for code, label in dept_choices %}
+            <a href="{% url 'admin_users' %}?dept={{ code }}{% if search_query %}&q={{ search_query }}{% endif %}" class="admin-filter-pill {% if selected_dept == code %}active{% endif %}">
+                {{ label }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- # Card List -->
+    <div class="admin-content-area">
+        <div class="admin-card-list">
+            {% for u in users %}
+            <div class="admin-card">
+                <div class="admin-card-top">
+                    <div>
+                        <h3 class="admin-card-title">
+                            <span>👤</span>
+                            <span>{{ u.full_name }}</span>
+                        </h3>
+                        <span class="admin-card-subtitle">@{{ u.username }}</span>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <span class="admin-card-badge {% if u.department == 'Owner' or u.department == 'Manager' or u.department == 'Admin' %}badge-purple{% elif u.department == 'Cashier' %}badge-blue{% elif u.department == 'Kitchen' %}badge-yellow{% else %}badge-green{% endif %}">
+                            {{ u.department_display }}
+                        </span>
+                        {% if u.is_active %}
+                        <span class="admin-card-badge badge-green">Hoạt động</span>
+                        {% else %}
+                        <span class="admin-card-badge badge-red">Đã khóa</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="admin-card-details">
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Số điện thoại</span>
+                        <span class="admin-detail-value">{{ u.phone|default:'Chưa cập nhật' }}</span>
+                    </div>
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Phân quyền gốc</span>
+                        <span class="admin-detail-value">
+                            {% if u.is_superuser %}Super Admin{% elif u.is_staff %}Quản lý (Staff){% else %}Nhân viên{% endif %}
+                        </span>
+                    </div>
+                    <div class="admin-detail-item">
+                        <span class="admin-detail-label">Ngày tham gia</span>
+                        <span class="admin-detail-value">{{ u.date_joined }}</span>
+                    </div>
+                </div>
+
+                <div class="admin-card-actions">
+                    <button type="button" class="admin-btn-action btn-action-edit btn-edit-user"
+                            data-id="{{ u.id }}"
+                            data-username="{{ u.username }}"
+                            data-fullname="{{ u.full_name }}"
+                            data-phone="{{ u.phone }}"
+                            data-dept="{{ u.department }}"
+                            data-active="{{ u.is_active|yesno:'1,0' }}">
+                        <span>✏️ Sửa</span>
+                    </button>
+                    {% if u.id != request.user.id and u.is_active %}
+                    <button type="button" class="admin-btn-action btn-action-delete btn-lock-user" data-id="{{ u.id }}" data-username="{{ u.username }}">
+                        <span>🔒 Khóa</span>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="admin-empty-state">
+                <p>Không tìm thấy người dùng nào phù hợp với bộ lọc.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- # MODAL THÊM / SỬA NGƯỜI DÙNG -->
+<div class="admin-modal-backdrop" id="modal-user-form" hidden>
+    <div class="admin-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-user-title">
+        <div class="admin-modal-header">
+            <h3 id="modal-user-title">Thêm nhân viên mới</h3>
+            <button type="button" class="admin-modal-close" data-dismiss="modal">&times;</button>
+        </div>
+        <form id="form-user-save">
+            {% csrf_token %}
+            <input type="hidden" name="user_id" id="inp-user-id" value="">
+            <div class="admin-modal-body">
+                <div class="admin-form-row">
+                    <label for="inp-user-name">Tên đăng nhập (*)</label>
+                    <input type="text" name="username" id="inp-user-name" class="admin-form-input" required placeholder="ví dụ: thungan2">
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-user-fullname">Họ và tên nhân viên (*)</label>
+                    <input type="text" name="full_name" id="inp-user-fullname" class="admin-form-input" required placeholder="ví dụ: Nguyễn Văn An">
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-user-password" id="lbl-user-password">Mật khẩu (*)</label>
+                    <input type="password" name="password" id="inp-user-password" class="admin-form-input" placeholder="Mật khẩu tối thiểu 4 ký tự">
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-user-phone">Số điện thoại</label>
+                    <input type="tel" name="phone" id="inp-user-phone" class="admin-form-input" placeholder="ví dụ: 0905123456">
+                </div>
+                <div class="admin-form-row">
+                    <label for="inp-user-dept">Bộ phận / Vị trí</label>
+                    <select name="department" id="inp-user-dept" class="admin-form-select">
+                        {% for code, label in dept_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="admin-switch-row" style="margin-top: 6px;">
+                    <div class="admin-switch-info">
+                        <span class="admin-switch-title">Kích hoạt tài khoản</span>
+                        <span class="admin-switch-desc">Cho phép nhân viên đăng nhập vào hệ thống</span>
+                    </div>
+                    <label class="admin-toggle-switch">
+                        <input type="checkbox" name="is_active" id="inp-user-active" checked>
+                        <span class="admin-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="admin-btn-cancel" data-dismiss="modal">Hủy</button>
+                <button type="submit" class="admin-btn-save">Lưu tài khoản</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard/admin_subpages.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

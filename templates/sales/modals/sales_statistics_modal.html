@@ -1,7 +1,7 @@
-<!-- MODAL: THỐNG KÊ BÁN HÀNG CHUẨN F&B POS 2026 -->
+<!-- # File này chịu trách nhiệm hiển thị hộp thoại Thống kê bán hàng chi tiết (Sales Statistics Modal) theo thu ngân, khu vực, bàn, nhóm món và mặt hàng. -->
 <div class="menu-modal-backdrop" id="modal-sales-statistics" hidden>
     <div class="menu-modal-dialog sales-stats-modal-container">
-        <!-- Modal Header -->
+        <!-- # Modal Header -->
         <div class="menu-modal-header sales-stats-modal-header">
             <div class="modal-title-wrap">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -14,7 +14,7 @@
             <button type="button" class="dialog-close" id="sales-stats-modal-close" aria-label="Đóng">&times;</button>
         </div>
 
-        <!-- Filter & Actions Toolbar -->
+        <!-- # Filter & Actions Toolbar -->
         <div class="sales-stats-toolbar">
             <div class="sales-stats-datetime-group">
                 <div class="field-item">
@@ -58,21 +58,21 @@
             </div>
         </div>
 
-        <!-- Modal Body: Split 2 Columns -->
+        <!-- # Modal Body: Split 2 Columns -->
         <div class="sales-stats-body">
-            <!-- LEFT SECTION (Nhân viên, Khu vực, Kiểu thanh toán, Điểm bàn) -->
+            <!-- # LEFT SECTION (Nhân viên, Khu vực, Kiểu thanh toán, Điểm bàn) -->
             <div class="sales-stats-left-section">
-                <!-- Row 1: Nhân viên & Khu vực -->
+                <!-- # Row 1: Nhân viên & Khu vực -->
                 <div class="sales-stats-grid-row">
-                    <!-- Table 1: Nhân viên -->
+                    <!-- # Table 1: Nhân viên -->
                     <div class="stats-card-table">
                         <div class="stats-card-scroll">
                             <table class="stats-table">
                                 <thead>
                                     <tr>
                                         <th>Nhân viên</th>
-                                        <th style="width: 70px;" class="text-right">Số h/đơn</th>
-                                        <th style="width: 105px;" class="text-right">Doanh thu (đ)</th>
+                                        <th class="text-right u-sale-40430a3c">Số h/đơn</th>
+                                        <th class="text-right u-sale-62019642">Doanh thu (đ)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sales-stats-cashiers-tbody">
@@ -82,15 +82,15 @@
                         </div>
                     </div>
 
-                    <!-- Table 2: Khu vực -->
+                    <!-- # Table 2: Khu vực -->
                     <div class="stats-card-table">
                         <div class="stats-card-scroll">
                             <table class="stats-table">
                                 <thead>
                                     <tr>
                                         <th>Khu vực</th>
-                                        <th style="width: 70px;" class="text-right">Số h/đơn</th>
-                                        <th style="width: 105px;" class="text-right">Doanh thu (đ)</th>
+                                        <th class="text-right u-sale-40430a3c">Số h/đơn</th>
+                                        <th class="text-right u-sale-62019642">Doanh thu (đ)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sales-stats-areas-tbody">
@@ -101,17 +101,17 @@
                     </div>
                 </div>
 
-                <!-- Row 2: Kiểu thanh toán & Điểm bàn -->
+                <!-- # Row 2: Kiểu thanh toán & Điểm bàn -->
                 <div class="sales-stats-grid-row">
-                    <!-- Table 3: Kiểu thanh toán -->
+                    <!-- # Table 3: Kiểu thanh toán -->
                     <div class="stats-card-table">
                         <div class="stats-card-scroll">
                             <table class="stats-table">
                                 <thead>
                                     <tr>
                                         <th>Kiểu thanh toán</th>
-                                        <th style="width: 70px;" class="text-right">Số h/đơn</th>
-                                        <th style="width: 105px;" class="text-right">Doanh thu (đ)</th>
+                                        <th class="text-right u-sale-40430a3c">Số h/đơn</th>
+                                        <th class="text-right u-sale-62019642">Doanh thu (đ)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sales-stats-payments-tbody">
@@ -121,15 +121,15 @@
                         </div>
                     </div>
 
-                    <!-- Table 4: Điểm bàn -->
+                    <!-- # Table 4: Điểm bàn -->
                     <div class="stats-card-table">
                         <div class="stats-card-scroll">
                             <table class="stats-table">
                                 <thead>
                                     <tr>
                                         <th>Điểm bàn</th>
-                                        <th style="width: 70px;" class="text-right">Số h/đơn</th>
-                                        <th style="width: 105px;" class="text-right">Doanh thu (đ)</th>
+                                        <th class="text-right u-sale-40430a3c">Số h/đơn</th>
+                                        <th class="text-right u-sale-62019642">Doanh thu (đ)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sales-stats-tables-tbody">
@@ -141,21 +141,21 @@
                 </div>
             </div>
 
-            <!-- RIGHT SECTION (Danh sách món đã bán & Nhóm món / Loại món) -->
+            <!-- # RIGHT SECTION (Danh sách món đã bán & Nhóm món / Loại món) -->
             <div class="sales-stats-right-section">
-                <!-- Top Right: Danh sách món đã bán -->
+                <!-- # Top Right: Danh sách món đã bán -->
                 <div class="stats-card-table dishes-card-table">
                     <div class="stats-card-scroll dishes-scroll">
                         <table class="stats-table dishes-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 32px;" class="text-center" id="th-dish-mark">M</th>
+                                    <th class="text-center u-sale-4c81df2f" id="th-dish-mark">M</th>
                                     <th>Tên món</th>
-                                    <th style="width: 55px;" class="text-center">ĐVT</th>
-                                    <th style="width: 60px;" class="text-center">Số lượng</th>
-                                    <th style="width: 55px;" class="text-center">Số giảm</th>
-                                    <th style="width: 90px;" class="text-right">Tiền giảm (đ)</th>
-                                    <th style="width: 110px;" class="text-right">Doanh thu (đ)</th>
+                                    <th class="text-center u-sale-a7436d68">ĐVT</th>
+                                    <th class="text-center u-sale-902c6d16">Số lượng</th>
+                                    <th class="text-center u-sale-a7436d68">Số giảm</th>
+                                    <th class="text-right u-sale-459fa5f4">Tiền giảm (đ)</th>
+                                    <th class="text-right u-sale-3e280fa7">Doanh thu (đ)</th>
                                 </tr>
                             </thead>
                             <tbody id="sales-stats-dishes-tbody">
@@ -165,16 +165,16 @@
                     </div>
                 </div>
 
-                <!-- Bottom Right: Nhóm món & Loại món -->
+                <!-- # Bottom Right: Nhóm món & Loại món -->
                 <div class="sales-stats-grid-row bottom-categories-row">
-                    <!-- Table 5: Nhóm món -->
+                    <!-- # Table 5: Nhóm món -->
                     <div class="stats-card-table">
                         <div class="stats-card-scroll small-category-scroll">
                             <table class="stats-table">
                                 <thead>
                                     <tr>
                                         <th>Nhóm món</th>
-                                        <th style="width: 110px;" class="text-right">Doanh thu (đ)</th>
+                                        <th class="text-right u-sale-3e280fa7">Doanh thu (đ)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sales-stats-groups-tbody">
@@ -184,14 +184,14 @@
                         </div>
                     </div>
 
-                    <!-- Table 6: Loại món -->
+                    <!-- # Table 6: Loại món -->
                     <div class="stats-card-table">
                         <div class="stats-card-scroll small-category-scroll">
                             <table class="stats-table">
                                 <thead>
                                     <tr>
                                         <th>Loại món</th>
-                                        <th style="width: 110px;" class="text-right">Doanh thu (đ)</th>
+                                        <th class="text-right u-sale-3e280fa7">Doanh thu (đ)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sales-stats-types-tbody">
@@ -204,7 +204,7 @@
             </div>
         </div>
 
-        <!-- Modal Footer: Summary & Profit Calculation -->
+        <!-- # Modal Footer: Summary & Profit Calculation -->
         <div class="sales-stats-footer">
             <div class="footer-summary-left">
                 <div class="summary-line-top">
@@ -222,4 +222,3 @@
         </div>
     </div>
 </div>
-

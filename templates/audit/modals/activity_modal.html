@@ -1,9 +1,9 @@
-<!-- Modal: Nhật ký hoạt động - Admin khớp chuẩn POS SaaS 2026 -->
+<!-- # File này chịu trách nhiệm hiển thị hộp thoại Nhật ký hoạt động hệ thống (Activity Log Modal) trên màn hình POS để tra cứu lịch sử thao tác theo thời gian thực. -->
 <div class="menu-modal-backdrop" id="pos-activity-admin-modal" hidden>
     <div class="menu-modal-dialog activity-admin-modal-container">
-        <!-- Modal Header -->
+        <!-- # Modal Header -->
         <div class="menu-modal-header activity-modal-header">
-            <div class="modal-title-wrap" style="color: #ffffff;">
+            <div class="modal-title-wrap u-audi-33e85a31">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14 2 14 8 20 8"/>
@@ -11,12 +11,12 @@
                     <line x1="16" y1="17" x2="8" y2="17"/>
                     <polyline points="10 9 9 9 8 9"/>
                 </svg>
-                <h3 style="color: #ffffff !important;">Nhật ký hoạt động - {{ request.user.get_username|default:"Admin" }}</h3>
+                <h3 class="u-audi-1f22ecc1">Nhật ký hoạt động - {{ request.user.get_username|default:"Admin" }}</h3>
             </div>
             <button type="button" class="dialog-close" id="pos-activity-modal-close" aria-label="Đóng">&times;</button>
         </div>
 
-        <!-- Filter Toolbar (Từ ngày, Đến ngày, Loại hoạt động, Nhân viên, Nhật ký gọi món) -->
+        <!-- # Filter Toolbar (Từ ngày, Đến ngày, Loại hoạt động, Nhân viên, Nhật ký gọi món) -->
         <div class="activity-modal-toolbar">
             <div class="activity-date-range">
                 <label for="pos-activity-date-from">Từ</label>
@@ -63,15 +63,15 @@
             </div>
         </div>
 
-        <!-- Table Data -->
+        <!-- # Table Data -->
         <div class="activity-modal-table-container">
             <table class="activity-modal-table" id="pos-activity-table">
                 <thead>
                     <tr>
-                        <th style="width: 175px;">Thời điểm</th>
-                        <th style="width: 175px;">Hoạt động</th>
+                        <th class="u-audi-66433d4d">Thời điểm</th>
+                        <th class="u-audi-66433d4d">Hoạt động</th>
                         <th>Chi tiết</th>
-                        <th style="width: 150px;">Thực hiện</th>
+                        <th class="u-audi-c25159cb">Thực hiện</th>
                     </tr>
                 </thead>
                 <tbody id="pos-activity-tbody">
@@ -82,7 +82,7 @@
             </table>
         </div>
 
-        <!-- Footer -->
+        <!-- # Footer -->
         <div class="activity-modal-footer">
             <div class="activity-footer-summary">
                 <span id="pos-activity-count">Đang tải...</span>
@@ -99,4 +99,3 @@
         </div>
     </div>
 </div>
-

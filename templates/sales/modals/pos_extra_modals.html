@@ -1,0 +1,235 @@
+<!-- # File này chịu trách nhiệm hiển thị hệ thống Modal đồng bộ cho các chức năng mở rộng trên POS: Mở két đựng tiền, Thiết bị POS, Bảo trì dữ liệu, Khách hàng, Sổ thu chi tiền mặt, Quản lý công nợ, Phân công bàn ca, Báo cáo và Trợ giúp. -->
+<style>
+/* # CSS đồng bộ giao diện MixFood Cloud POS 2026 cho Modal tính năng mở rộng */
+.pos-hub-dialog {
+    width: min(1080px, 95vw) !important;
+    max-height: 90vh !important;
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.38);
+}
+.pos-hub-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f8fafc;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.pos-hub-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.pos-hub-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+.pos-hub-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+    flex: 1;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.pos-hub-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+}
+.pos-hub-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.pos-hub-kpi-card .kpi-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+.pos-hub-kpi-card .kpi-val {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.pos-hub-kpi-card.emerald .kpi-val { color: #059669; }
+.pos-hub-kpi-card.blue .kpi-val { color: #2563eb; }
+.pos-hub-kpi-card.amber .kpi-val { color: #d97706; }
+.pos-hub-kpi-card.rose .kpi-val { color: #e11d48; }
+
+.pos-hub-form-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+.pos-hub-form-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pos-hub-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+.pos-hub-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.pos-hub-field label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #475569;
+}
+.pos-hub-field input,
+.pos-hub-field select {
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 13px;
+    color: #0f172a;
+    background: #fff;
+}
+.pos-hub-field input:focus,
+.pos-hub-field select:focus {
+    outline: none;
+    border-color: #059669;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
+}
+.pos-hub-btn {
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+.pos-hub-btn.primary {
+    background: #059669;
+    color: #ffffff;
+}
+.pos-hub-btn.primary:hover {
+    background: #047857;
+}
+.pos-hub-btn.secondary {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+.pos-hub-btn.secondary:hover {
+    background: #cbd5e1;
+}
+.pos-hub-btn.danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.pos-hub-btn.danger:hover {
+    background: #fecaca;
+}
+.pos-hub-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.pos-hub-table-wrap {
+    max-height: 340px;
+    overflow-y: auto;
+}
+.pos-hub-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.pos-hub-table th {
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 700;
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.pos-hub-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    vertical-align: middle;
+}
+.pos-hub-table tr:hover td {
+    background: #f8fafc;
+}
+.pos-hub-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.pos-hub-pill.green { background: #d1fae5; color: #065f46; }
+.pos-hub-pill.red { background: #fee2e2; color: #991b1b; }
+.pos-hub-pill.blue { background: #dbeafe; color: #1e40af; }
+.pos-hub-pill.amber { background: #fef3c7; color: #92400e; }
+.pos-hub-footer {
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+</style>
+
+<div class="menu-modal-backdrop" id="modal-pos-feature-hub" data-api-url="{% url 'sales:pos_features_api' %}" data-backup-url="{% url 'sales:pos_backup_download_api' %}" hidden>
+    <div class="menu-modal-dialog pos-hub-dialog" role="dialog" aria-modal="true">
+        <div class="pos-hub-header">
+            <div class="pos-hub-title-wrap">
+                <span class="pos-hub-badge" id="pos-hub-badge">MIXFOOD POS 2026</span>
+                <h3 id="pos-hub-title" style="margin: 0; font-size: 16px; font-weight: 700; color: #fff;">Chức năng Hệ thống POS</h3>
+            </div>
+            <button type="button" class="dialog-close" id="pos-hub-close" style="color: #fff; font-size: 22px; background: transparent; border: none; cursor: pointer;" aria-label="Đóng">&times;</button>
+        </div>
+
+        <div class="pos-hub-body" id="pos-hub-body">
+            <!-- Nội dung động của từng chức năng sẽ được render tại đây -->
+        </div>
+
+        <div class="pos-hub-footer">
+            <span id="pos-hub-status-hint" style="font-size: 12.5px; color: #64748b;">Hệ thống MixFood Cloud POS 2026 • Đồng bộ dữ liệu thời gian thực</span>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" class="pos-hub-btn secondary" id="pos-hub-close-btn">Đóng cửa sổ (Esc)</button>
+            </div>
+        </div>
+    </div>
+</div>

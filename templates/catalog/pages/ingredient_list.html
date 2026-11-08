@@ -1,9 +1,11 @@
+<!-- # File này chịu trách nhiệm hiển thị trang Quản lý Mặt hàng Nguyên liệu (Admin) chia theo 3 Kho, hỗ trợ thêm/sửa/xóa, cấu hình quy cách Thùng -> Hộp và nhập/xuất Excel. -->
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Mặt hàng - Admin | MixFood Manager{% endblock %}
 
 {% block content %}
 <div class="ingredient-admin-page-container">
-    <!-- Topbar Banner -->
+    <!-- # Topbar Banner -->
     <div class="ingredient-page-header">
         <div class="ingredient-page-title-wrap">
             <span class="ingredient-page-icon">📦</span>
@@ -25,29 +27,29 @@
         </div>
     </div>
 
-    <!-- Alert Banner -->
-    <div id="page-ing-alert" class="menu-alert-banner" style="margin-bottom: 16px;" hidden></div>
+    <!-- # Alert Banner -->
+    <div id="page-ing-alert" class="menu-alert-banner u-cata-d3277930" hidden></div>
 
-    <!-- Main Card -->
+    <!-- # Main Card -->
     <div class="ingredient-page-card">
-        <!-- 3 KHO TABS SWITCHER -->
-        <div class="pos-wh-tabs-container" style="display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; align-items: center; flex-wrap: wrap;">
-            <span style="font-size: 13px; font-weight: 800; color: #475569; margin-right: 6px;">🏢 KHU VỰC KHO:</span>
-            <button type="button" class="btn-page-wh-tab {% if current_warehouse == 'all' %}active{% endif %}" data-wh="all" style="padding: 7px 15px; border-radius: 6px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #0f172a; background: {% if current_warehouse == 'all' %}#0f172a{% else %}#ffffff{% endif %}; color: {% if current_warehouse == 'all' %}#ffffff{% else %}#0f172a{% endif %}; cursor: pointer;">
+        <!-- # 3 KHO TABS SWITCHER -->
+        <div class="pos-wh-tabs-container u-cata-ce8c1a9e">
+            <span class="u-cata-b6413f46">🏢 KHU VỰC KHO:</span>
+            <button type="button" class="btn-page-wh-tab {% if current_warehouse == 'all' %}active{% endif %} u-cata-e54d8f61" data-wh="all" data-dyn-bg="{% if current_warehouse == 'all' %}#0f172a{% else %}#ffffff{% endif %}" data-dyn-color="{% if current_warehouse == 'all' %}#ffffff{% else %}#0f172a{% endif %}">
                 🌐 Tất cả kho (<span id="page-wh-count-all">{{ warehouse_counts.all }}</span>)
             </button>
-            <button type="button" class="btn-page-wh-tab {% if current_warehouse == 'fresh' %}active{% endif %}" data-wh="fresh" style="padding: 7px 15px; border-radius: 6px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #86efac; background: {% if current_warehouse == 'fresh' %}#16a34a{% else %}#f0fdf4{% endif %}; color: {% if current_warehouse == 'fresh' %}#ffffff{% else %}#166534{% endif %}; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-page-wh-tab {% if current_warehouse == 'fresh' %}active{% endif %} u-cata-7ee4cbaa" data-wh="fresh" data-dyn-bg="{% if current_warehouse == 'fresh' %}#16a34a{% else %}#f0fdf4{% endif %}" data-dyn-color="{% if current_warehouse == 'fresh' %}#ffffff{% else %}#166534{% endif %}">
                 🥦 Kho 1: Tươi sống & Rau củ (<span id="page-wh-count-fresh">{{ warehouse_counts.fresh }}</span>)
             </button>
-            <button type="button" class="btn-page-wh-tab {% if current_warehouse == 'dry' %}active{% endif %}" data-wh="dry" style="padding: 7px 15px; border-radius: 6px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #fde68a; background: {% if current_warehouse == 'dry' %}#d97706{% else %}#fffbeb{% endif %}; color: {% if current_warehouse == 'dry' %}#ffffff{% else %}#b45309{% endif %}; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-page-wh-tab {% if current_warehouse == 'dry' %}active{% endif %} u-cata-117be679" data-wh="dry" data-dyn-bg="{% if current_warehouse == 'dry' %}#d97706{% else %}#fffbeb{% endif %}" data-dyn-color="{% if current_warehouse == 'dry' %}#ffffff{% else %}#b45309{% endif %}">
                 🥫 Kho 2: Khô, Gia vị & Bao bì (<span id="page-wh-count-dry">{{ warehouse_counts.dry }}</span>)
             </button>
-            <button type="button" class="btn-page-wh-tab {% if current_warehouse == 'beverage' %}active{% endif %}" data-wh="beverage" style="padding: 7px 15px; border-radius: 6px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #93c5fd; background: {% if current_warehouse == 'beverage' %}#2563eb{% else %}#eff6ff{% endif %}; color: {% if current_warehouse == 'beverage' %}#ffffff{% else %}#1d4ed8{% endif %}; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-page-wh-tab {% if current_warehouse == 'beverage' %}active{% endif %} u-cata-79945c96" data-wh="beverage" data-dyn-bg="{% if current_warehouse == 'beverage' %}#2563eb{% else %}#eff6ff{% endif %}" data-dyn-color="{% if current_warehouse == 'beverage' %}#ffffff{% else %}#1d4ed8{% endif %}">
                 🍹 Kho 3: Đồ uống & Trái cây (<span id="page-wh-count-beverage">{{ warehouse_counts.beverage }}</span>)
             </button>
         </div>
 
-        <!-- Filter Toolbar -->
+        <!-- # Filter Toolbar -->
         <div class="ingredient-toolbar">
             <div class="ingredient-search-wrap">
                 <input type="text" id="page-ing-search" class="ingredient-search-input" value="{{ query }}" placeholder="🔍 Tìm tên mặt hàng hoặc mã...">
@@ -64,18 +66,18 @@
             </div>
         </div>
 
-        <!-- Table Container -->
+        <!-- # Table Container -->
         <div class="ingredient-table-container">
             <table class="ingredient-data-table" id="page-ing-table">
                 <thead>
                     <tr>
-                        <th style="width: 13%;">Khu vực kho</th>
-                        <th style="width: 26%;">Tên mặt hàng / Mã</th>
-                        <th style="width: 7%; text-align: center;">ĐVT</th>
-                        <th style="width: 16%; text-align: left;">Quy cách tách lẻ</th>
-                        <th style="width: 10%; text-align: right;">Tồn kho</th>
-                        <th style="width: 15%; text-align: left;">Suất chờ bán</th>
-                        <th style="width: 13%; text-align: right;">Giá nhập (đ)</th>
+                        <th class="u-cata-adbe3ed4">Khu vực kho</th>
+                        <th class="u-cata-4e12908f">Tên mặt hàng / Mã</th>
+                        <th class="u-cata-df4207e5">ĐVT</th>
+                        <th class="u-cata-c85ddc6c">Quy cách tách lẻ</th>
+                        <th class="u-cata-659522f4">Tồn kho</th>
+                        <th class="u-cata-c92ff1f5">Suất chờ bán</th>
+                        <th class="u-cata-7424fdc7">Giá nhập (đ)</th>
                     </tr>
                 </thead>
                 <tbody id="page-ing-tbody">
@@ -83,29 +85,29 @@
                     <tr data-id="{{ ing.id }}" class="ingredient-row">
                         <td>
                             {% if ing.storage_area == 'fresh' %}
-                            <span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 800; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">🥦 Kho 1: Tươi</span>
+                            <span class="u-cata-d5a199c7">🥦 Kho 1: Tươi</span>
                             {% elif ing.storage_area == 'dry' %}
-                            <span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 800; background: #fffbeb; color: #d97706; border: 1px solid #fde68a;">🥫 Kho 2: Khô & GV</span>
+                            <span class="u-cata-ef8dd943">🥫 Kho 2: Khô & GV</span>
                             {% else %}
-                            <span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 800; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">🍹 Kho 3: Nước & Quả</span>
+                            <span class="u-cata-b9e03bab">🍹 Kho 3: Nước & Quả</span>
                             {% endif %}
                         </td>
                         <td>
                             <strong>{{ ing.name }}</strong>
-                            <span class="text-muted" style="font-size: 11px; margin-left: 6px;">({{ ing.code }})</span>
-                            <div style="font-size: 11.5px; color: #64748b;">{{ ing.group|default:'-' }}</div>
+                            <span class="text-muted u-cata-89dfc8a2">({{ ing.code }})</span>
+                            <div class="u-cata-a59e8d6b">{{ ing.group|default:'-' }}</div>
                         </td>
-                        <td style="text-align: center; font-weight: 700;">{{ ing.unit }}</td>
+                        <td class="u-cata-ca52a61f">{{ ing.unit }}</td>
                         <td>
-                            <span style="display: inline-block; background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 2px 7px; border-radius: 6px; font-size: 11.5px; font-weight: 700;">
+                            <span class="u-cata-3eac16e0">
                                 📦 {{ ing.pack_rule_display }}
                             </span>
                         </td>
-                        <td style="text-align: right; font-weight: 700;">{{ ing.current_stock_formatted }}</td>
-                        <td style="text-align: left; font-weight: 700; color: #0284c7;">
+                        <td class="u-cata-e225c700">{{ ing.current_stock_formatted }}</td>
+                        <td class="u-cata-04b1eaf9">
                             ⏳ {{ ing.portions_wait_display }}
                         </td>
-                        <td style="text-align: right; font-weight: 700; color: #d97706;">{{ ing.cost_vnd }}</td>
+                        <td class="u-cata-61b75845">{{ ing.cost_vnd }}</td>
                     </tr>
                     {% empty %}
                     <tr>
@@ -116,7 +118,7 @@
             </table>
         </div>
 
-        <!-- Card Footer -->
+        <!-- # Card Footer -->
         <div class="ingredient-modal-footer">
             <div class="ingredient-footer-status">
                 <span id="page-ing-count">{{ total_count }} mặt hàng</span>
@@ -125,63 +127,63 @@
     </div>
 </div>
 
-<!-- Submodal Thêm/Sửa Mặt hàng -->
-<div class="dining-submodal-overlay" id="page-submodal-ingredient" hidden style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 10000;">
-    <div class="dining-submodal-card" style="background: #ffffff; width: 540px; max-width: 95vw; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
-        <div class="dining-submodal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 18px;">📦</span>
-                <h4 id="page-submodal-ing-title" style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">Thêm mặt hàng mới</h4>
+<!-- # Submodal Thêm/Sửa Mặt hàng -->
+<div class="dining-submodal-overlay u-cata-cc58ebcd" id="page-submodal-ingredient" hidden>
+    <div class="dining-submodal-card u-cata-bed5bd3e">
+        <div class="dining-submodal-header u-cata-89682d08">
+            <div class="u-cata-bd9db1cb">
+                <span class="u-cata-768e1f23">📦</span>
+                <h4 class="u-cata-5d565ebe" id="page-submodal-ing-title">Thêm mặt hàng mới</h4>
             </div>
-            <button type="button" class="btn-submodal-close" id="page-submodal-ing-close" style="font-size: 22px; cursor: pointer; color: #94a3b8; border: none; background: none; line-height: 1; padding: 0 4px;">&times;</button>
+            <button type="button" class="btn-submodal-close u-cata-aa7964ed" id="page-submodal-ing-close">&times;</button>
         </div>
-        <form id="page-form-ingredient" style="display: flex; flex-direction: column;">
+        <form class="u-cata-a4196e09" id="page-form-ingredient">
             <input type="hidden" id="page-ing-id">
-            <div class="dining-submodal-body" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; background: #ffffff;">
-                <div class="form-row" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 0;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Khu vực Kho lưu trữ <span class="text-danger" style="color: #ef4444;">*</span></label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                        <label style="display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1.5px solid #86efac; background: #f0fdf4; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #166534;">
-                            <input type="radio" name="page-ing-storage-area" value="fresh" checked style="accent-color: #16a34a;">
+            <div class="dining-submodal-body u-cata-7a3ccd4b">
+                <div class="form-row u-cata-a3c5bf2e">
+                    <label class="u-cata-85902042">Khu vực Kho lưu trữ <span class="text-danger u-cata-ecc5dd78">*</span></label>
+                    <div class="u-cata-1c111cdf">
+                        <label class="u-cata-505351e1">
+                            <input class="u-cata-fb4bf204" type="radio" name="page-ing-storage-area" value="fresh" checked>
                             <span>🥦 Kho 1: Tươi</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1.5px solid #fde68a; background: #fffbeb; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #b45309;">
-                            <input type="radio" name="page-ing-storage-area" value="dry" style="accent-color: #d97706;">
+                        <label class="u-cata-da9bf1fe">
+                            <input class="u-cata-af064275" type="radio" name="page-ing-storage-area" value="dry">
                             <span>🥫 Kho 2: Khô & GV</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1.5px solid #93c5fd; background: #eff6ff; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #1d4ed8;">
-                            <input type="radio" name="page-ing-storage-area" value="beverage" style="accent-color: #2563eb;">
+                        <label class="u-cata-294b51c0">
+                            <input class="u-cata-b0e0db18" type="radio" name="page-ing-storage-area" value="beverage">
                             <span>🍹 Kho 3: Nước & Quả</span>
                         </label>
                     </div>
                 </div>
 
-                <div class="form-row" style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 0;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Nhóm mặt hàng</label>
-                    <input type="text" id="page-ing-group" class="form-input" list="page-ing-group-datalist" placeholder="Ví dụ: Nông sản, Pha chế, Thịt cá, Đồ khô..." style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; outline: none;">
+                <div class="form-row u-cata-71b972cf">
+                    <label class="u-cata-85902042">Nhóm mặt hàng</label>
+                    <input type="text" id="page-ing-group" class="form-input u-cata-76e4a2f7" list="page-ing-group-datalist" placeholder="Ví dụ: Nông sản, Pha chế, Thịt cá, Đồ khô...">
                     <datalist id="page-ing-group-datalist">
                         {% for g in groups %}<option value="{{ g }}">{% endfor %}
                     </datalist>
                 </div>
-                <div class="form-row" style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 0;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Tên mặt hàng <span class="text-danger" style="color: #ef4444;">*</span></label>
-                    <input type="text" id="page-ing-name" class="form-input" required placeholder="Ví dụ: Chanh quả, Đường trắng, Thịt bò phi lê..." style="width: 100%; height: 40px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-weight: 600; outline: none;">
+                <div class="form-row u-cata-71b972cf">
+                    <label class="u-cata-85902042">Tên mặt hàng <span class="text-danger u-cata-ecc5dd78">*</span></label>
+                    <input type="text" id="page-ing-name" class="form-input u-cata-06ea6d51" required placeholder="Ví dụ: Chanh quả, Đường trắng, Thịt bò phi lê...">
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-col" style="display: flex; flex-direction: column; gap: 5px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Mã mặt hàng</label>
-                            <button type="button" id="page-btn-auto-ing-code" style="background: none; border: none; color: #0284c7; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 0;">⚡ Tự sinh mã</button>
+                <div class="u-cata-38f68199">
+                    <div class="form-col u-cata-d24beb37">
+                        <div class="u-cata-948e6d6e">
+                            <label class="u-cata-85902042">Mã mặt hàng</label>
+                            <button class="u-cata-9c210798" type="button" id="page-btn-auto-ing-code">⚡ Tự sinh mã</button>
                         </div>
-                        <input type="text" id="page-ing-code" class="form-input" placeholder="Tự sinh nếu trống (MH001...)" style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-family: monospace; font-weight: 700; text-transform: uppercase; outline: none;">
+                        <input type="text" id="page-ing-code" class="form-input u-cata-7ac6d649" placeholder="Tự sinh nếu trống (MH001...)">
                     </div>
-                    <div class="form-col" style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Đơn vị tính (ĐVT) <span class="text-danger" style="color: #ef4444;">*</span></label>
-                        <input type="text" id="page-ing-unit" class="form-input" value="Kg" required placeholder="Kg, Gram, Lít, Gói..." style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: 700; text-align: center; outline: none;">
+                    <div class="form-col u-cata-d24beb37">
+                        <label class="u-cata-85902042">Đơn vị tính (ĐVT) <span class="text-danger u-cata-ecc5dd78">*</span></label>
+                        <input type="text" id="page-ing-unit" class="form-input u-cata-859fc57f" value="Kg" required placeholder="Kg, Gram, Lít, Gói...">
                     </div>
                 </div>
-                <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                    <span style="font-size: 11.5px; color: #94a3b8; font-weight: 600;">Chọn nhanh ĐVT:</span>
+                <div class="u-cata-cc4e66c2">
+                    <span class="u-cata-719ae9ea">Chọn nhanh ĐVT:</span>
                     <button type="button" class="btn-pos-ing-unit-chip" data-unit="Thùng">Thùng</button>
                     <button type="button" class="btn-pos-ing-unit-chip" data-unit="Vỉ">Vỉ</button>
                     <button type="button" class="btn-pos-ing-unit-chip" data-unit="Hộp">Hộp</button>
@@ -192,54 +194,54 @@
                     <button type="button" class="btn-pos-ing-unit-chip" data-unit="Lon">Lon</button>
                     <button type="button" class="btn-pos-ing-unit-chip" data-unit="Chai">Chai</button>
                 </div>
-                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
-                    <label style="font-size: 12.5px; font-weight: 800; color: #92400e; margin: 0;">
+                <div class="u-cata-dc369d6b">
+                    <label class="u-cata-fec4ffca">
                         📦 Quy cách đóng gói & Tách lẻ chờ bán (1 ĐVT Kho tách ra bao nhiêu phần/hộp/quả?)
                     </label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <span style="font-size: 11.5px; font-weight: 700; color: #b45309;">Số lượng tách ra từ 1 ĐVT kho:</span>
-                            <input type="number" id="page-ing-pack-size" class="form-input" value="10" min="1" step="0.5" style="width: 100%; height: 36px; padding: 0 10px; border: 1px solid #f59e0b; border-radius: 6px; font-size: 14px; font-weight: 800; text-align: center; color: #b45309; background: #ffffff;">
+                    <div class="u-cata-bb5ff478">
+                        <div class="u-cata-5bcf4cf5">
+                            <span class="u-cata-8ca21c93">Số lượng tách ra từ 1 ĐVT kho:</span>
+                            <input type="number" id="page-ing-pack-size" class="form-input u-cata-b9af983a" value="10" min="1" step="0.5">
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <span style="font-size: 11.5px; font-weight: 700; color: #0369a1;">Đơn vị lẻ sau khi tách (chờ bán):</span>
-                            <input type="text" id="page-ing-unpacked-unit" class="form-input" value="phần" style="width: 100%; height: 36px; padding: 0 10px; border: 1px solid #38bdf8; border-radius: 6px; font-size: 13.5px; font-weight: 800; text-align: center; color: #0284c7; background: #ffffff;">
+                        <div class="u-cata-5bcf4cf5">
+                            <span class="u-cata-1c6770bf">Đơn vị lẻ sau khi tách (chờ bán):</span>
+                            <input type="text" id="page-ing-unpacked-unit" class="form-input u-cata-0b412ecf" value="phần">
                         </div>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-col" style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Giá nhập chuẩn (đ)</label>
-                        <input type="text" id="page-ing-cost" class="form-input" value="0" placeholder="0" style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-weight: 700; text-align: right; color: #d97706; outline: none;">
+                <div class="u-cata-38f68199">
+                    <div class="form-col u-cata-d24beb37">
+                        <label class="u-cata-85902042">Giá nhập chuẩn (đ)</label>
+                        <input type="text" id="page-ing-cost" class="form-input u-cata-9b1530db" value="0" placeholder="0">
                     </div>
-                    <div class="form-col" style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Cảnh báo tồn tối thiểu</label>
-                        <input type="number" step="0.001" min="0" id="page-ing-min-stock" class="form-input" value="0.000" style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; text-align: right; font-weight: 600; outline: none;">
+                    <div class="form-col u-cata-d24beb37">
+                        <label class="u-cata-85902042">Cảnh báo tồn tối thiểu</label>
+                        <input type="number" step="0.001" min="0" id="page-ing-min-stock" class="form-input u-cata-5c797120" value="0.000">
                     </div>
                 </div>
-                <div class="form-row" style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 0;">
-                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">Nhà cung cấp / Ghi chú</label>
-                    <input type="text" id="page-ing-supplier" class="form-input" placeholder="Tên nhà phân phối / xuất xứ..." style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; outline: none;">
+                <div class="form-row u-cata-71b972cf">
+                    <label class="u-cata-85902042">Nhà cung cấp / Ghi chú</label>
+                    <input type="text" id="page-ing-supplier" class="form-input u-cata-76e4a2f7" placeholder="Tên nhà phân phối / xuất xứ...">
                 </div>
             </div>
-            <div class="dining-submodal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" class="btn-modal-cancel" id="page-submodal-ing-cancel" style="padding: 8px 18px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 600; font-size: 13.5px; border-radius: 6px; cursor: pointer;">Bỏ qua</button>
-                <button type="submit" class="btn-modal-save" id="page-btn-save-ing" style="padding: 8px 24px; border: none; background: #f97316; color: #ffffff; font-weight: 800; font-size: 13.5px; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3); display: inline-flex; align-items: center; gap: 6px;">✓ Đồng ý</button>
+            <div class="dining-submodal-footer u-cata-b4f0d389">
+                <button type="button" class="btn-modal-cancel u-cata-4d1105e3" id="page-submodal-ing-cancel">Bỏ qua</button>
+                <button type="submit" class="btn-modal-save u-cata-14c6fd61" id="page-btn-save-ing">✓ Đồng ý</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Submodal Nhập dữ liệu từ Excel -->
+<!-- # Submodal Nhập dữ liệu từ Excel -->
 <div class="dining-submodal-overlay" id="page-submodal-ing-excel" hidden>
-    <div class="dining-submodal-card" style="max-width: 600px;">
+    <div class="dining-submodal-card u-cata-4d1e5c7d">
         <div class="dining-submodal-header">
             <h4>Nhập dữ liệu Mặt hàng từ Excel</h4>
             <button type="button" class="btn-submodal-close" id="page-submodal-ing-excel-close">&times;</button>
         </div>
         <form id="page-form-ing-excel">
             <div class="dining-submodal-body">
-                <p class="modal-help-text" style="margin-bottom: 12px; font-size: 13px; color: #64748b; line-height: 1.5;">
+                <p class="modal-help-text u-cata-926d5d16">
                     Bạn có thể tải lên file <strong>.csv</strong> hoặc sao chép và dán trực tiếp dữ liệu từ Excel.<br>
                     <strong>Cấu trúc cột:</strong> <code>Nhóm | Tên mặt hàng | ĐVT | Giá nhập | Cảnh báo tồn</code>
                 </p>
@@ -259,336 +261,5 @@
         </form>
     </div>
 </div>
-
-<script>
-    (function() {
-        const csrfToken = () => {
-            const match = document.cookie.match(/csrftoken=([^;]+)/);
-            return match ? match[1] : '';
-        };
-
-        let selectedId = null;
-        let ingredientsData = [];
-        let currentWarehouse = 'all';
-
-        const alertBanner = document.getElementById('page-ing-alert');
-        const searchInput = document.getElementById('page-ing-search');
-        const groupFilter = document.getElementById('page-ing-group-filter');
-        const tbody = document.getElementById('page-ing-tbody');
-        const countSpan = document.getElementById('page-ing-count');
-
-        const submodalIng = document.getElementById('page-submodal-ingredient');
-        const submodalExcel = document.getElementById('page-submodal-ing-excel');
-
-        function showAlert(msg, type = 'success') {
-            if (!alertBanner) return;
-            alertBanner.textContent = msg;
-            alertBanner.className = `menu-alert-banner alert-${type}`;
-            alertBanner.hidden = false;
-            setTimeout(() => { alertBanner.hidden = true; }, 4000);
-        }
-
-        async function loadData() {
-            const q = searchInput.value.trim();
-            const g = groupFilter.value;
-            const params = new URLSearchParams();
-            if (q) params.set('q', q);
-            if (g) params.set('group', g);
-            if (currentWarehouse && currentWarehouse !== 'all') params.set('warehouse', currentWarehouse);
-
-            try {
-                const res = await fetch(`/catalog/ingredients/api/list/?${params.toString()}`);
-                const data = await res.json();
-                ingredientsData = data.ingredients || [];
-
-                if (data.warehouse_counts) {
-                    const c = data.warehouse_counts;
-                    if (document.getElementById('page-wh-count-all')) document.getElementById('page-wh-count-all').textContent = c.all;
-                    if (document.getElementById('page-wh-count-fresh')) document.getElementById('page-wh-count-fresh').textContent = c.fresh;
-                    if (document.getElementById('page-wh-count-dry')) document.getElementById('page-wh-count-dry').textContent = c.dry;
-                    if (document.getElementById('page-wh-count-beverage')) document.getElementById('page-wh-count-beverage').textContent = c.beverage;
-                }
-
-                renderTable();
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        function renderTable() {
-            countSpan.textContent = `${ingredientsData.length} mặt hàng`;
-            if (ingredientsData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="empty-table-row">Không tìm thấy mặt hàng nào trong kho này.</td></tr>';
-                selectedId = null;
-                return;
-            }
-
-            tbody.innerHTML = ingredientsData.map(ing => {
-                let whBadge = '';
-                if (ing.storage_area === 'fresh') {
-                    whBadge = '<span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 800; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">🥦 Kho 1: Tươi</span>';
-                } else if (ing.storage_area === 'dry') {
-                    whBadge = '<span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 800; background: #fffbeb; color: #d97706; border: 1px solid #fde68a;">🥫 Kho 2: Khô & GV</span>';
-                } else {
-                    whBadge = '<span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 800; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">🍹 Kho 3: Nước & Quả</span>';
-                }
-
-                return `
-                    <tr data-id="${ing.id}" class="ingredient-row ${selectedId === ing.id ? 'selected' : ''}">
-                        <td>${whBadge}</td>
-                        <td>
-                            <strong>${ing.name}</strong> <span class="text-muted" style="font-size: 11px; margin-left: 6px;">(${ing.code})</span>
-                            <div style="font-size: 11.5px; color: #64748b;">${ing.group || '-'}</div>
-                        </td>
-                        <td style="text-align: center; font-weight: 700;">${ing.unit}</td>
-                        <td>
-                            <span style="display: inline-block; background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 2px 7px; border-radius: 6px; font-size: 11.5px; font-weight: 700;">
-                                📦 ${ing.pack_rule_display || `1 ${ing.unit} = ${ing.pack_size || 10} ${ing.unpacked_unit || 'phần'}`}
-                            </span>
-                        </td>
-                        <td style="text-align: right; font-weight: 700;">${ing.current_stock_formatted || '0.000'}</td>
-                        <td style="text-align: left; font-weight: 700; color: #0284c7;">
-                            ⏳ ${ing.portions_wait || '0 phần'}
-                        </td>
-                        <td style="text-align: right; font-weight: 700; color: #d97706;">${ing.cost_formatted}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            // Row click event
-            tbody.querySelectorAll('.ingredient-row').forEach(row => {
-                row.addEventListener('click', () => {
-                    tbody.querySelectorAll('.ingredient-row').forEach(r => r.classList.remove('selected'));
-                    row.classList.add('selected');
-                    selectedId = Number(row.dataset.id);
-                });
-                row.addEventListener('dblclick', () => {
-                    selectedId = Number(row.dataset.id);
-                    openEditModal();
-                });
-            });
-        }
-
-        function openAddModal() {
-            document.getElementById('page-submodal-ing-title').textContent = 'Thêm mặt hàng mới';
-            document.getElementById('page-ing-id').value = '';
-            document.getElementById('page-ing-group').value = groupFilter.value || '';
-            document.getElementById('page-ing-name').value = '';
-            document.getElementById('page-ing-code').value = '';
-            document.getElementById('page-ing-unit').value = 'Kg';
-            document.getElementById('page-ing-cost').value = '0';
-            document.getElementById('page-ing-min-stock').value = '0.000';
-            document.getElementById('page-ing-supplier').value = '';
-            if (document.getElementById('page-ing-pack-size')) document.getElementById('page-ing-pack-size').value = '10';
-            if (document.getElementById('page-ing-unpacked-unit')) document.getElementById('page-ing-unpacked-unit').value = 'phần';
-            
-            const defWh = (currentWarehouse && currentWarehouse !== 'all') ? currentWarehouse : 'fresh';
-            const radio = document.querySelector(`input[name="page-ing-storage-area"][value="${defWh}"]`);
-            if (radio) radio.checked = true;
-
-            submodalIng.hidden = false;
-        }
-
-        function openEditModal() {
-            const ing = ingredientsData.find(i => i.id === selectedId);
-            if (!ing) {
-                showAlert('Vui lòng chọn mặt hàng cần sửa.', 'error');
-                return;
-            }
-            document.getElementById('page-submodal-ing-title').textContent = 'Sửa mặt hàng';
-            document.getElementById('page-ing-id').value = ing.id;
-            document.getElementById('page-ing-group').value = ing.group || '';
-            document.getElementById('page-ing-name').value = ing.name;
-            document.getElementById('page-ing-code').value = ing.code;
-            document.getElementById('page-ing-unit').value = ing.unit;
-            document.getElementById('page-ing-cost').value = ing.cost_formatted;
-            document.getElementById('page-ing-min-stock').value = ing.minimum_stock_formatted;
-            document.getElementById('page-ing-supplier').value = ing.supplier || '';
-            if (document.getElementById('page-ing-pack-size')) document.getElementById('page-ing-pack-size').value = ing.pack_size || 10;
-            if (document.getElementById('page-ing-unpacked-unit')) document.getElementById('page-ing-unpacked-unit').value = ing.unpacked_unit || 'phần';
-
-            const sa = ing.storage_area || 'fresh';
-            const radio = document.querySelector(`input[name="page-ing-storage-area"][value="${sa}"]`);
-            if (radio) radio.checked = true;
-
-            submodalIng.hidden = false;
-        }
-
-        // Warehouse tabs switch
-        document.querySelectorAll('.btn-page-wh-tab').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.btn-page-wh-tab').forEach(b => {
-                    b.classList.remove('active');
-                    b.style.background = '#ffffff';
-                    b.style.color = '#334155';
-                });
-                btn.classList.add('active');
-                currentWarehouse = btn.dataset.wh;
-                if (currentWarehouse === 'all') {
-                    btn.style.background = '#0f172a';
-                    btn.style.color = '#ffffff';
-                } else if (currentWarehouse === 'fresh') {
-                    btn.style.background = '#16a34a';
-                    btn.style.color = '#ffffff';
-                } else if (currentWarehouse === 'dry') {
-                    btn.style.background = '#d97706';
-                    btn.style.color = '#ffffff';
-                } else if (currentWarehouse === 'beverage') {
-                    btn.style.background = '#2563eb';
-                    btn.style.color = '#ffffff';
-                }
-                loadData();
-            });
-        });
-
-        // Event listeners
-        searchInput?.addEventListener('input', () => { loadData(); });
-        groupFilter?.addEventListener('change', () => { loadData(); });
-
-        document.getElementById('page-btn-add-ing')?.addEventListener('click', openAddModal);
-        document.getElementById('page-btn-edit-ing')?.addEventListener('click', openEditModal);
-
-        document.getElementById('page-submodal-ing-close')?.addEventListener('click', () => { submodalIng.hidden = true; });
-        document.getElementById('page-submodal-ing-cancel')?.addEventListener('click', () => { submodalIng.hidden = true; });
-
-        // Unit chips handler
-        document.querySelectorAll('#page-submodal-ingredient .btn-pos-ing-unit-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                const u = chip.dataset.unit;
-                const unitInput = document.getElementById('page-ing-unit');
-                if (unitInput && u) {
-                    unitInput.value = u;
-                }
-            });
-        });
-
-        // Auto generate code handler
-        document.getElementById('page-btn-auto-ing-code')?.addEventListener('click', () => {
-            const codeInput = document.getElementById('page-ing-code');
-            const rand = Math.floor(100 + Math.random() * 900);
-            if (codeInput) {
-                codeInput.value = `MH${rand}`;
-            }
-        });
-
-        // Cost formatting mask
-        const costInput = document.getElementById('page-ing-cost');
-        if (costInput) {
-            costInput.addEventListener('input', () => {
-                const num = parseInt(costInput.value.replace(/\D/g, ''), 10);
-                costInput.value = isNaN(num) ? '0' : num.toLocaleString('vi-VN');
-            });
-        }
-
-        // Save form
-        document.getElementById('page-form-ingredient')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const selectedArea = document.querySelector('input[name="page-ing-storage-area"]:checked')?.value || 'fresh';
-            const payload = {
-                id: document.getElementById('page-ing-id').value || undefined,
-                storage_area: selectedArea,
-                group: document.getElementById('page-ing-group').value.trim(),
-                name: document.getElementById('page-ing-name').value.trim(),
-                code: document.getElementById('page-ing-code').value.trim(),
-                unit: document.getElementById('page-ing-unit').value.trim(),
-                average_cost: document.getElementById('page-ing-cost').value.trim(),
-                minimum_stock: document.getElementById('page-ing-min-stock').value.trim(),
-                supplier: document.getElementById('page-ing-supplier').value.trim(),
-                pack_size: document.getElementById('page-ing-pack-size')?.value || 10,
-                unpacked_unit: document.getElementById('page-ing-unpacked-unit')?.value.trim() || 'phần',
-            };
-
-            try {
-                const resp = await fetch('/catalog/ingredients/api/save/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
-                    body: JSON.stringify(payload),
-                });
-                const res = await resp.json();
-                if (!resp.ok) throw new Error(res.error || 'Lỗi khi lưu mặt hàng.');
-
-                submodalIng.hidden = true;
-                selectedId = res.ingredient.id;
-                showAlert(res.message);
-                await loadData();
-            } catch (err) {
-                showAlert(err.message, 'error');
-            }
-        });
-
-        // Delete
-        document.getElementById('page-btn-del-ing')?.addEventListener('click', async () => {
-            const ing = ingredientsData.find(i => i.id === selectedId);
-            if (!ing) {
-                showAlert('Vui lòng chọn mặt hàng cần xóa.', 'error');
-                return;
-            }
-            if (!confirm(`Bạn có chắc muốn xóa mặt hàng "${ing.name}"?`)) return;
-
-            try {
-                const resp = await fetch(`/catalog/ingredients/api/delete/${ing.id}/`, {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': csrfToken() },
-                });
-                const res = await resp.json();
-                if (!resp.ok) throw new Error(res.error || 'Lỗi khi xóa.');
-
-                selectedId = null;
-                showAlert(res.message);
-                await loadData();
-            } catch (err) {
-                showAlert(err.message, 'error');
-            }
-        });
-
-        // Excel Import
-        document.getElementById('page-btn-excel-import')?.addEventListener('click', () => {
-            submodalExcel.hidden = false;
-        });
-        document.getElementById('page-submodal-ing-excel-close')?.addEventListener('click', () => { submodalExcel.hidden = true; });
-        document.getElementById('page-submodal-ing-excel-cancel')?.addEventListener('click', () => { submodalExcel.hidden = true; });
-
-        document.getElementById('page-form-ing-excel')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fileInput = document.getElementById('page-ing-excel-file');
-            const textInput = document.getElementById('page-ing-excel-text');
-            const formData = new FormData();
-
-            if (fileInput.files.length > 0) {
-                formData.append('file', fileInput.files[0]);
-            } else if (textInput.value.trim()) {
-                formData.append('csv_text', textInput.value.trim());
-            } else {
-                showAlert('Vui lòng chọn file hoặc dán dữ liệu mặt hàng.', 'error');
-                return;
-            }
-
-            const btnSubmit = document.getElementById('page-btn-submit-ing-excel');
-            if (btnSubmit) btnSubmit.disabled = true;
-
-            try {
-                const resp = await fetch('/catalog/ingredients/import/', {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': csrfToken() },
-                    body: formData,
-                });
-                const res = await resp.json();
-                if (!resp.ok) throw new Error(res.error || 'Lỗi khi nhập dữ liệu.');
-
-                showAlert(res.message);
-                submodalExcel.hidden = true;
-                fileInput.value = '';
-                textInput.value = '';
-                await loadData();
-            } catch (err) {
-                showAlert(err.message, 'error');
-            } finally {
-                if (btnSubmit) btnSubmit.disabled = false;
-            }
-        });
-
-        // Initial load
-        loadData();
-    })();
-</script>
+<script src="{% static 'js/catalog/ingredient_list.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

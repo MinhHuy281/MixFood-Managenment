@@ -1,0 +1,117 @@
+<!-- # File này chịu trách nhiệm hiển thị trang Đăng nhập chuyên biệt cho Quản trị viên (/admin/login/), tách biệt hoàn toàn phiên với nhân viên bán hàng POS. -->
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập Quản trị Admin | MixFood POS 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/base/core.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dashboard/admin_live.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base/responsive.css' %}">
+</head>
+<body class="admin-login-body">
+    <div class="admin-login-wrapper">
+        <div class="admin-login-card">
+            <!-- # Card Header & Brand -->
+            <div class="admin-login-header">
+                <div class="admin-brand-logo">
+                    <span class="admin-logo-shield">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="m9 12 2 2 4-4"/>
+                        </svg>
+                    </span>
+                    <div class="admin-brand-info">
+                        <h2>MIX FOOD ADMIN</h2>
+                        <span class="admin-brand-tag">Cổng Giám sát Live & Quản trị</span>
+                    </div>
+                </div>
+                <p class="admin-login-desc">Đăng nhập tài khoản Quản trị viên (Chủ quán, Quản lý) để theo dõi thời gian thực mọi hoạt động quán từ xa.</p>
+            </div>
+
+            <!-- # Error Alert -->
+            {% if error_msg %}
+            <div class="admin-login-alert" role="alert">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>{{ error_msg }}</span>
+            </div>
+            {% endif %}
+
+            <!-- # Login Form -->
+            <form method="post" action="{% url 'admin_login' %}" class="admin-login-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="admin-form-group">
+                    <label for="admin-username">Tên đăng nhập Quản trị</label>
+                    <div class="admin-input-wrap">
+                        <span class="admin-input-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </span>
+                        <input type="text" id="admin-username" name="username" class="admin-form-control" placeholder="admin" required autofocus autocomplete="username">
+                    </div>
+                </div>
+
+                <div class="admin-form-group">
+                    <label for="admin-password">Mật khẩu</label>
+                    <div class="admin-input-wrap">
+                        <span class="admin-input-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                        </span>
+                        <input type="password" id="admin-password" name="password" class="admin-form-control" placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" class="btn-toggle-admin-pwd" id="btn-toggle-admin-pwd" aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                            <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg class="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                <line x1="1" y1="1" x2="23" y2="23"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-isolation-badge">
+                    <span class="badge-dot"></span>
+                    <span><strong>Phiên độc lập:</strong> Không ảnh hưởng hay đá văng tài khoản Thu ngân đang bán hàng trên POS.</span>
+                </div>
+
+                <button type="submit" class="admin-btn-login">
+                    <span>ĐĂNG NHẬP ADMIN</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                </button>
+            </form>
+
+            <div class="admin-login-footer">
+                <a href="{% url 'dashboard:home' %}" class="admin-link-pos">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"/>
+                        <polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    <span>Về màn hình Bán hàng (POS)</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/dashboard/admin_login.js' %}"></script>
+</body>
+</html>

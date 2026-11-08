@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm xử lý hiển thị trang Nhật ký hoạt động, API lọc dữ liệu thời gian thực và xuất báo cáo kiểm toán ra Excel.
 import csv
 from datetime import datetime, time
 from django.contrib.auth import get_user_model
@@ -43,7 +44,7 @@ DISPLAY_ACTIONS = [
 
 
 def _parse_date(date_str, end_of_day=False):
-    """Phân tích chuỗi ngày dạng dd/mm/yyyy hoặc yyyy-mm-dd thành datetime có timezone."""
+    # Hàm này dùng để: Phân tích chuỗi ngày dạng dd/mm/yyyy hoặc yyyy-mm-dd thành datetime có timezone. (Input: date_str, end_of_day; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     if not date_str:
         return None
     date_str = date_str.strip()
@@ -61,7 +62,7 @@ def _parse_date(date_str, end_of_day=False):
 
 
 def _filter_logs(request):
-    """Hàm dùng chung lọc ActivityLog theo tham số request."""
+    # Hàm này dùng để: Hàm dùng chung lọc ActivityLog theo tham số request. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     logs = (
         ActivityLog.objects.select_related('actor')
         .exclude(description__startswith='POST /')
@@ -112,7 +113,7 @@ def _filter_logs(request):
 @login_required
 @role_required('Owner', 'Manager')
 def activity_list(request):
-    """Trang xem nhật ký hoạt động đầy đủ giao diện."""
+    # Hàm này dùng để: Trang xem nhật ký hoạt động đầy đủ giao diện. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     logs = _filter_logs(request)
     staff_users = User.objects.filter(is_active=True).order_by('username')
 
@@ -140,7 +141,7 @@ def activity_list(request):
 
 @login_required
 def activity_api(request):
-    """API JSON trả về danh sách nhật ký hoạt động và cấu hình bộ lọc."""
+    # Hàm này dùng để: API JSON trả về danh sách nhật ký hoạt động và cấu hình bộ lọc. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     logs = _filter_logs(request)
     limit = min(int(request.GET.get('limit', 500)), 1000)
 
@@ -174,7 +175,7 @@ def activity_api(request):
 
 @login_required
 def activity_export_excel(request):
-    """Xuất nhật ký hoạt động sang file Excel CSV UTF-8 kèm BOM."""
+    # Hàm này dùng để: Xuất nhật ký hoạt động sang file Excel CSV UTF-8 kèm BOM. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     logs = _filter_logs(request)[:2000]
 
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')

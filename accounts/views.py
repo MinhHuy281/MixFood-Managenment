@@ -1,3 +1,4 @@
+# File này chịu trách nhiệm xử lý toàn bộ logic điều hướng và API của phân hệ Tài khoản: Đăng nhập, Đăng xuất, Đổi mật khẩu, Quản lý Người dùng và Phân quyền vai trò.
 import json
 from django.contrib.auth import get_user_model, login as auth_login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -21,7 +22,7 @@ User = get_user_model()
 
 
 def _sync_user_role_groups(user, department):
-    """Đồng bộ quyền Django (Group, is_staff, is_superuser) theo Bộ phận."""
+    # Hàm này dùng để: Đồng bộ quyền Django (Group, is_staff, is_superuser) theo Bộ phận. (Input: user, department; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     role_map = {
         UserProfile.Department.ADMIN: (['Owner', 'Manager', 'Sales'], True, True),
         UserProfile.Department.MANAGER: (['Manager', 'Sales'], True, False),
@@ -29,7 +30,7 @@ def _sync_user_role_groups(user, department):
         UserProfile.Department.CASHIER: (['Sales', 'Cashier'], False, False),
         UserProfile.Department.WAITER: (['Sales', 'Cashier'], False, False),
         UserProfile.Department.KITCHEN: (['Sales', 'Cashier'], False, False),
-        UserProfile.Department.WAREHOUSE: (['Manager', 'Sales'], False, False),
+        UserProfile.Department.WAREHOUSE: (['Warehouse', 'Sales'], False, False),
         UserProfile.Department.UNDEFINED: (['Sales', 'Cashier'], False, False),
     }
     group_names, is_staff, is_superuser = role_map.get(
@@ -47,7 +48,7 @@ def _sync_user_role_groups(user, department):
 
 
 def _ensure_user_profile(user):
-    """Đảm bảo mọi User đều có UserProfile hợp lệ."""
+    # Hàm này dùng để: Đảm bảo mọi User đều có UserProfile hợp lệ. (Input: user; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     profile, created = UserProfile.objects.get_or_create(user=user)
     if created:
         if user.is_superuser or user.username.lower() == 'admin':
@@ -68,6 +69,7 @@ def _ensure_user_profile(user):
 
 
 def _serialize_user(user, current_user_id=None, index=None):
+    # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ '_serialize_user' trong module views.py. Input: user, current_user_id, index. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
     profile = _ensure_user_profile(user)
     full_name = profile.full_name or user.get_full_name() or user.username
     return {
@@ -85,6 +87,7 @@ def _serialize_user(user, current_user_id=None, index=None):
 
 
 def _serialize_activity(log):
+    # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ '_serialize_activity' trong module views.py. Input: log. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
     if not log:
         return None
     return {
@@ -100,15 +103,18 @@ def _serialize_activity(log):
 
 
 class AccountLoginView(LoginView):
+    # Class này dùng để xử lý giao diện và logic Đăng nhập hệ thống (hỗ trợ đăng nhập tiêu chuẩn và đăng nhập nhanh chỉ bằng mật khẩu số).
     template_name = 'accounts/pages/login.html'
     redirect_authenticated_user = True
 
     def get_context_data(self, **kwargs):
+        # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ 'get_context_data' trong module views.py. Input: không có tham số đầu vào trực tiếp. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
         ctx = super().get_context_data(**kwargs)
         ctx['allow_numeric_password_only'] = UserSystemConfig.get_solo().allow_numeric_password_only
         return ctx
 
     def post(self, request, *args, **kwargs):
+        # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'post' trong phân hệ accounts/views.py. Input: đối tượng HttpRequest (request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
         config = UserSystemConfig.get_solo()
         if config.allow_numeric_password_only:
             raw_username = (request.POST.get('username') or '').strip()
@@ -133,6 +139,7 @@ class AccountLoginView(LoginView):
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
+        # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ 'form_valid' trong module views.py. Input: form. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
         response = super().form_valid(form)
         user = self.request.user
         if user and user.is_authenticated:
@@ -146,9 +153,11 @@ class AccountLoginView(LoginView):
 
 
 class AccountLogoutView(LogoutView):
+    # Class này dùng để xử lý yêu cầu Đăng xuất tài khoản và ghi nhận lịch sử đăng xuất vào nhật ký hoạt động.
     next_page = 'accounts:login'
 
     def dispatch(self, request, *args, **kwargs):
+        # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'dispatch' trong phân hệ accounts/views.py. Input: đối tượng HttpRequest (request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
         if getattr(request, 'user', None) and request.user.is_authenticated and request.method == 'POST':
             user = request.user
             log_activity(
@@ -161,10 +170,12 @@ class AccountLogoutView(LogoutView):
 
 
 class AccountPasswordChangeView(PasswordChangeView):
+    # Class này dùng để xử lý giao diện và nghiệp vụ Đổi mật khẩu tài khoản người dùng đang đăng nhập.
     template_name = 'accounts/pages/password_change.html'
     success_url = reverse_lazy('dashboard:home')
 
     def post(self, request, *args, **kwargs):
+        # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'post' trong phân hệ accounts/views.py. Input: đối tượng HttpRequest (request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
         is_ajax = (
             request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             or 'application/json' in (request.headers.get('Accept') or '')
@@ -219,7 +230,7 @@ class AccountPasswordChangeView(PasswordChangeView):
 
 @login_required
 def user_list_view(request):
-    """Trang quản lý Người dùng - Admin đồng bộ giao diện POS."""
+    # Hàm này dùng để: Trang quản lý Người dùng - Admin đồng bộ giao diện POS. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     users_qs = User.objects.filter(is_active=True).order_by('id')
     users_data = [
         _serialize_user(u, current_user_id=request.user.id, index=idx)
@@ -238,7 +249,7 @@ def user_list_view(request):
 @login_required
 @require_GET
 def user_api_list(request):
-    """API trả về danh sách người dùng và cấu hình cho modal Người dùng - Admin."""
+    # Hàm này dùng để: API trả về danh sách người dùng và cấu hình cho modal Người dùng - Admin. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     users_qs = User.objects.filter(is_active=True).order_by('id')
     users_data = [
         _serialize_user(u, current_user_id=request.user.id, index=idx)
@@ -261,7 +272,7 @@ def user_api_list(request):
 @login_required
 @require_POST
 def user_api_save(request):
-    """API Thêm mới hoặc Cập nhật người dùng."""
+    # Hàm này dùng để: API Thêm mới hoặc Cập nhật người dùng. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except (ValueError, TypeError):
@@ -370,7 +381,7 @@ def user_api_save(request):
 @login_required
 @require_POST
 def user_api_delete(request, user_id):
-    """API Xóa người dùng."""
+    # Hàm này dùng để: API Xóa người dùng. (Input: request, user_id; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     try:
         target_user = User.objects.get(pk=user_id, is_active=True)
     except User.DoesNotExist:
@@ -412,7 +423,7 @@ def user_api_delete(request, user_id):
 @login_required
 @require_POST
 def user_api_toggle_config(request):
-    """API Lưu tùy chọn 'Cho phép chỉ cần nhập mật khẩu (dạng số) để truy cập'."""
+    # Hàm này dùng để: API Lưu tùy chọn 'Cho phép chỉ cần nhập mật khẩu (dạng số) để truy cập'. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except (ValueError, TypeError):
@@ -442,7 +453,7 @@ def user_api_toggle_config(request):
 @login_required
 @require_GET
 def permission_api_get(request):
-    """API lấy ma trận phân quyền, tùy chọn mở rộng và quyền hạn của tài khoản đang đăng nhập."""
+    # Hàm này dùng để: API lấy ma trận phân quyền, tùy chọn mở rộng và quyền hạn của tài khoản đang đăng nhập. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     config = UserSystemConfig.get_solo()
     profile = _ensure_user_profile(request.user)
     user_perms = config.get_user_permissions(request.user)
@@ -470,7 +481,7 @@ def permission_api_get(request):
 @login_required
 @require_POST
 def permission_api_save(request):
-    """API lưu thiết lập Phân quyền sử dụng - Admin."""
+    # Hàm này dùng để: API lưu thiết lập Phân quyền sử dụng - Admin. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except (ValueError, TypeError):
@@ -525,11 +536,7 @@ def permission_api_save(request):
 @login_required
 @require_POST
 def permission_api_verify(request):
-    """
-    API Xác thực quyền hạn tạm thời (Yêu cầu quyền hạn)
-    Khi tài khoản hiện tại (VD: thungan1) truy cập chức năng chưa được cấp quyền,
-    nhập tài khoản có quyền (VD: admin) để mở chức năng đó mà KHÔNG đổi phiên đăng nhập của thungan1.
-    """
+    # Hàm này dùng để: API Xác thực quyền hạn tạm thời (Yêu cầu quyền hạn) Khi tài khoản hiện tại (VD: thungan1) truy cập chức năng chưa được cấp quyền, nhập tài khoản có quyền (VD: admin) để mở chức năng đó mà KHÔNG đổi phiên đăng nhập của thungan1. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except (ValueError, TypeError):
@@ -537,7 +544,7 @@ def permission_api_verify(request):
 
     username = (payload.get('username') or '').strip()
     password = (payload.get('password') or '').strip()
-    required_permission = (payload.get('required_permission') or '').strip()
+    required_permission = (payload.get('required_permission') or payload.get('permission_key') or '').strip()
     feature_label = (payload.get('feature_label') or '').strip()
 
     if not username or not password:
@@ -583,6 +590,7 @@ def permission_api_verify(request):
 
     return JsonResponse({
         'status': 'success',
+        'authorized': True,
         'message': f'Đã xác thực quyền hạn bởi {target_user.username}.',
         'authorized_by': {
             'username': target_user.username,
@@ -596,9 +604,173 @@ def permission_api_verify(request):
 @login_required
 @require_POST
 def permission_api_clear_elevation(request):
-    """Xóa cờ nâng quyền tạm thời sau khi đóng chức năng được cấp quyền."""
+    # Hàm này dùng để: Xóa cờ nâng quyền tạm thời sau khi đóng chức năng được cấp quyền. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     request.session.pop('pos_elevated_auth', None)
     request.session.pop('pos_elevated_by', None)
     request.session.modified = True
     return JsonResponse({'status': 'success'})
 
+
+@require_POST
+def api_forgot_password(request):
+    """
+    Hàm này dùng để xử lý yêu cầu đặt lại mật khẩu của người dùng khi quên mật khẩu.
+    Xác thực qua Tên đăng nhập và Số điện thoại đăng ký (UserProfile.phone).
+    Input: HttpRequest (JSON chứa username, phone, new_password).
+    Output: JsonResponse ({ok: True/False, message: ...}).
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+
+    username = str(data.get('username') or '').strip()
+    phone = str(data.get('phone') or '').strip()
+    new_password = str(data.get('new_password') or '').strip()
+
+    if not username:
+        return JsonResponse({'ok': False, 'message': 'Vui lòng nhập Tên đăng nhập.'}, status=400)
+    if not phone:
+        return JsonResponse({'ok': False, 'message': 'Vui lòng nhập Số điện thoại đã đăng ký.'}, status=400)
+    if not new_password or len(new_password) < 4:
+        return JsonResponse({'ok': False, 'message': 'Mật khẩu mới phải có ít nhất 4 ký tự.'}, status=400)
+
+    user = User.objects.filter(username__iexact=username).first()
+    if not user:
+        return JsonResponse({'ok': False, 'message': f"Không tìm thấy tài khoản '{username}'."}, status=404)
+
+    profile = getattr(user, 'profile', None)
+    user_phone = (profile.phone or '').replace(' ', '').replace('.', '').replace('-', '') if profile else ''
+    input_phone = phone.replace(' ', '').replace('.', '').replace('-', '')
+
+    if user_phone and user_phone != input_phone:
+        return JsonResponse({'ok': False, 'message': 'Số điện thoại không trùng khớp với hồ sơ nhân viên này.'}, status=400)
+
+    user.set_password(new_password)
+    user.save(update_fields=['password'])
+
+    if profile and not profile.phone:
+        profile.phone = phone
+        profile.save(update_fields=['phone'])
+
+    log_activity(
+        actor=user,
+        action=ActivityLog.Action.LOGIN,
+        description=f"Tài khoản '{user.username}' đã đặt lại mật khẩu mới thành công qua xác minh số điện thoại.",
+    )
+
+    return JsonResponse({'ok': True, 'message': 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay bằng mật khẩu mới.'})
+
+
+@require_POST
+def api_register_user(request):
+    """
+    Hàm này dùng để xử lý đăng ký tài khoản nhân viên mới từ trang đăng nhập.
+    Tạo mới User, UserProfile và gán quyền hạn tương ứng theo bộ phận đăng ký.
+    Input: HttpRequest (JSON chứa full_name, username, password, phone, department).
+    Output: JsonResponse ({ok: True/False, message: ...}).
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+
+    full_name = str(data.get('full_name') or '').strip()
+    username = str(data.get('username') or '').strip()
+    password = str(data.get('password') or '').strip()
+    phone = str(data.get('phone') or '').strip()
+    department = str(data.get('department') or UserProfile.Department.CASHIER).strip()
+
+    if not username:
+        return JsonResponse({'ok': False, 'message': 'Vui lòng nhập Tên đăng nhập.'}, status=400)
+    if not password or len(password) < 4:
+        return JsonResponse({'ok': False, 'message': 'Mật khẩu phải có ít nhất 4 ký tự.'}, status=400)
+    if not full_name:
+        full_name = username
+
+    if User.objects.filter(username__iexact=username).exists():
+        return JsonResponse({'ok': False, 'message': f"Tên đăng nhập '{username}' đã tồn tại trong hệ thống. Vui lòng chọn tên khác."}, status=400)
+
+    user = User(
+        username=username,
+        first_name=full_name,
+        is_active=True,
+    )
+    user.set_password(password)
+    user.save()
+
+    valid_departments = [d[0] for d in UserProfile.Department.choices]
+    if department not in valid_departments:
+        department = UserProfile.Department.CASHIER
+
+    profile = UserProfile.objects.create(
+        user=user,
+        full_name=full_name,
+        phone=phone,
+        department=department,
+    )
+
+    _sync_user_role_groups(user, department)
+
+    log_activity(
+        actor=user,
+        action=ActivityLog.Action.LOGIN,
+        description=f"Đăng ký thành công tài khoản nhân viên mới: '{username}' (Họ tên: {full_name}, Bộ phận: {profile.get_department_display()}).",
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'message': f"Đăng ký tài khoản '{username}' thành công! Bạn có thể đăng nhập ngay bây giờ.",
+        'username': username,
+    })
+
+
+@require_POST
+def api_change_password(request):
+    """
+    Hàm này dùng để xử lý yêu cầu đổi mật khẩu trực tiếp từ màn hình đăng nhập hoặc modal.
+    Xác thực Tên đăng nhập và Mật khẩu hiện tại trước khi cập nhật mật khẩu mới.
+    Input: HttpRequest (JSON chứa username, old_password, new_password).
+    Output: JsonResponse ({ok: True/False, message: ...}).
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+
+    username = str(data.get('username') or '').strip()
+    old_password = str(data.get('old_password') or '').strip()
+    new_password = str(data.get('new_password') or '').strip()
+
+    if not username:
+        return JsonResponse({'ok': False, 'message': 'Vui lòng nhập Tên đăng nhập.'}, status=400)
+    if not old_password:
+        return JsonResponse({'ok': False, 'message': 'Vui lòng nhập Mật khẩu hiện tại.'}, status=400)
+    if not new_password or len(new_password) < 4:
+        return JsonResponse({'ok': False, 'message': 'Mật khẩu mới phải có ít nhất 4 ký tự.'}, status=400)
+
+    user = User.objects.filter(username__iexact=username).first()
+    if not user:
+        return JsonResponse({'ok': False, 'message': f"Không tìm thấy tài khoản '{username}'."}, status=404)
+
+    if not user.check_password(old_password):
+        return JsonResponse({'ok': False, 'message': 'Mật khẩu hiện tại không chính xác. Vui lòng kiểm tra lại.'}, status=400)
+
+    if old_password == new_password:
+        return JsonResponse({'ok': False, 'message': 'Mật khẩu mới không được trùng với mật khẩu hiện tại.'}, status=400)
+
+    user.set_password(new_password)
+    user.save(update_fields=['password'])
+
+    log_activity(
+        actor=user,
+        action=ActivityLog.Action.SYSTEM,
+        description=f"Tài khoản '{user.username}' đã thực hiện đổi mật khẩu thành công từ màn hình đăng nhập.",
+        request=request,
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'message': 'Đổi mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.',
+        'username': user.username,
+    })

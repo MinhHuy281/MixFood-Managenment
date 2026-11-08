@@ -1,0 +1,119 @@
+<!-- # File này chịu trách nhiệm hiển thị giao diện cấu hình Ma trận 11 Quyền hạn sử dụng và Khóa Tablet/Smartphone trên Mobile cho Admin (/admin/permissions/). -->
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Phân quyền sử dụng (11 quyền) - Admin Mobile | MixFood 2026{% endblock %}
+{% block body_class %}admin-subpage-body{% endblock %}
+{% block page_class %}admin-subpage-shell{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/admin_subpages.css' %}?v={% now 'U' %}">
+{% endblock %}
+
+{% block authenticated_header %}
+<!-- # Không nạp topbar POS desktop để giữ trọn vẹn diện tích cho Mobile Admin -->
+{% endblock %}
+
+{% block content %}
+<div class="admin-subpage-shell" style="padding-bottom: 90px;">
+    <!-- # Header Top Bar -->
+    <header class="admin-subpage-header">
+        <div class="admin-header-left">
+            <a href="{% url 'admin_live_dashboard' %}" class="admin-back-btn" title="Về Giám sát Live">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <div>
+                <h1 class="admin-subpage-title">Phân quyền sử dụng</h1>
+                <span class="admin-subpage-badge">11 quyền • 5 cấp bậc</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- # Role Selector Pills -->
+    <div class="admin-toolbar-wrap">
+        <div class="admin-filter-scroll" id="perm-role-tabs">
+            {% for r in roles %}
+            <button type="button" class="admin-filter-pill role-pill {% if forloop.first %}active{% endif %}" data-role="{{ r.key }}">
+                {{ r.label }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- # Main Content Area: 11 Permissions for Selected Role -->
+    <div class="admin-content-area">
+        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
+                Cấp bậc: <strong id="active-role-title" style="color: #34d399;">Quản lý</strong>
+            </span>
+            <span style="font-size: 11px; color: #64748b;">(Quản trị viên có toàn quyền)</span>
+        </div>
+
+        <div class="admin-card-list" id="permission-switches-container">
+            {% for p in permission_definitions %}
+            <div class="admin-card" style="padding: 10px 14px;">
+                <div class="admin-switch-row" style="background: transparent; padding: 0;">
+                    <div class="admin-switch-info">
+                        <span class="admin-switch-title">{{ p.label }}</span>
+                        <span class="admin-switch-desc">{{ p.desc }}</span>
+                    </div>
+                    <label class="admin-toggle-switch">
+                        <input type="checkbox" class="perm-switch-input" data-perm="{{ p.key }}">
+                        <span class="admin-slider"></span>
+                    </label>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- # Section: Khóa tính năng Tablet / Smartphone -->
+        <div style="margin-top: 24px; margin-bottom: 12px;">
+            <span style="font-size: 13px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                <span>📱</span>
+                <span>Khóa bảo vệ Tablet / Smartphone</span>
+            </span>
+            <small style="color: #64748b; font-size: 11.5px; display: block; margin-top: 2px;">
+                Áp dụng chung toàn hệ thống khi nhân viên thao tác trên thiết bị cầm tay.
+            </small>
+        </div>
+
+        <div class="admin-card-list">
+            {% for extra in extra_definitions %}
+            <div class="admin-card" style="padding: 10px 14px;">
+                <div class="admin-switch-row" style="background: transparent; padding: 0;">
+                    <div class="admin-switch-info">
+                        <span class="admin-switch-title">{{ extra.label }}</span>
+                    </div>
+                    <label class="admin-toggle-switch">
+                        <input type="checkbox" class="extra-switch-input" data-key="{{ extra.key }}">
+                        <span class="admin-slider"></span>
+                    </label>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- # Floating Save Bar -->
+    <div class="admin-floating-bar">
+        <button type="button" class="admin-btn-floating-save" id="btn-save-permissions">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            <span>Lưu thiết lập 11 quyền</span>
+        </button>
+    </div>
+</div>
+
+<!-- # Dữ liệu ma trận quyền từ server nạp an toàn qua JSON -->
+<script id="matrix-data" type="application/json">{{ matrix_json|safe }}</script>
+<script id="extra-data" type="application/json">{{ extra_json|safe }}</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard/admin_subpages.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

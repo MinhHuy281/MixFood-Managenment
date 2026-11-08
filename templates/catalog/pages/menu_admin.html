@@ -1,3 +1,4 @@
+<!-- # File này chịu trách nhiệm hiển thị trang Quản lý Thực đơn (Menu Admin) chuyên sâu: quản lý nhóm món, danh sách món ăn, bảng giá 1-2-3, ảnh món và nhập/xuất Excel. -->
 {% extends 'base.html' %}
 {% load static %}
 {% load menu_tags %}
@@ -5,7 +6,7 @@
 
 {% block content %}
 <div class="menu-admin-page-container">
-    <!-- Page Header -->
+    <!-- # Page Header -->
     <div class="menu-admin-page-header">
         <div class="header-left">
             <p class="eyebrow">CÀI ĐẶT / THỰC ĐƠN BÁN HÀNG</p>
@@ -28,10 +29,10 @@
         </div>
     </div>
 
-    <!-- Notification Toast / Banner -->
+    <!-- # Notification Toast / Banner -->
     <div id="menu-admin-alert" class="menu-alert-banner" hidden></div>
 
-    <!-- Section 1: Categories Bar (Các hạng mục - nhóm món) -->
+    <!-- # Section 1: Categories Bar (Các hạng mục - nhóm món) -->
     <div class="menu-categories-card">
         <div class="categories-card-header">
             <div class="cat-title-wrap">
@@ -59,7 +60,7 @@
             </button>
             {% for cat in category_list_data %}
             <button type="button" class="cat-pill" data-cat-id="{{ cat.id }}" data-cat-name="{{ cat.name }}" data-cat-color="{{ cat.color }}" data-cat-order="{{ cat.display_order }}">
-                <span class="cat-pill-dot" style="background-color: {{ cat.color }};"></span>
+                <span class="cat-pill-dot" data-dyn-bg="{{ cat.color }}"></span>
                 <span class="cat-pill-name">{{ cat.name }}</span>
                 <span class="cat-pill-count">{{ cat.count }}</span>
             </button>
@@ -67,9 +68,9 @@
         </div>
     </div>
 
-    <!-- Section 2: Main Workspace (Split Grid: Left Table, Right Form) -->
+    <!-- # Section 2: Main Workspace (Split Grid: Left Table, Right Form) -->
     <div class="menu-workspace-grid">
-        <!-- Left: Dishes Table -->
+        <!-- # Left: Dishes Table -->
         <div class="dishes-table-card">
             <div class="dishes-card-header">
                 <div class="dishes-header-left">
@@ -89,20 +90,20 @@
                 </div>
             </div>
 
-            <!-- Table Container -->
+            <!-- # Table Container -->
             <div class="dishes-table-scroll">
                 <table class="menu-dishes-table" id="menu-dishes-table">
                     <thead>
                         <tr>
-                            <th style="width: 140px;">Hạng mục</th>
-                            <th style="width: 110px;">Nhóm con</th>
-                            <th style="width: 85px;">Mã món</th>
-                            <th style="min-width: 180px;">Tên món</th>
-                            <th style="width: 65px;" class="text-center">ĐVT</th>
-                            <th style="width: 105px;" class="text-right">Đơn giá (đ)</th>
-                            <th style="width: 105px;" class="text-right">Đơn giá 2</th>
-                            <th style="width: 105px;" class="text-right">Đơn giá 3</th>
-                            <th style="width: 95px;" class="text-center">Loại</th>
+                            <th class="u-cata-14175304">Hạng mục</th>
+                            <th class="u-cata-3e280fa7">Nhóm con</th>
+                            <th class="u-cata-a4a5ac1d">Mã món</th>
+                            <th class="u-cata-94a14c3f">Tên món</th>
+                            <th class="text-center u-cata-de7faf05">ĐVT</th>
+                            <th class="text-right u-cata-62019642">Đơn giá (đ)</th>
+                            <th class="text-right u-cata-62019642">Đơn giá 2</th>
+                            <th class="text-right u-cata-62019642">Đơn giá 3</th>
+                            <th class="text-center u-cata-683ede6d">Loại</th>
                         </tr>
                     </thead>
                     <tbody id="dishes-table-tbody">
@@ -135,7 +136,7 @@
                 </table>
             </div>
 
-            <!-- Table Footer -->
+            <!-- # Table Footer -->
             <div class="dishes-table-footer">
                 <div class="footer-note">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -148,7 +149,7 @@
             </div>
         </div>
 
-        <!-- Right: Dish Form Card (Thêm món / Sửa món) -->
+        <!-- # Right: Dish Form Card (Thêm món / Sửa món) -->
         <div class="dish-form-card" id="dish-form-card">
             <div class="dish-form-header">
                 <div class="form-title-wrap">
@@ -156,7 +157,7 @@
                     <span class="form-title" id="dish-form-title">Thêm món</span>
                 </div>
                 <span class="form-mode-badge" id="dish-form-mode-badge">Tạo mới</span>
-                <button type="button" class="btn-switch-add" id="btn-switch-add" style="display:none;" title="Chuyển sang chế độ thêm món mới">+ Thêm món mới</button>
+                <button type="button" class="btn-switch-add u-cata-93b8ea5b" id="btn-switch-add" title="Chuyển sang chế độ thêm món mới">+ Thêm món mới</button>
             </div>
 
             <form id="dish-editor-form" class="dish-editor-form" autocomplete="off">
@@ -225,9 +226,9 @@
                 </div>
 
                 <div class="form-actions-row">
-                    <button type="submit" class="btn-submit-dish" id="btn-submit-dish" style="background-color: #059669 !important; background: linear-gradient(135deg, #059669, #047857) !important; color: #ffffff !important; border: 1px solid #047857 !important;">
+                    <button type="submit" class="btn-submit-dish u-cata-6fd48f27" id="btn-submit-dish">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg>
-                        <span style="color: #ffffff !important; font-weight: 700;">Đồng ý</span>
+                        <span class="u-cata-eb707ec5">Đồng ý</span>
                     </button>
                     <button type="button" class="btn-cancel-dish" id="btn-cancel-dish">Hủy / Thêm mới</button>
                 </div>
@@ -240,35 +241,38 @@
                 </div>
             </form>
         </div>
-    <!-- Modal: Xác nhận xóa món ăn kèm Lý do -->
+    </div>
+</div>
+
+<!-- # Modal: Xác nhận xóa món ăn kèm Lý do -->
 <div class="menu-modal-backdrop" id="modal-delete-dish-confirm" hidden>
-    <div class="menu-modal-dialog" style="max-width: 460px;">
-        <div class="menu-modal-header" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff;">
+    <div class="menu-modal-dialog u-cata-10768aa6">
+        <div class="menu-modal-header u-cata-73607ce4">
             <div class="modal-title-wrap">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                <h3 style="color: #fff;">Xác nhận xóa món ăn</h3>
+                <h3 class="u-cata-421b9989">Xác nhận xóa món ăn</h3>
             </div>
-            <button type="button" class="modal-close" id="modal-delete-dish-close" style="color: #fff;">×</button>
+            <button type="button" class="modal-close u-cata-421b9989" id="modal-delete-dish-close">×</button>
         </div>
         <form id="form-delete-dish-confirm">
-            <div class="menu-modal-body" style="padding: 20px;">
-                <p style="margin-bottom: 12px; font-size: 14px; color: var(--slate-700);">
-                    Bạn có chắc chắn muốn xóa món <strong id="modal-delete-target-dish-name" style="color: #dc2626;"></strong>?
+            <div class="menu-modal-body u-cata-32c16dc4">
+                <p class="u-cata-f1990652">
+                    Bạn có chắc chắn muốn xóa món <strong class="u-cata-610bd2f7" id="modal-delete-target-dish-name"></strong>?
                 </p>
                 <div class="form-group">
-                    <label for="modal-delete-target-reason" style="font-weight: 600; font-size: 13px;">Lý do xóa món <span class="required">*</span></label>
-                    <input type="text" id="modal-delete-target-reason" placeholder="Ví dụ: Ngừng kinh doanh, hết nguyên liệu dài hạn..." required style="width: 100%; padding: 8px 12px; border: 1px solid var(--slate-300); border-radius: 6px; font-size: 13px;">
+                    <label class="u-cata-31c8ecc1" for="modal-delete-target-reason">Lý do xóa món <span class="required">*</span></label>
+                    <input class="u-cata-9dd14670" type="text" id="modal-delete-target-reason" placeholder="Ví dụ: Ngừng kinh doanh, hết nguyên liệu dài hạn..." required>
                 </div>
             </div>
-            <div class="menu-modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--slate-200); display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="menu-modal-footer u-cata-972ba828">
                 <button type="button" class="secondary-button" id="modal-delete-dish-cancel">Bỏ qua</button>
-                <button type="submit" class="primary-button" id="btn-confirm-delete-dish" style="background: #dc2626; border-color: #b91c1c;">Xác nhận xóa</button>
+                <button type="submit" class="primary-button u-cata-a47c297a" id="btn-confirm-delete-dish">Xác nhận xóa</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal: Nhập dữ liệu từ Excel -->
+<!-- # Modal: Nhập dữ liệu từ Excel -->
 <div class="menu-modal-backdrop" id="modal-import-excel" hidden>
     <div class="menu-modal-dialog">
         <div class="menu-modal-header">
@@ -293,9 +297,9 @@
                     <input type="file" id="import-file-input" name="file" accept=".csv, .txt">
                 </div>
 
-                <div class="form-group" style="margin-top: 14px;">
+                <div class="form-group u-cata-abf93305">
                     <label for="import-csv-text">Hoặc dán trực tiếp dữ liệu phân tách tab / phẩy:</label>
-                    <textarea id="import-csv-text" name="csv_text" rows="5" placeholder="BÚN THÁI	BTB	Bún Thái Bò	Phần	50000	60000	0	Đồ ăn..."></textarea>
+                    <textarea id="import-csv-text" name="csv_text" rows="5" placeholder="BÚN THÁI    BTB    Bún Thái Bò    Phần    50000    60000    0    Đồ ăn..."></textarea>
                 </div>
 
                 <div class="form-auto-recipe-check">
@@ -313,7 +317,7 @@
     </div>
 </div>
 
-<!-- Modal: Thêm / Sửa Danh mục -->
+<!-- # Modal: Thêm / Sửa Danh mục -->
 <div class="menu-modal-backdrop" id="modal-category" hidden>
     <div class="menu-modal-dialog category-dialog">
         <div class="menu-modal-header">
@@ -333,12 +337,12 @@
                     <div class="cat-color-picker-row">
                         <input type="color" id="modal-cat-color" value="#f59e0b">
                         <div class="color-presets">
-                            <span class="preset-color" style="background:#f59e0b;" data-color="#f59e0b"></span>
-                            <span class="preset-color" style="background:#10b981;" data-color="#10b981"></span>
-                            <span class="preset-color" style="background:#3b82f6;" data-color="#3b82f6"></span>
-                            <span class="preset-color" style="background:#ef4444;" data-color="#ef4444"></span>
-                            <span class="preset-color" style="background:#8b5cf6;" data-color="#8b5cf6"></span>
-                            <span class="preset-color" style="background:#ec4899;" data-color="#ec4899"></span>
+                            <span class="preset-color u-cata-1ade0dff" data-color="#f59e0b"></span>
+                            <span class="preset-color u-cata-81455c5b" data-color="#10b981"></span>
+                            <span class="preset-color u-cata-497322d3" data-color="#3b82f6"></span>
+                            <span class="preset-color u-cata-75be8f9d" data-color="#ef4444"></span>
+                            <span class="preset-color u-cata-23bcb4b1" data-color="#8b5cf6"></span>
+                            <span class="preset-color u-cata-c2fc89f2" data-color="#ec4899"></span>
                         </div>
                     </div>
                 </div>
@@ -355,515 +359,6 @@
     </div>
 </div>
 
-<!-- Core Menu Admin Client Script -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    let selectedCatId = 'all';
-    let selectedDishRow = null;
-    let selectedCatPill = null;
-
-    const alertBanner = document.getElementById('menu-admin-alert');
-    const tableTbody = document.getElementById('dishes-table-tbody');
-    const dishesCountBadge = document.getElementById('dishes-count-badge');
-    const currentCatDisplay = document.getElementById('current-cat-display');
-    const searchInput = document.getElementById('dish-search-input');
-    const dishForm = document.getElementById('dish-editor-form');
-
-    const formDishId = document.getElementById('form-dish-id');
-    const formCategory = document.getElementById('form-dish-category');
-    const formSubgroup = document.getElementById('form-dish-subgroup');
-    const formCode = document.getElementById('form-dish-code');
-    const formUnit = document.getElementById('form-dish-unit');
-    const formName = document.getElementById('form-dish-name');
-    const formPrice = document.getElementById('form-dish-price');
-    const formPrice2 = document.getElementById('form-dish-price-2');
-    const formPrice3 = document.getElementById('form-dish-price-3');
-    const formType = document.getElementById('form-dish-type');
-    const formReason = document.getElementById('form-dish-reason');
-    const formAutoRecipe = document.getElementById('form-auto-recipe');
-    const formTitle = document.getElementById('dish-form-title');
-    const formModeBadge = document.getElementById('dish-form-mode-badge');
-
-    const btnEditDish = document.getElementById('btn-trigger-edit-dish');
-    const btnDelDish = document.getElementById('btn-trigger-del-dish');
-    const btnAddDish = document.getElementById('btn-trigger-add-dish');
-    const btnCancelDish = document.getElementById('btn-cancel-dish');
-
-    const btnCatEdit = document.getElementById('btn-cat-edit');
-    const btnCatDel = document.getElementById('btn-cat-del');
-    const btnCatAdd = document.getElementById('btn-cat-add');
-
-    // Show notice helper
-    function showAlert(msg, isError = false) {
-        alertBanner.textContent = msg;
-        alertBanner.className = 'menu-alert-banner ' + (isError ? 'danger' : 'success');
-        alertBanner.hidden = false;
-        setTimeout(() => { alertBanner.hidden = true; }, 4000);
-    }
-
-    // Filter dishes by category and search
-    function filterDishes() {
-        const query = searchInput.value.toLowerCase().trim();
-        const rows = tableTbody.querySelectorAll('.dish-row');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            const catId = row.dataset.catId;
-            const code = (row.dataset.code || '').toLowerCase();
-            const name = (row.dataset.name || '').toLowerCase();
-            const sub = (row.dataset.subgroup || '').toLowerCase();
-
-            const matchCat = (selectedCatId === 'all' || catId === selectedCatId);
-            const matchQuery = (!query || code.includes(query) || name.includes(query) || sub.includes(query));
-
-            if (matchCat && matchQuery) {
-                row.hidden = false;
-                visibleCount++;
-            } else {
-                row.hidden = true;
-            }
-        });
-
-        dishesCountBadge.textContent = `${visibleCount} món`;
-    }
-
-    // Category pill selection
-    document.querySelectorAll('.cat-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-            document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-            pill.classList.add('active');
-            selectedCatId = pill.dataset.catId;
-            selectedCatPill = pill;
-
-            if (selectedCatId === 'all') {
-                currentCatDisplay.textContent = '[Tất cả]';
-                btnCatEdit.disabled = true;
-                btnCatDel.disabled = true;
-            } else {
-                currentCatDisplay.textContent = `[${pill.dataset.catName}]`;
-                btnCatEdit.disabled = false;
-                btnCatDel.disabled = false;
-                // auto set form category
-                formCategory.value = selectedCatId;
-            }
-            filterDishes();
-        });
-    });
-
-    searchInput.addEventListener('input', filterDishes);
-
-    const btnSwitchAdd = document.getElementById('btn-switch-add');
-    if (btnSwitchAdd) btnSwitchAdd.addEventListener('click', resetDishForm);
-
-    // Format VND helper (ví dụ: 15.000, 100.000)
-    function formatVND(value) {
-        if (value === null || value === undefined || value === '') return '0';
-        const num = Math.round(Number(String(value).replace(/\./g, '').replace(/,/g, '')) || 0);
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    }
-
-    // Setup live price inputs formatting
-    function setupPriceInput(input) {
-        if (!input) return;
-        input.addEventListener('input', () => {
-            const raw = input.value.replace(/\D/g, '');
-            if (!raw) {
-                input.value = '0';
-                return;
-            }
-            const num = parseInt(raw, 10);
-            input.value = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        });
-        input.addEventListener('focus', () => {
-            if (input.value === '0') input.select();
-        });
-    }
-    setupPriceInput(formPrice);
-    setupPriceInput(formPrice2);
-    setupPriceInput(formPrice3);
-
-    // Sort rows alphabetically by name (A -> B -> C ...)
-    function sortDishRows() {
-        const rows = Array.from(tableTbody.querySelectorAll('.dish-row'));
-        rows.sort((a, b) => {
-            const nameA = (a.dataset.name || '').trim();
-            const nameB = (b.dataset.name || '').trim();
-            return nameA.localeCompare(nameB, 'vi', { sensitivity: 'base' });
-        });
-        rows.forEach(r => tableTbody.appendChild(r));
-    }
-
-    // Row selection
-    function bindRowEvents(row) {
-        row.addEventListener('click', () => {
-            if (selectedDishRow) selectedDishRow.classList.remove('selected');
-            selectedDishRow = row;
-            row.classList.add('selected');
-
-            btnEditDish.disabled = false;
-            btnDelDish.disabled = false;
-
-            // Load into form
-            loadDishIntoForm(row);
-        });
-
-        row.addEventListener('dblclick', () => {
-            loadDishIntoForm(row);
-            formName.focus();
-        });
-    }
-
-    document.querySelectorAll('.dish-row').forEach(bindRowEvents);
-
-    function loadDishIntoForm(row) {
-        formDishId.value = row.dataset.id;
-        formCategory.value = row.dataset.catId;
-        formSubgroup.value = row.dataset.subgroup || '';
-        formCode.value = row.dataset.code;
-        formName.value = row.dataset.name;
-        formUnit.value = row.dataset.unit || 'Phần';
-        formPrice.value = formatVND(row.dataset.p1 || 0);
-        formPrice2.value = formatVND(row.dataset.p2 || 0);
-        formPrice3.value = formatVND(row.dataset.p3 || 0);
-        formType.value = row.dataset.type || 'food';
-        if (formReason) formReason.value = '';
-
-        formTitle.textContent = `Sửa món: ${row.dataset.name}`;
-        formModeBadge.textContent = 'Đang sửa';
-        formModeBadge.className = 'form-mode-badge edit-mode';
-        if (btnSwitchAdd) btnSwitchAdd.style.display = 'inline-flex';
-    }
-
-    function resetDishForm() {
-        formDishId.value = '';
-        if (selectedCatId !== 'all') {
-            formCategory.value = selectedCatId;
-        } else {
-            formCategory.value = formCategory.options.length > 1 ? formCategory.options[1].value : '';
-        }
-        formSubgroup.value = '';
-        formCode.value = '';
-        formName.value = '';
-        formUnit.value = 'Phần';
-        formPrice.value = '0';
-        formPrice2.value = '0';
-        formPrice3.value = '0';
-        formType.value = 'food';
-        if (formReason) formReason.value = '';
-
-        formTitle.textContent = 'Thêm món mới';
-        formModeBadge.textContent = 'Tạo mới';
-        formModeBadge.className = 'form-mode-badge';
-        if (btnSwitchAdd) btnSwitchAdd.style.display = 'none';
-
-        if (selectedDishRow) {
-            selectedDishRow.classList.remove('selected');
-            selectedDishRow = null;
-        }
-        btnEditDish.disabled = true;
-        btnDelDish.disabled = true;
-    }
-
-    btnAddDish.addEventListener('click', resetDishForm);
-    btnCancelDish.addEventListener('click', resetDishForm);
-    btnEditDish.addEventListener('click', () => {
-        if (selectedDishRow) loadDishIntoForm(selectedDishRow);
-    });
-
-    // Helper to update or insert dish in table with alphabetical sorting
-    function updateOrInsertDish(dish, isEdit = false) {
-        let row = tableTbody.querySelector(`.dish-row[data-id="${dish.id}"]`);
-        const p1Formatted = formatVND(dish.price);
-        const p2Formatted = formatVND(dish.price_2);
-        const p3Formatted = formatVND(dish.price_3);
-
-        const rowHtml = `
-            <td class="col-cat"><span class="badge-cat">${dish.category_name}</span></td>
-            <td class="col-sub">${dish.subgroup || '-'}</td>
-            <td class="col-code"><code>${dish.code}</code></td>
-            <td class="col-name"><strong>${dish.name}</strong></td>
-            <td class="col-unit text-center">${dish.unit}</td>
-            <td class="col-price text-right">${p1Formatted} đ</td>
-            <td class="col-price-2 text-right">${p2Formatted} đ</td>
-            <td class="col-price-3 text-right">${p3Formatted} đ</td>
-            <td class="col-type text-center">
-                <span class="badge-type type-${dish.product_type}">${dish.product_type_display}</span>
-            </td>
-        `;
-
-        if (row) {
-            row.dataset.catId = dish.category_id;
-            row.dataset.subgroup = dish.subgroup || '';
-            row.dataset.code = dish.code;
-            row.dataset.name = dish.name;
-            row.dataset.unit = dish.unit;
-            row.dataset.p1 = dish.price;
-            row.dataset.p2 = dish.price_2;
-            row.dataset.p3 = dish.price_3;
-            row.dataset.type = dish.product_type;
-            row.innerHTML = rowHtml;
-        } else {
-            const emptyRow = tableTbody.querySelector('tr td.text-center');
-            if (emptyRow) emptyRow.closest('tr')?.remove();
-
-            row = document.createElement('tr');
-            row.className = 'dish-row';
-            row.dataset.id = dish.id;
-            row.dataset.catId = dish.category_id;
-            row.dataset.subgroup = dish.subgroup || '';
-            row.dataset.code = dish.code;
-            row.dataset.name = dish.name;
-            row.dataset.unit = dish.unit;
-            row.dataset.p1 = dish.price;
-            row.dataset.p2 = dish.price_2;
-            row.dataset.p3 = dish.price_3;
-            row.dataset.type = dish.product_type;
-            row.innerHTML = rowHtml;
-            tableTbody.appendChild(row);
-            bindRowEvents(row);
-        }
-
-        // NHẢY XẾP HÀNG THEO BẢNG CHỮ CÁI (A-B-C...)
-        sortDishRows();
-        filterDishes();
-
-        // Cuộn mượt tới món vừa lưu và tạo hiệu ứng nhấp nháy nhận biết
-        row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        row.classList.add('just-updated');
-        setTimeout(() => row.classList.remove('just-updated'), 2000);
-
-        if (isEdit) {
-            if (selectedDishRow) selectedDishRow.classList.remove('selected');
-            selectedDishRow = row;
-            row.classList.add('selected');
-            loadDishIntoForm(row);
-        } else {
-            // Thêm món mới xong -> Tự động reset form về Tạo mới để sẵn sàng thêm tiếp món khác, KHÔNG đè lên món vừa tạo
-            resetDishForm();
-            if (formCode) formCode.focus();
-        }
-    }
-
-    // Sắp xếp Alphabet ngay khi tải trang
-    sortDishRows();
-
-    // Save Dish via AJAX
-    dishForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitBtn = document.getElementById('btn-submit-dish');
-        const origText = submitBtn ? submitBtn.innerHTML : '';
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span>Đang lưu...</span>';
-        }
-
-        const isEdit = Boolean(formDishId.value);
-        const payload = {
-            dish_id: formDishId.value,
-            category_id: formCategory.value,
-            subgroup: formSubgroup.value.trim(),
-            code: formCode.value.trim().toUpperCase(),
-            name: formName.value.trim(),
-            unit: formUnit.value.trim() || 'Phần',
-            price: formPrice.value.replace(/\./g, '').trim(),
-            price_2: formPrice2.value.replace(/\./g, '').trim(),
-            price_3: formPrice3.value.replace(/\./g, '').trim(),
-            product_type: formType.value,
-            reason: formReason ? formReason.value.trim() : '',
-            auto_recipe: formAutoRecipe.checked,
-        };
-
-        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-
-        try {
-            const resp = await fetch('{% url "catalog:menu_save_dish" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
-                body: JSON.stringify(payload)
-            });
-            const res = await resp.json();
-            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi lưu món.');
-
-            showAlert(res.message);
-            if (res.dish) {
-                updateOrInsertDish(res.dish, isEdit);
-            }
-        } catch (err) {
-            showAlert(err.message, true);
-        } finally {
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = origText;
-            }
-        }
-    });
-
-    // Delete Dish with Reason Confirmation Modal
-    const deleteDishModal = document.getElementById('modal-delete-dish-confirm');
-    const deleteDishCloseBtn = document.getElementById('modal-delete-dish-close');
-    const deleteDishCancelBtn = document.getElementById('modal-delete-dish-cancel');
-    const deleteDishForm = document.getElementById('form-delete-dish-confirm');
-    const deleteDishTargetName = document.getElementById('modal-delete-target-dish-name');
-    const deleteDishTargetReason = document.getElementById('modal-delete-target-reason');
-
-    if (deleteDishCloseBtn) deleteDishCloseBtn.addEventListener('click', () => { if (deleteDishModal) deleteDishModal.hidden = true; });
-    if (deleteDishCancelBtn) deleteDishCancelBtn.addEventListener('click', () => { if (deleteDishModal) deleteDishModal.hidden = true; });
-
-    btnDelDish.addEventListener('click', () => {
-        if (!selectedDishRow) return;
-        const name = selectedDishRow.dataset.name;
-        const code = selectedDishRow.dataset.code;
-        if (deleteDishTargetName) deleteDishTargetName.textContent = `"${name}" (${code})`;
-        if (deleteDishTargetReason) {
-            deleteDishTargetReason.value = '';
-            setTimeout(() => deleteDishTargetReason.focus(), 100);
-        }
-        if (deleteDishModal) deleteDishModal.hidden = false;
-    });
-
-    if (deleteDishForm) {
-        deleteDishForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!selectedDishRow) return;
-            const id = selectedDishRow.dataset.id;
-            const reason = deleteDishTargetReason ? deleteDishTargetReason.value.trim() : '';
-
-            const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-            try {
-                const resp = await fetch(`/catalog/menu/api/delete-dish/${id}/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                    body: JSON.stringify({ reason: reason })
-                });
-                const res = await resp.json();
-                if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi xóa món.');
-                if (deleteDishModal) deleteDishModal.hidden = true;
-                showAlert(res.message);
-                selectedDishRow.remove();
-                resetDishForm();
-                filterDishes();
-            } catch (err) {
-                showAlert(err.message, true);
-            }
-        });
-    }
-
-    // Category Add & Edit Modals
-    const catModal = document.getElementById('modal-category');
-    const catModalTitle = document.getElementById('cat-modal-title');
-    const modalCatId = document.getElementById('modal-cat-id');
-    const modalCatName = document.getElementById('modal-cat-name');
-    const modalCatColor = document.getElementById('modal-cat-color');
-    const modalCatOrder = document.getElementById('modal-cat-order');
-
-    btnCatAdd.addEventListener('click', () => {
-        modalCatId.value = '';
-        modalCatName.value = '';
-        modalCatColor.value = '#f59e0b';
-        modalCatOrder.value = 0;
-        catModalTitle.textContent = 'Thêm danh mục mới';
-        catModal.hidden = false;
-        modalCatName.focus();
-    });
-
-    btnCatEdit.addEventListener('click', () => {
-        if (!selectedCatPill || selectedCatId === 'all') return;
-        modalCatId.value = selectedCatId;
-        modalCatName.value = selectedCatPill.dataset.catName;
-        modalCatColor.value = selectedCatPill.dataset.catColor || '#f59e0b';
-        modalCatOrder.value = selectedCatPill.dataset.catOrder || 0;
-        catModalTitle.textContent = `Sửa danh mục: ${selectedCatPill.dataset.catName}`;
-        catModal.hidden = false;
-        modalCatName.focus();
-    });
-
-    document.querySelectorAll('.preset-color').forEach(dot => {
-        dot.addEventListener('click', () => {
-            modalCatColor.value = dot.dataset.color;
-        });
-    });
-
-    document.getElementById('modal-cat-close').addEventListener('click', () => { catModal.hidden = true; });
-    document.getElementById('modal-cat-cancel').addEventListener('click', () => { catModal.hidden = true; });
-
-    document.getElementById('form-category').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = {
-            category_id: modalCatId.value,
-            name: modalCatName.value,
-            color: modalCatColor.value,
-            display_order: modalCatOrder.value,
-        };
-        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-        try {
-            const resp = await fetch('{% url "catalog:menu_save_category" %}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify(payload)
-            });
-            const res = await resp.json();
-            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi lưu danh mục.');
-            showAlert(res.message);
-            catModal.hidden = true;
-            window.location.reload();
-        } catch (err) {
-            alert(err.message);
-        }
-    });
-
-    // Delete Category
-    btnCatDel.addEventListener('click', async () => {
-        if (!selectedCatPill || selectedCatId === 'all') return;
-        const name = selectedCatPill.dataset.catName;
-        if (!confirm(`Bạn có chắc chắn muốn xóa danh mục "${name}"?`)) return;
-
-        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-        try {
-            const resp = await fetch(`/catalog/menu/api/delete-category/${selectedCatId}/`, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': csrfToken }
-            });
-            const res = await resp.json();
-            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi xóa danh mục.');
-            showAlert(res.message);
-            window.location.reload();
-        } catch (err) {
-            showAlert(err.message, true);
-        }
-    });
-
-    // Import Modal
-    const importModal = document.getElementById('modal-import-excel');
-    document.getElementById('page-btn-open-import').addEventListener('click', () => { importModal.hidden = false; });
-    document.getElementById('modal-import-close').addEventListener('click', () => { importModal.hidden = true; });
-    document.getElementById('modal-import-cancel').addEventListener('click', () => { importModal.hidden = true; });
-
-    document.getElementById('form-import-excel').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const submitBtn = document.getElementById('btn-submit-import');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Đang nhập dữ liệu...';
-
-        try {
-            const resp = await fetch('{% url "catalog:menu_import_excel" %}', {
-                method: 'POST',
-                body: formData
-            });
-            const res = await resp.json();
-            if (!resp.ok || res.error) throw new Error(res.error || 'Lỗi khi nhập dữ liệu.');
-            alert(res.message);
-            importModal.hidden = true;
-            window.location.reload();
-        } catch (err) {
-            alert(err.message);
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Nhập dữ liệu';
-        }
-    });
-});
-</script>
+<!-- # Core Menu Admin Client Script -->
+<script src="{% static 'js/catalog/menu_admin.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

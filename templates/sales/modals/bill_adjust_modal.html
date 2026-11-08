@@ -1,10 +1,10 @@
-<!-- MODAL 1: GIẢM GIÁ / PHỤ PHÍ / VAT / MÃ GIẢM GIÁ CHO BÀN (NHƯ ẢNH 1) -->
+<!-- # File này chịu trách nhiệm hiển thị các hộp thoại điều chỉnh phiếu thanh toán trên POS: Giảm giá, Phụ phí, Thuế VAT, Tặng món và Quản lý Mã giảm giá (Coupon). -->
 <div class="menu-modal-backdrop sub-modal reason-sub-modal" id="modal-bill-adjust"
      data-validate-coupon-url="{% url 'sales:validate_coupon_api' %}"
      data-coupons-url="{% url 'sales:coupons_api' %}"
      role="dialog" aria-modal="true" aria-labelledby="bill-adjust-title" hidden>
     <div class="menu-modal-dialog inv-reason-popup-dialog bill-adjust-popup-dialog">
-        <!-- Modal Header -->
+        <!-- # Modal Header -->
         <div class="menu-modal-header inv-reason-popup-header bill-adjust-popup-header">
             <div class="modal-title-wrap">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -16,9 +16,9 @@
             <button type="button" class="dialog-close" id="bill-adjust-close" aria-label="Đóng">&times;</button>
         </div>
 
-        <!-- Modal Body -->
+        <!-- # Modal Body -->
         <div class="inv-reason-popup-body bill-adjust-popup-body">
-            <!-- Row 1: Phụ thu (% | đ) -->
+            <!-- # Row 1: Phụ thu (% | đ) -->
             <div class="bill-adjust-row">
                 <label for="bill-adjust-surcharge" class="bill-adjust-label">Phụ thu (% | đ)</label>
                 <div class="pos-editable-combo" data-combo="surcharge">
@@ -40,7 +40,7 @@
                 </div>
             </div>
 
-            <!-- Row 2: Giảm giá (% | đ) -->
+            <!-- # Row 2: Giảm giá (% | đ) -->
             <div class="bill-adjust-row">
                 <label for="bill-adjust-discount" class="bill-adjust-label">Giảm giá (% | đ)</label>
                 <div class="pos-editable-combo" data-combo="discount">
@@ -65,7 +65,7 @@
                 </div>
             </div>
 
-            <!-- Row 3: VAT (%) -->
+            <!-- # Row 3: VAT (%) -->
             <div class="bill-adjust-row">
                 <label for="bill-adjust-vat" class="bill-adjust-label">VAT (%)</label>
                 <div class="pos-editable-combo" data-combo="vat">
@@ -82,7 +82,7 @@
                 </div>
             </div>
 
-            <!-- Row 4: Mã giảm giá -->
+            <!-- # Row 4: Mã giảm giá -->
             <div class="bill-adjust-coupon-group">
                 <div class="bill-adjust-coupon-header">
                     <label for="bill-adjust-coupon" class="bill-adjust-label">Mã giảm giá</label>
@@ -109,13 +109,13 @@
                 </div>
             </div>
 
-            <!-- Live Preview Summary Box -->
+            <!-- # Live Preview Summary Box -->
             <div class="bill-adjust-live-preview" id="bill-adjust-live-preview">
                 <div class="preview-item"><span>Tiền món:</span> <strong id="ba-prev-subtotal">0 đ</strong></div>
                 <div class="preview-item"><span>Thành tiền sau điều chỉnh:</span> <strong id="ba-prev-total" class="preview-total-val">0 đ</strong></div>
             </div>
 
-            <!-- Footer Actions -->
+            <!-- # Footer Actions -->
             <div class="inv-reason-popup-actions bill-adjust-actions">
                 <button type="button" id="bill-adjust-confirm" class="btn-reason-confirm">Xác nhận</button>
                 <button type="button" id="bill-adjust-cancel" class="btn-reason-cancel">Bỏ qua</button>
@@ -124,7 +124,7 @@
     </div>
 </div>
 
-<!-- MODAL 2: QUẢN LÝ MÃ GIẢM GIÁ & COUPON (MỞ TỪ CÀI ĐẶT -> MÃ GIẢM GIÁ & COUPON) -->
+<!-- # MODAL 2: QUẢN LÝ MÃ GIẢM GIÁ & COUPON (MỞ TỪ CÀI ĐẶT -> MÃ GIẢM GIÁ & COUPON) -->
 <div class="menu-modal-backdrop sub-modal" id="modal-coupon-manager" hidden>
     <div class="menu-modal-dialog coupon-manager-dialog">
         <div class="menu-modal-header inv-reason-popup-header">
@@ -139,38 +139,40 @@
         </div>
 
         <div class="coupon-manager-body">
-            <form id="coupon-manager-form" class="coupon-manager-form">
-                <input type="text" id="cm-code-input" placeholder="Mã (VD: GIAM20)" required maxlength="30" class="cm-input cm-code">
-                <select id="cm-type-select" class="cm-select">
+            <form id="coupon-manager-form" class="coupon-manager-form" onsubmit="return false;">
+                <input type="text" id="coupon-form-code" placeholder="Mã (VD: GIAM20)" required maxlength="30" class="cm-input cm-code">
+                <select id="coupon-form-type" class="cm-select">
                     <option value="percent">Giảm theo %</option>
                     <option value="fixed">Giảm số tiền (đ)</option>
                 </select>
-                <input type="number" id="cm-value-input" placeholder="Giá trị (VD: 20 hoặc 50000)" required min="1" class="cm-input cm-val">
-                <input type="text" id="cm-desc-input" placeholder="Mô tả ngắn..." maxlength="120" class="cm-input cm-desc">
-                <button type="submit" class="btn-reason-confirm cm-btn-save">+ Lưu mã</button>
+                <input type="number" id="coupon-form-value" placeholder="Giá trị (VD: 20 hoặc 50000)" required min="1" class="cm-input cm-val">
+                <input type="number" id="coupon-form-min-order" placeholder="Đơn tối thiểu (đ)" min="0" value="0" class="cm-input cm-val">
+                <input type="text" id="coupon-form-desc" placeholder="Mô tả ngắn..." maxlength="120" class="cm-input cm-desc">
+                <button type="button" id="coupon-form-save-btn" class="btn-reason-confirm cm-btn-save">+ Lưu mã</button>
             </form>
 
             <div class="coupon-manager-table-wrap">
                 <table class="rev-time-table coupon-manager-table">
                     <thead>
                         <tr>
-                            <th style="width: 24%;">Mã giảm giá</th>
-                            <th style="width: 22%;">Mức giảm</th>
+                            <th class="u-sale-02e7158c">Mã giảm giá</th>
+                            <th>Loại giảm</th>
+                            <th class="text-right u-sale-03d93c8f">Mức giảm</th>
+                            <th class="text-right">Đơn tối thiểu</th>
                             <th>Mô tả</th>
-                            <th style="width: 90px;" class="text-center">Thao tác</th>
+                            <th class="text-center u-sale-459fa5f4">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="coupon-manager-tbody">
-                        <tr><td colspan="4" class="rev-time-loading">Đang tải danh sách mã...</td></tr>
+                        <tr><td colspan="6" class="rev-time-loading">Đang tải danh sách mã...</td></tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="coupon-manager-footer">
-                <span class="text-muted" style="font-size: 12px;">Nhấn vào mã để sửa nhanh hoặc nhập mã này tại hộp thoại Giảm giá / Phụ phí của bàn.</span>
+                <span class="text-muted u-sale-345895de">Nhấn vào mã để sửa nhanh hoặc nhập mã này tại hộp thoại Giảm giá / Phụ phí của bàn.</span>
                 <button type="button" class="btn-eod-cancel" id="coupon-manager-done">Đóng</button>
             </div>
         </div>
     </div>
 </div>
-

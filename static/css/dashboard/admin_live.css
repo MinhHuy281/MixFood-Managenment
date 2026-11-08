@@ -1,0 +1,1192 @@
+/* # File này chịu trách nhiệm định nghĩa toàn bộ giao diện của trang Admin Live Remote Dashboard (/admin/) chuẩn Mobile-First 100%, hỗ trợ theo dõi trực tiếp hoạt động của User và sơ đồ bàn thời gian thực trên điện thoại thông minh. */
+
+/* ==========================================================================
+   1. GLOBAL CONTAINER & APP SHELL
+   ========================================================================== */
+.admin-live-body {
+    background: #090e17 !important;
+    color: #f1f5f9;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.admin-live-shell {
+    padding: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+}
+
+.admin-live-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-bottom: 74px; /* Chừa khoảng trống cho thanh Bottom Nav trên điện thoại */
+    box-sizing: border-box;
+}
+
+/* ==========================================================================
+   2. HEADER APP BAR & KPI CARDS
+   ========================================================================== */
+.admin-live-header {
+    background: linear-gradient(180deg, #0f172a 0%, #131d31 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 14px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+.header-main-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.admin-brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.live-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+    flex-shrink: 0;
+}
+
+.live-status-dot.pulse {
+    animation: liveDotPulse 2s infinite ease-in-out;
+}
+
+@keyframes liveDotPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.55; }
+}
+
+.brand-text-block h1 {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: 0.03em;
+}
+
+.brand-sub {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.header-action-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.live-clock-badge {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: #38bdf8;
+}
+
+.btn-live-toggle,
+.btn-live-audio,
+.btn-admin-logout {
+    height: 34px;
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8fafc;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-live-toggle.active {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: #10b981;
+    color: #34d399;
+}
+
+.btn-live-audio {
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+}
+
+.btn-live-audio.active {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: #38bdf8;
+    color: #38bdf8;
+}
+
+.btn-admin-logout {
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* KPI Horizontal Cards (Cuộn ngang tiện lợi trên điện thoại) */
+.kpi-scroll-container {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+}
+
+.kpi-scroll-container::-webkit-scrollbar {
+    display: none;
+}
+
+.kpi-card {
+    min-width: 140px;
+    flex: 1;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+    padding: 9px 11px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    transition: all 0.2s ease;
+}
+
+.kpi-card.has-alert {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.kpi-icon-wrap {
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.kpi-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.kpi-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+.kpi-value {
+    font-family: var(--font-heading);
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-card.card-revenue .kpi-value {
+    color: #34d399;
+}
+
+.kpi-card.card-sensitive .kpi-value {
+    color: #f87171;
+}
+
+.kpi-sub {
+    font-size: 9.5px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   3. TAB BAR (SEGMENTED CONTROL TRÊN DESKTOP & TABLET)
+   ========================================================================== */
+.admin-tab-bar {
+    display: flex;
+    background: #0f172a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 10px;
+    gap: 6px;
+    position: sticky;
+    top: 96px;
+    z-index: 90;
+}
+
+.tab-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 7px;
+    background: transparent;
+    color: #94a3b8;
+    font-family: var(--font-heading);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+    color: #f1f5f9;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-btn.active {
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* ==========================================================================
+   4. TAB CONTENT & PANE STYLES
+   ========================================================================== */
+.admin-tab-content {
+    flex: 1;
+    padding: 12px 14px;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+    animation: fadeInTab 0.2s ease-out;
+}
+
+@keyframes fadeInTab {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   5. TAB 1: LIVE FEED (DÒNG SỰ KIỆN THỜI GIAN THỰC)
+   ========================================================================== */
+.feed-filter-bar {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-chips-scroll {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+}
+
+.filter-chips-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.chip-filter {
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.chip-filter.active {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+}
+
+.chip-filter.chip-sensitive.active {
+    background: #dc2626;
+    border-color: #f87171;
+    color: #ffffff;
+}
+
+.feed-search-wrap input {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 12.5px;
+    outline: none;
+}
+
+.feed-search-wrap input:focus {
+    border-color: #10b981;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.live-feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.feed-item {
+    background: #111a2e;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s ease;
+}
+
+.feed-item.item-sensitive {
+    border-left: 4px solid #ef4444 !important;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.09) 0%, #111a2e 100%);
+}
+
+.feed-item.new-arrival {
+    animation: highlightItem 2.5s ease-out;
+}
+
+@keyframes highlightItem {
+    0% { background: rgba(16, 185, 129, 0.25); border-color: #10b981; }
+    100% { background: #111a2e; }
+}
+
+.feed-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.feed-actor-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feed-actor-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.feed-actor-name {
+    font-size: 13px;
+    color: #f1f5f9;
+    font-weight: 700;
+    display: block;
+}
+
+.feed-time-text {
+    font-size: 11px;
+    color: #64748b;
+    display: block;
+}
+
+.feed-action-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+.feed-description {
+    margin: 0;
+    font-size: 12.5px;
+    color: #cbd5e1;
+    line-height: 1.45;
+}
+
+.feed-reason-box {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid #ef4444;
+    font-size: 12px;
+}
+
+.reason-label {
+    font-weight: 700;
+    color: #f87171;
+    margin-right: 4px;
+}
+
+.reason-val {
+    color: #fca5a5;
+}
+
+.feed-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+}
+
+.feed-empty-state .empty-icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* ==========================================================================
+   6. TAB 2: LIVE TABLES GRID (SƠ ĐỒ BÀN TRỰC TIẾP)
+   ========================================================================= */
+.tables-tab-header {
+    margin-bottom: 12px;
+}
+
+.area-filter-scroll {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+}
+
+.area-filter-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.area-chip {
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.area-chip.active {
+    background: #059669;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.tables-summary-line {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: 6px;
+}
+
+.live-tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.admin-table-card {
+    background: #111a2e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.admin-table-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.admin-table-card.table-status-occupied {
+    background: linear-gradient(145deg, #163028 0%, #11231f 100%);
+    border-color: #10b981;
+}
+
+.admin-table-card.table-status-reserved {
+    background: linear-gradient(145deg, #2b281f 0%, #1f1d16 100%);
+    border-color: #f59e0b;
+}
+
+.table-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.table-badge-name {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.table-badge-status {
+    font-size: 10.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+}
+
+.admin-table-card.table-status-occupied .table-badge-status {
+    background: #059669;
+    color: #ffffff;
+}
+
+.table-area-text {
+    font-size: 11px;
+    color: #64748b;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.occupied-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #34d399;
+}
+
+.badge-active-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: liveDotPulse 1.8s infinite;
+}
+
+.table-view-detail-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 10.5px;
+    color: #38bdf8;
+    font-weight: 600;
+}
+
+.text-available {
+    font-size: 11px;
+    color: #475569;
+}
+
+/* ==========================================================================
+   7. TAB 3: DOANH SỐ & TIẾN ĐỘ CA
+   ========================================================================== */
+.metric-block-card {
+    background: #111a2e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.metric-block-card h3 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.metric-big-number {
+    font-family: var(--font-heading);
+    font-size: 30px;
+    font-weight: 800;
+    color: #34d399;
+    letter-spacing: -0.02em;
+}
+
+.metric-note {
+    margin: 4px 0 0;
+    font-size: 11.5px;
+    color: #64748b;
+}
+
+.metric-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.sub-metric-card {
+    background: #111a2e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.sub-label {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.sub-value {
+    font-family: var(--font-heading);
+    font-size: 17px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.text-amber { color: #fbbf24 !important; }
+.text-danger { color: #f87171 !important; }
+.text-primary { color: #38bdf8 !important; }
+
+.quick-nav-reports {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.btn-goto-report {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #f1f5f9;
+    font-weight: 600;
+    font-size: 12.5px;
+    transition: all 0.15s ease;
+}
+
+.btn-goto-report:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #38bdf8;
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   8. TAB 4: TRUNG TÂM QUẢN TRỊ ADMIN (HUB TIỆN ÍCH)
+   ========================================================================== */
+.admin-hub-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.hub-section-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+}
+
+.hub-links-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hub-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #111a2e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #f1f5f9;
+    transition: all 0.15s ease;
+}
+
+.hub-tile:hover {
+    background: #15223c;
+    border-color: #38bdf8;
+    transform: translateY(-1px);
+}
+
+.hub-tile-icon {
+    font-size: 20px;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.hub-tile-text strong {
+    display: block;
+    font-size: 13.5px;
+    color: #ffffff;
+}
+
+.hub-tile-text small {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.hub-tile.hub-tile-django {
+    border-color: rgba(2, 132, 199, 0.4);
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, #111a2e 100%);
+}
+
+.hub-tile.hub-tile-pos {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, #111a2e 100%);
+}
+
+/* ==========================================================================
+   9. POPUP CHI TIẾT ĐƠN HÀNG CỦA BÀN
+   ========================================================================== */
+.admin-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.admin-modal-backdrop[hidden] {
+    display: none !important;
+}
+
+.admin-modal-card {
+    background: #111a2e;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+}
+
+.admin-modal-header {
+    padding: 12px 16px;
+    background: #0f172a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-modal-header h3 {
+    margin: 0;
+    font-size: 15px;
+    color: #ffffff;
+}
+
+.btn-admin-modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.admin-modal-body {
+    padding: 14px 16px;
+    overflow-y: auto;
+    font-size: 12.5px;
+}
+
+.table-modal-loading {
+    text-align: center;
+    padding: 24px 0;
+    color: #94a3b8;
+}
+
+.order-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.order-items-table th {
+    text-align: left;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+.order-items-table td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.order-modal-summary {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 800;
+    color: #34d399;
+}
+
+.admin-modal-footer {
+    padding: 10px 16px;
+    background: #0f172a;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-modal-action-close {
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   10. BOTTOM NAVIGATION BAR CHO MOBILE (MÀN HÌNH < 768px)
+   ========================================================================== */
+.admin-bottom-nav {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .admin-tab-bar {
+        display: none !important; /* Ẩn tab trên đầu, thay bằng bottom nav ở đáy */
+    }
+
+    .admin-bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: #0f172a;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 10010;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .bottom-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 10.5px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bottom-nav-icon {
+        font-size: 19px;
+    }
+
+    .bottom-nav-item.active {
+        color: #34d399;
+    }
+
+    .bottom-nav-item.active .bottom-nav-icon {
+        transform: translateY(-2px);
+    }
+}
+
+
+/* ==========================================================================
+   ADMIN LOGIN CARD STYLES (/admin/login/)
+   ========================================================================== */
+.admin-login-body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 20%, #1e293b 0%, #0f172a 100%);
+    font-family: var(--font-body);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    box-sizing: border-box;
+    color: #e2e8f0;
+}
+
+.admin-login-wrapper {
+    width: 100%;
+    max-width: 440px;
+    margin: auto;
+}
+
+.admin-login-card {
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    padding: 32px 28px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55);
+}
+
+.admin-login-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.admin-brand-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.admin-logo-shield {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-brand-info h2 {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.3px;
+    text-align: left;
+}
+
+.admin-brand-tag {
+    font-size: 11.5px;
+    color: #10b981;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    text-align: left;
+}
+
+.admin-login-desc {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.admin-login-alert {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    color: #fca5a5;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.admin-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.admin-form-group label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+.admin-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.admin-input-icon {
+    position: absolute;
+    left: 14px;
+    color: #64748b;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+}
+
+.admin-form-control {
+    width: 100%;
+    height: 46px;
+    padding: 0 46px 0 42px;
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.admin-form-control:focus {
+    outline: none;
+    border-color: #10b981;
+    background: rgba(30, 41, 59, 1);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.btn-toggle-admin-pwd {
+    position: absolute;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+}
+
+.btn-toggle-admin-pwd:hover {
+    color: #ffffff;
+}
+
+.admin-isolation-badge {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px dashed rgba(16, 185, 129, 0.35);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11.5px;
+    color: #a7f3d0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
+}
+
+.admin-isolation-badge .badge-dot {
+    width: 7px;
+    height: 7px;
+    background: #10b981;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+
+.admin-btn-login {
+    width: 100%;
+    height: 48px;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+    margin-top: 6px;
+}
+
+.admin-btn-login:hover {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 6px 20px rgba(5, 150, 105, 0.45);
+    transform: translateY(-1px);
+}
+
+.admin-btn-login:active {
+    transform: translateY(0);
+}
+
+.admin-login-footer {
+    margin-top: 22px;
+    text-align: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 16px;
+}
+
+.admin-link-pos {
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.15s ease;
+}
+
+.admin-link-pos:hover {
+    color: #34d399;
+}

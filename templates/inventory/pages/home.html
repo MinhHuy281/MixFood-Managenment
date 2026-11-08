@@ -1,50 +1,42 @@
+<!-- # File này chịu trách nhiệm hiển thị trang độc lập Báo cáo Xuất - Nhập - Tồn kho & Kiểm kê kho hàng. -->
 {% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Quản lý Kho hàng & Xuất - Nhập - Tồn | MixFood Manager{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<link rel="stylesheet" href="{% static 'css/inventory/inventory.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="inv-standalone-container" data-initial-tab="xnt" style="padding: 16px 20px; max-width: 1440px; margin: 0 auto;">
+<div class="inv-standalone-container u-inve-3227cc43" data-initial-tab="xnt">
     <div class="inv-page-top-nav">
         <a href="{% url 'dashboard:home' %}" class="inv-back-btn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
             ← Về màn hình thu ngân POS
         </a>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <a href="{% url 'inventory:manage' %}" class="inv-btn-secondary" style="text-decoration: none;">
+        <div class="u-inve-39b2332b">
+            <a href="{% url 'inventory:manage' %}" class="inv-btn-secondary u-inve-8354e9b3">
                 📦 Quản lý Kho hàng (Tách Thùng ➔ Hộp)
             </a>
-            <a href="{% url 'inventory:home' %}" class="inv-btn-primary" style="text-decoration: none; background: #0f172a; color: #fff;">
+            <a href="{% url 'inventory:home' %}" class="inv-btn-primary u-inve-1d1f1517">
                 🔄 Báo cáo Xuất - Nhập - Tồn
             </a>
-            <a href="{% url 'inventory:recipes' %}" class="inv-btn-secondary" style="text-decoration: none;">
+            <a href="{% url 'inventory:recipes' %}" class="inv-btn-secondary u-inve-8354e9b3">
                 ⚖️ Định lượng món (Recipes / BOM)
             </a>
-            <a href="{% url 'catalog:ingredients' %}" class="inv-btn-secondary" style="text-decoration: none;">
+            <a href="{% url 'catalog:ingredients' %}" class="inv-btn-secondary u-inve-8354e9b3">
                 🏷️ Quản lý Mặt hàng
             </a>
         </div>
     </div>
 
-    <!-- Inventory Manager Interface -->
+    <!-- # Giao diện Quản lý Kho hàng -->
     {% include 'inventory/modals/inventory_modal.html' %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/inventory.js' %}?v={% now 'U' %}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const modal = document.querySelector('#modal-inventory-manager');
-        if (modal) {
-            modal.hidden = false;
-            modal.classList.remove('menu-modal-backdrop', 'inv-modal-backdrop');
-            modal.classList.add('inv-embedded-page');
-        }
-    });
-</script>
+<script src="{% static 'js/inventory/inventory.js' %}?v={% now 'U' %}"></script>
+<script src="{% static 'js/inventory/inventory_home.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

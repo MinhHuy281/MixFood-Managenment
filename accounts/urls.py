@@ -1,9 +1,13 @@
+# File này chịu trách nhiệm định tuyến URL (URL Routing) cho các trang và API thuộc phân hệ Tài khoản & Phân quyền.
 from django.urls import path
 
 from .views import (
     AccountLoginView,
     AccountLogoutView,
     AccountPasswordChangeView,
+    api_change_password,
+    api_forgot_password,
+    api_register_user,
     permission_api_clear_elevation,
     permission_api_get,
     permission_api_save,
@@ -30,5 +34,7 @@ urlpatterns = [
     path('api/permissions/save/', permission_api_save, name='permission_api_save'),
     path('api/permissions/verify/', permission_api_verify, name='permission_api_verify'),
     path('api/permissions/clear-elevation/', permission_api_clear_elevation, name='permission_api_clear_elevation'),
+    path('api/forgot-password/', api_forgot_password, name='api_forgot_password'),
+    path('api/change-password/', api_change_password, name='api_change_password'),
+    path('api/register/', api_register_user, name='api_register_user'),
 ]
-

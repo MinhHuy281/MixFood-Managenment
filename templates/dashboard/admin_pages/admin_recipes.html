@@ -1,0 +1,92 @@
+<!-- # File này chịu trách nhiệm hiển thị giao diện Định lượng nguyên liệu (BOM) trên Mobile cho Admin (/admin/recipes/), hỗ trợ xem định mức chế biến từng món và trừ kho tự động. -->
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Định lượng nguyên liệu (BOM) - Admin Mobile | MixFood 2026{% endblock %}
+{% block body_class %}admin-subpage-body{% endblock %}
+{% block page_class %}admin-subpage-shell{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/admin_subpages.css' %}?v={% now 'U' %}">
+{% endblock %}
+
+{% block authenticated_header %}
+<!-- # Không nạp topbar POS desktop để giữ trọn vẹn diện tích cho Mobile Admin -->
+{% endblock %}
+
+{% block content %}
+<div class="admin-subpage-shell">
+    <!-- # Header Top Bar -->
+    <header class="admin-subpage-header">
+        <div class="admin-header-left">
+            <a href="{% url 'admin_live_dashboard' %}" class="admin-back-btn" title="Về Giám sát Live">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <div>
+                <h1 class="admin-subpage-title">Định lượng BOM</h1>
+                <span class="admin-subpage-badge">{{ recipes|length }} công thức</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- # Toolbar Tìm kiếm -->
+    <div class="admin-toolbar-wrap">
+        <form method="get" action="{% url 'admin_recipes' %}" class="admin-search-form">
+            <span class="admin-search-icon">🔍</span>
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Tìm công thức theo tên món..." class="admin-search-input">
+        </form>
+    </div>
+
+    <!-- # Card List Công thức BOM -->
+    <div class="admin-content-area">
+        <div class="admin-card-list">
+            {% for rec in recipes %}
+            <div class="admin-card">
+                <div class="admin-card-top">
+                    <div>
+                        <h3 class="admin-card-title">
+                            <span>⚖️</span>
+                            <span>{{ rec.product.name }}</span>
+                        </h3>
+                        <span class="admin-card-subtitle">Mã: {{ rec.product.code|default:'N/A' }} • {{ rec.product.category.name|default:'Khác' }}</span>
+                    </div>
+                    <span class="admin-card-badge badge-blue">
+                        {{ rec.items.all|length }} thành phần
+                    </span>
+                </div>
+
+                <!-- # Chi tiết danh sách nguyên liệu trong định lượng -->
+                <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+                    {% for it in rec.items.all %}
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(30, 41, 59, 0.6); border-radius: 6px; font-size: 12px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="color: #94a3b8;">▪</span>
+                            <strong style="color: #ffffff;">{{ it.ingredient.name }}</strong>
+                            <small style="color: #64748b;">({{ it.ingredient.get_storage_area_display }})</small>
+                        </div>
+                        <div style="font-weight: 700; color: #34d399;">
+                            {{ it.quantity }} {{ it.ingredient.unit }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div style="font-size: 12px; color: #64748b; font-style: italic; padding: 4px 0;">
+                        Chưa cấu hình định lượng thành phần cho món này.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="admin-empty-state">
+                <p>Không tìm thấy công thức định lượng nào.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard/admin_subpages.js' %}?v={% now 'U' %}"></script>
+{% endblock %}
