@@ -209,6 +209,362 @@
     align-items: center;
     justify-content: space-between;
 }
+
+/* # Giao diện Hộp thoại Xem trước & In Bill Nhiệt K80 (Thanh toán, In lại HĐ, Kết ca, Báo cáo cuối ngày) */
+.pos-thermal-modal-dialog {
+    width: 96vw;
+    max-width: 720px;
+    max-height: 92vh;
+    background: #0f172a;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.pos-thermal-modal-dialog.single-slip {
+    max-width: 420px;
+}
+.pos-thermal-body {
+    background: #cbd5e1;
+    padding: 18px 14px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 16px;
+}
+.pos-k80-slip {
+    width: 312px;
+    max-width: 100%;
+    background: #ffffff;
+    color: #000000;
+    padding: 16px 13px 20px;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.22);
+    font-family: "Times New Roman", Times, Georgia, serif;
+    font-size: 13px;
+    line-height: 1.38;
+}
+.pos-k80-slip .cup-icon-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+.pos-k80-slip .brand-main {
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+.pos-k80-slip .brand-sub {
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.25;
+    margin-bottom: 2px;
+}
+.pos-k80-slip .brand-addr {
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    font-style: italic;
+    margin-bottom: 9px;
+}
+.pos-k80-slip .bill-table-title {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 3px;
+}
+.pos-k80-slip .bill-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.2px;
+    margin-bottom: 2px;
+}
+.pos-k80-slip .bill-items-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12.8px;
+}
+.pos-k80-slip .bill-items-tbl thead th {
+    border-bottom: 1.5px solid #000;
+    padding: 3px 2px;
+    text-align: left;
+    font-weight: 700;
+}
+.pos-k80-slip .bill-items-tbl thead th.c-sl,
+.pos-k80-slip .bill-items-tbl tbody td.c-sl {
+    text-align: center;
+    width: 30px;
+}
+.pos-k80-slip .bill-items-tbl thead th.c-price,
+.pos-k80-slip .bill-items-tbl tbody td.c-price,
+.pos-k80-slip .bill-items-tbl thead th.c-total,
+.pos-k80-slip .bill-items-tbl tbody td.c-total {
+    text-align: right;
+    width: 64px;
+    white-space: nowrap;
+}
+.pos-k80-slip .bill-items-tbl tbody td {
+    padding: 3.5px 2px 2px;
+    vertical-align: top;
+}
+.pos-k80-slip .line-solid {
+    border-top: 1.5px solid #000;
+    margin: 7px 0 5px;
+}
+.pos-k80-slip .line-double {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    height: 3px;
+    margin: 9px 0;
+}
+.pos-k80-slip .sum-bold-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14.5px;
+    font-weight: 700;
+    margin: 2px 0;
+}
+.pos-k80-slip .sum-italic-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13.5px;
+    font-style: italic;
+    margin: 2px 0;
+}
+.pos-k80-slip .sum-grand-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16.5px;
+    font-weight: 700;
+    margin: 7px 0 5px;
+}
+.pos-k80-slip .qr-box {
+    margin: 9px 0 7px;
+    padding: 7px 5px;
+    border: 1px dashed #374151;
+    border-radius: 6px;
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.pos-k80-slip .qr-box .qr-m-title {
+    font-size: 11.5px;
+    font-weight: 700;
+}
+.pos-k80-slip .qr-box .qr-m-code {
+    font-size: 9.5px;
+    color: #374151;
+    margin-bottom: 2px;
+}
+.pos-k80-slip .qr-box .qr-bank-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: #b91c1c;
+    margin-bottom: 3px;
+}
+.pos-k80-slip .qr-box img {
+    width: 156px;
+    height: 156px;
+    object-fit: contain;
+    display: block;
+    margin: 2px auto 4px;
+}
+.pos-k80-slip .qr-box .qr-napas {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+.pos-k80-slip .qr-box .qr-holder {
+    font-size: 10px;
+    font-weight: 700;
+}
+.pos-k80-slip .qr-box .qr-acc {
+    font-size: 12px;
+    font-weight: 800;
+}
+.pos-k80-slip .bill-footer {
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    margin-top: 6px;
+}
+.pos-k80-slip .bill-footer .ft-1 {
+    font-size: 11.5px;
+    font-style: italic;
+    font-weight: 600;
+}
+.pos-k80-slip .bill-footer .ft-2 {
+    font-size: 10.5px;
+    font-style: italic;
+}
+
+/* # Định dạng phiếu nhiệt BÁO CÁO KẾT CA & BÁO CÁO CUỐI NGÀY trên modal */
+.pos-k80-slip .shift-report-heading {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 17.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+}
+.pos-k80-slip .shift-report-sub {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #047857;
+    margin-bottom: 7px;
+}
+.pos-k80-slip .shift-top-grid {
+    display: grid;
+    grid-template-columns: 122px 1fr;
+    row-gap: 2.5px;
+    margin-bottom: 8px;
+}
+.pos-k80-slip .shift-pay-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 8px;
+}
+.pos-k80-slip .shift-pay-tbl td {
+    padding: 2px 0;
+    font-size: 13px;
+}
+.pos-k80-slip .shift-pay-tbl td.c-cnt {
+    text-align: right;
+    width: 32px;
+    padding-right: 12px;
+}
+.pos-k80-slip .shift-pay-tbl td.c-amt {
+    text-align: left;
+    width: 88px;
+}
+.pos-k80-slip .shift-note-lines {
+    margin: 7px 0;
+    line-height: 1.42;
+}
+.pos-k80-slip .shift-unpaid-grid {
+    display: grid;
+    grid-template-columns: 148px 32px 1fr;
+    margin-top: 8px;
+    padding-top: 3px;
+}
+.pos-k80-slip .shift-unpaid-grid .c-cnt {
+    text-align: right;
+    padding-right: 12px;
+}
+
+@media print {
+    @page {
+        margin: 4mm;
+    }
+    html,
+    body,
+    body.pos-body,
+    body.pos-printing-thermal {
+        background: #ffffff !important;
+        color: #000000 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        width: 100% !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    body.pos-printing-thermal > *:not(#pos-thermal-receipt-modal):not(.page-shell) {
+        display: none !important;
+    }
+    body.pos-printing-thermal > .page-shell {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+    body.pos-printing-thermal > .page-shell > *:not(#pos-thermal-receipt-modal) {
+        display: none !important;
+    }
+    body.pos-printing-thermal #pos-thermal-receipt-modal,
+    body.pos-printing-thermal #pos-thermal-receipt-modal[hidden] {
+        position: static !important;
+        inset: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+        backdrop-filter: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+    body.pos-printing-thermal .pos-thermal-modal-dialog {
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: #ffffff !important;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+    body.pos-printing-thermal .pos-hub-header,
+    body.pos-printing-thermal .pos-hub-footer {
+        display: none !important;
+    }
+    body.pos-printing-thermal .pos-thermal-body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+    body.pos-printing-thermal .pos-k80-slip {
+        width: 80mm !important;
+        max-width: 80mm !important;
+        margin: 0 auto 10px !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 4px 2px 10px !important;
+        page-break-after: always;
+        break-after: page;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    body.pos-printing-thermal .pos-k80-slip:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+}
 </style>
 
 <div class="menu-modal-backdrop" id="modal-pos-feature-hub" data-api-url="{% url 'sales:pos_features_api' %}" data-backup-url="{% url 'sales:pos_backup_download_api' %}" hidden>
@@ -230,6 +586,31 @@
             <div style="display: flex; gap: 8px;">
                 <button type="button" class="pos-hub-btn secondary" id="pos-hub-close-btn">Đóng cửa sổ (Esc)</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- # MODAL XEM TRƯỚC & IN BILL NHIỆT K80 (THANH TOÁN, IN LẠI HÓA ĐƠN, KẾT CA, BÁO CÁO CUỐI NGÀY) -->
+<div class="menu-modal-backdrop" id="pos-thermal-receipt-modal" hidden style="z-index: 9999;">
+    <div class="menu-modal-dialog pos-thermal-modal-dialog single-slip" id="pos-thermal-modal-dialog" role="dialog" aria-modal="true">
+        <div class="pos-hub-header">
+            <div class="pos-hub-title-wrap">
+                <span class="pos-hub-badge" id="pos-thermal-modal-badge">MÁY IN NHIỆT K80</span>
+                <h3 id="pos-thermal-modal-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #fff;">In hóa đơn thanh toán</h3>
+            </div>
+            <button type="button" class="dialog-close" id="pos-thermal-modal-close" style="color: #fff; font-size: 22px; background: transparent; border: none; cursor: pointer;" aria-label="Đóng">&times;</button>
+        </div>
+
+        <div class="pos-thermal-body" id="pos-thermal-receipt-paper-host">
+            <!-- Nội dung phiếu in K80 sẽ được render tại đây -->
+        </div>
+
+        <div class="pos-hub-footer">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="pos-hub-btn primary" id="pos-thermal-btn-print">🖨️ In bill ngay (K80)</button>
+                <a href="#" target="_blank" rel="noopener" class="pos-hub-btn blue" id="pos-thermal-btn-open-tab" hidden>🗗 Mở trang in riêng</a>
+            </div>
+            <button type="button" class="pos-hub-btn secondary" id="pos-thermal-btn-done">Hoàn tất / Đóng</button>
         </div>
     </div>
 </div>

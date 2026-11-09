@@ -1,4 +1,4 @@
-<!-- # File này chịu trách nhiệm hiển thị bản in Báo cáo cuối ngày (Phiếu tóm tắt K80 hoặc Báo cáo chi tiết món bán hôm nay/hôm qua). -->
+<!-- # File này chịu trách nhiệm hiển thị bản in Báo cáo cuối ngày dành cho cả 2 ca (Ca 1: thungan1 - Thu Ngân 1 và Ca 2: thungan2 - Thu Ngân 2) cũng như phiếu tổng hợp cuối ngày. -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="vi">
@@ -10,7 +10,7 @@
         {% elif mode == 'detail_today' %}
             Báo cáo chi tiết hôm nay ({{ eod.date_display }}) | MixFood POS
         {% else %}
-            Báo cáo cuối ngày ({{ eod.date_display }}) | MixFood POS
+            Báo cáo cuối ngày - Cả 2 ca thungan1 &amp; thungan2 ({{ eod.date_display }}) | MixFood POS
         {% endif %}
     </title>
     <link rel="stylesheet" href="{% static 'css/sales/end_of_day_print.css' %}?v={% now 'U' %}">
@@ -18,41 +18,103 @@
 <body>
     <div class="no-print-bar">
         <button type="button" class="btn-action primary" data-print-action="print">🖨️ In báo cáo ngay</button>
-        <a class="btn-action" href="?mode=summary&unpaid_count={{ eod.unpaid_count }}&unpaid_amount=0">Phiếu tóm tắt</a>
-        <a class="btn-action" href="?mode=detail_today&unpaid_count={{ eod.unpaid_count }}&unpaid_amount=0">Chi tiết hôm nay (CTRL)</a>
-        <a class="btn-action" href="?mode=detail_yesterday">Chi tiết hôm qua (SHIFT)</a>
+        <a class="btn-action {% if mode == 'summary' and shift_filter == 'all' %}active-tab{% endif %}" href="?mode=summary&shift=all&unpaid_count={{ eod.unpaid_count }}&unpaid_amount={{ eod.unpaid_amount|floatformat:0 }}">Cả 2 ca (thungan1 &amp; 2)</a>
+        <a class="btn-action {% if shift_filter == 'thungan1' %}active-tab{% endif %}" href="?mode=summary&shift=thungan1&unpaid_count={{ eod.unpaid_count }}&unpaid_amount={{ eod.unpaid_amount|floatformat:0 }}">Chỉ Ca 1 (thungan1)</a>
+        <a class="btn-action {% if shift_filter == 'thungan2' %}active-tab{% endif %}" href="?mode=summary&shift=thungan2&unpaid_count={{ eod.unpaid_count }}&unpaid_amount={{ eod.unpaid_amount|floatformat:0 }}">Chỉ Ca 2 (thungan2)</a>
+        <a class="btn-action {% if mode == 'detail_today' %}active-tab{% endif %}" href="?mode=detail_today&unpaid_count={{ eod.unpaid_count }}&unpaid_amount={{ eod.unpaid_amount|floatformat:0 }}">Chi tiết hôm nay (CTRL)</a>
+        <a class="btn-action {% if mode == 'detail_yesterday' %}active-tab{% endif %}" href="?mode=detail_yesterday">Chi tiết hôm qua (SHIFT)</a>
         <button type="button" class="btn-action" data-print-action="close">Đóng</button>
     </div>
 
+    <!-- # 1. KHU VỰC PHIẾU NHIỆT K80 CỦA 2 CA (THUNGAN1 & THUNGAN2) ĐỒNG BỘ ẢNH THỰC TẾ -->
+    <div class="thermal-shifts-wrapper">
+        {% for s in eod.shifts_data %}
+            {% if shift_filter == 'all' or shift_filter == s.shift_key %}
+            <div class="k80-thermal-card">
+                <div class="k80-thermal-title">BÁO CÁO KẾT CA</div>
+                <div class="k80-thermal-sub">{{ s.shift_label }}</div>
+
+                <div class="k80-top-grid">
+                    <span>Ca trước giao lúc:</span>
+                    <span>{{ s.prev_shift_display }}</span>
+
+                    <span>Thời điểm kết ca:</span>
+                    <span>{{ s.close_shift_display }}</span>
+
+                    <span>Số hóa đơn:</span>
+                    <span>{{ s.total_invoices }}</span>
+
+                    <span>Số tiền bán:</span>
+                    <span>{{ s.total_revenue_formatted }} đ</span>
+                </div>
+
+                <table class="k80-pay-table">
+                    <tbody>
+                        {% for row in s.thermal_payment_rows %}
+                        <tr>
+                            <td>{{ row.label }}</td>
+                            <td class="cnt">{{ row.count }}</td>
+                            <td class="amt">{{ row.amount_formatted }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="k80-note-block">
+                    <div>Có {{ s.discount_invoice_count }} hóa đơn giảm giá ({{ s.coupon_count }} mã giảm, {{ s.vip_count }} thẻ vip, {{ s.gift_count }} tặng món)</div>
+                    <div>Giảm {{ s.discount_total_formatted }} đ</div>
+                </div>
+
+                <div class="k80-note-block">
+                    <div>Có {{ s.edit_price_discount_count }} lần sửa đơn giá/giảm giá món</div>
+                    <div>Có {{ s.cancel_return_item_count }} lần trả/hủy món, {{ s.edit_delete_invoice_count }} lần sửa/xóa hóa đơn</div>
+                </div>
+
+                <div class="k80-unpaid-row">
+                    <span>Hóa đơn chưa thu:</span>
+                    <span class="cnt">{{ s.unpaid_count }}</span>
+                    <span>{{ s.unpaid_amount_formatted }}</span>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- # 2. PHIẾU TỔNG HỢP BÁO CÁO CUỐI NGÀY (GỘP CẢ 2 CA THUNGAN1 & THUNGAN2) -->
+    {% if shift_filter == 'all' or is_detailed %}
     <div class="print-sheet {% if is_detailed %}sheet-detailed{% else %}sheet-summary{% endif %}">
         <div class="sheet-header">
             <div class="brand-name">MIX FOOD - ẨM THỰC THÁI</div>
             <div class="brand-sub">K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng</div>
             <div class="sheet-title">
                 {% if mode == 'detail_yesterday' %}
-                    BÁO CÁO CHI TIẾT CUỐI NGÀY (HÔM QUA)
+                    BÁO CÁO CHI TIẾT CUỐI NGÀY (HÔM QUA - CẢ 2 CA)
                 {% elif mode == 'detail_today' %}
-                    BÁO CÁO CHI TIẾT CUỐI NGÀY (HÔM NAY)
+                    BÁO CÁO CHI TIẾT CUỐI NGÀY (HÔM NAY - CẢ 2 CA)
                 {% else %}
-                    BÁO CÁO CUỐI NGÀY
+                    BÁO CÁO CUỐI NGÀY (TỔNG HỢP CA 1 &amp; CA 2)
                 {% endif %}
             </div>
             <div class="sheet-meta">
-                Nhân viên: <strong>{{ current_user.get_full_name|default:current_user.username }}</strong>
+                Ca làm việc: <strong>Thu Ngân 1 (thungan1) &amp; Thu Ngân 2 (thungan2)</strong> &bull; Người in: <strong>{{ current_user.get_full_name|default:current_user.username }}</strong>
             </div>
         </div>
 
         <div class="eod-box">
             <div class="top-row">
+                <span>Ca trước giao lúc:</span>
+                <strong>{{ eod.prev_shift_display }}</strong>
+            </div>
+            <div class="top-row">
                 <span>Tính đến thời điểm:</span>
                 <strong>{{ eod.as_of_display }}</strong>
             </div>
             <div class="top-row">
-                <span>Tổng số hóa đơn:</span>
+                <span>Tổng số hóa đơn (Cả 2 ca):</span>
                 <strong>{{ eod.total_invoices }}</strong>
             </div>
             <div class="top-row">
-                <span>Tổng số tiền bán:</span>
+                <span>Tổng số tiền bán (Cả 2 ca):</span>
                 <strong>{{ eod.total_revenue_formatted }} đ</strong>
             </div>
 
@@ -84,7 +146,7 @@
             <div class="divider"></div>
 
             <div class="unpaid-line">
-                <span>Hóa đơn chưa thanh toán: {{ eod.unpaid_count }}</span>
+                <span>Hóa đơn chưa thu: {{ eod.unpaid_count }}</span>
                 <span>{{ eod.unpaid_amount_formatted }}</span>
             </div>
         </div>
@@ -123,17 +185,18 @@
 
         <div class="signatures">
             <div>
-                <strong>Người lập báo cáo</strong>
+                <strong>Thu ngân Ca 1 &amp; Ca 2</strong>
                 <div class="sig-space"></div>
-                <span>{{ current_user.get_full_name|default:current_user.username }}</span>
+                <span>Thu Ngân 1 (thungan1) / Thu Ngân 2 (thungan2)</span>
             </div>
             <div>
                 <strong>Quản lý xác nhận</strong>
                 <div class="sig-space"></div>
-                <span>(Ký & ghi rõ họ tên)</span>
+                <span>(Ký &amp; ghi rõ họ tên)</span>
             </div>
         </div>
     </div>
+    {% endif %}
 
     <script src="{% static 'js/sales/end_of_day_print.js' %}?v={% now 'U' %}"></script>
 </body>

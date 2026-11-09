@@ -1,11 +1,11 @@
-<!-- # File này chịu trách nhiệm hiển thị hộp thoại Báo cáo cuối ngày (End of Day Report Modal) trên màn hình POS. -->
+<!-- # File này chịu trách nhiệm hiển thị hộp thoại Báo cáo cuối ngày (End of Day Report Modal) dành cho cả 2 ca thungan1 & thungan2 trên màn hình POS. -->
 {% load static %}
-<!-- # MODAL: BÁO CÁO CUỐI NGÀY (ĐỒNG BỘ POS 2026 & ẢNH MẪU) -->
+<!-- # MODAL: BÁO CÁO CUỐI NGÀY (DÀNH CHO CẢ 2 CA THUNGAN1 & THUNGAN2) -->
 <div class="menu-modal-backdrop sub-modal reason-sub-modal" id="modal-end-of-day-report"
      data-api-url="{% url 'sales:end_of_day_api' %}"
      data-print-url="{% url 'sales:end_of_day_print' %}"
      role="dialog" aria-modal="true" aria-labelledby="eod-report-modal-title" hidden>
-    <div class="menu-modal-dialog inv-reason-popup-dialog eod-report-popup-dialog">
+    <div class="menu-modal-dialog inv-reason-popup-dialog eod-report-popup-dialog" style="max-width: 540px;">
         <!-- # Modal Header -->
         <div class="menu-modal-header inv-reason-popup-header eod-report-popup-header">
             <div class="modal-title-wrap">
@@ -15,19 +15,45 @@
                     <line x1="8" y1="2" x2="8" y2="6"/>
                     <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <h3 id="eod-report-modal-title">Báo cáo cuối ngày - {{ request.user.get_full_name|default:request.user.get_username }}</h3>
+                <h3 id="eod-report-modal-title">Báo cáo cuối ngày (Cả 2 ca: thungan1 &amp; thungan2)</h3>
             </div>
             <button type="button" class="dialog-close" id="eod-report-modal-close" aria-label="Đóng">&times;</button>
         </div>
 
         <!-- # Modal Body -->
         <div class="inv-reason-popup-body eod-report-popup-body">
+            <!-- # Bộ chuyển đổi xem Tổng hợp 2 ca / Ca 1 (thungan1) / Ca 2 (thungan2) -->
+            <div class="eod-shift-tabs" id="eod-shift-tabs" style="display:flex; gap:6px; margin-bottom:10px;">
+                <button type="button" class="eod-shift-tab active" data-shift-tab="all" style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid #059669; background:#059669; color:#fff; font-size:12px; font-weight:700; cursor:pointer;">
+                    Tổng hợp 2 ca
+                </button>
+                <button type="button" class="eod-shift-tab" data-shift-tab="thungan1" style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; color:#1e293b; font-size:12px; font-weight:600; cursor:pointer;">
+                    Ca 1: Thu Ngân 1 (thungan1)
+                </button>
+                <button type="button" class="eod-shift-tab" data-shift-tab="thungan2" style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; color:#1e293b; font-size:12px; font-weight:600; cursor:pointer;">
+                    Ca 2: Thu Ngân 2 (thungan2)
+                </button>
+            </div>
+
+            <!-- # Thanh tóm tắt nhanh doanh thu 2 ca thungan1 & thungan2 -->
+            <div id="eod-two-shifts-strip" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; padding:7px 10px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; font-size:12px; color:#065f46;">
+                <div>
+                    <strong>Ca 1 (thungan1):</strong> <span id="eod-ca1-brief">0 HĐ &bull; 0 đ</span>
+                </div>
+                <div>
+                    <strong>Ca 2 (thungan2):</strong> <span id="eod-ca2-brief">0 HĐ &bull; 0 đ</span>
+                </div>
+            </div>
+
             <div class="eod-report-content-row">
                 <div class="guest-count-info-badge eod-info-badge" aria-hidden="true">i</div>
                 <div class="eod-report-stats-block">
                     <!-- # 1. Thông tin tổng hợp tính đến thời điểm hiện tại -->
                     <div class="eod-top-grid">
-                        <span class="eod-label">Tính đến thời điểm:</span>
+                        <span class="eod-label">Ca trước giao lúc:</span>
+                        <span class="eod-val" id="eod-prev-shift-time">--/--/---- --:-- --</span>
+
+                        <span class="eod-label">Thời điểm kết ca / báo cáo:</span>
                         <span class="eod-val" id="eod-as-of-time">--/--/---- --:-- --</span>
 
                         <span class="eod-label">Tổng số hóa đơn:</span>
@@ -88,15 +114,15 @@
                         <div id="eod-cancel-edit-summary">Có 0 lần trả/hủy món, 0 lần sửa/xóa hóa đơn</div>
                     </div>
 
-                    <!-- # 5. Hóa đơn chưa thanh toán (các bàn đang mở trên POS) -->
+                    <!-- # 5. Hóa đơn chưa thu (các bàn đang mở trên POS) -->
                     <div class="eod-unpaid-row">
-                        <span>Hóa đơn chưa thanh toán: <span id="eod-unpaid-count">0</span></span>
+                        <span>Hóa đơn chưa thu: <span id="eod-unpaid-count">0</span></span>
                         <span class="eod-unpaid-amt" id="eod-unpaid-amount">0</span>
                     </div>
 
                     <!-- # 6. Hướng dẫn phím tắt in báo cáo -->
                     <div class="eod-instructions">
-                        <div>Nhấn [OK] để in báo cáo, [Cancel] để bỏ qua.</div>
+                        <div>Nhấn [OK / In bill] để in báo cáo cuối ngày (Cả 2 ca thungan1 &amp; 2), [Hủy bỏ] để đóng.</div>
                         <div>Giữ phím CTRL trong khi nhấn [OK] để in báo cáo chi tiết hôm nay</div>
                         <div>Giữ phím SHIFT trong khi nhấn [OK] để in báo cáo chi tiết hôm qua</div>
                     </div>
@@ -105,7 +131,7 @@
 
             <!-- # Modal Footer -->
             <div class="eod-report-popup-footer">
-                <button type="button" id="eod-report-modal-ok" class="btn-guest-count-ok">OK</button>
+                <button type="button" id="eod-report-modal-ok" class="btn-guest-count-ok">🖨️ In bill cuối ngày (OK)</button>
                 <button type="button" id="eod-report-modal-cancel" class="btn-eod-cancel">Hủy bỏ</button>
             </div>
         </div>

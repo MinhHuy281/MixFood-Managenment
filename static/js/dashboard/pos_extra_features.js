@@ -1138,4 +1138,424 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // =========================================================================
+    // 10. BỘ ĐIỀU KHIỂN IN BILL NHIỆT K80 (THANH TOÁN, IN LẠI HÓA ĐƠN, KẾT CA, BÁO CÁO CUỐI NGÀY)
+    // =========================================================================
+    const thermalModal = document.getElementById('pos-thermal-receipt-modal');
+    const thermalDialog = document.getElementById('pos-thermal-modal-dialog');
+    const thermalBadge = document.getElementById('pos-thermal-modal-badge');
+    const thermalTitle = document.getElementById('pos-thermal-modal-title');
+    const thermalHost = document.getElementById('pos-thermal-receipt-paper-host');
+    const thermalBtnPrint = document.getElementById('pos-thermal-btn-print');
+    const thermalBtnOpenTab = document.getElementById('pos-thermal-btn-open-tab');
+    const thermalBtnDone = document.getElementById('pos-thermal-btn-done');
+    const thermalBtnClose = document.getElementById('pos-thermal-modal-close');
+
+    let currentThermalOnClose = null;
+
+    // Đưa modal in nhiệt trực tiếp ra thẻ <body> để khi in (@media print) không bị ẩn bởi <main class="page-shell">
+    const ensureThermalModalOnBody = () => {
+        if (thermalModal && thermalModal.parentElement !== document.body) {
+            document.body.appendChild(thermalModal);
+        }
+    };
+    ensureThermalModalOnBody();
+
+    const formatDotNum = (val) => {
+        const num = Math.round(Number(val) || 0);
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    const closeThermalModal = () => {
+        if (!thermalModal) return;
+        thermalModal.hidden = true;
+        document.body.classList.remove('pos-printing-thermal');
+        const cb = currentThermalOnClose;
+        currentThermalOnClose = null;
+        if (typeof cb === 'function') {
+            cb();
+        }
+    };
+
+    // Chờ ảnh QR (nếu có) tải xong trước khi gọi hộp thoại window.print() của trình duyệt
+    const triggerBrowserThermalPrint = () => {
+        ensureThermalModalOnBody();
+        if (thermalModal) {
+            thermalModal.hidden = false;
+        }
+        document.body.classList.add('pos-printing-thermal');
+
+        const imgs = thermalHost ? Array.from(thermalHost.querySelectorAll('img')) : [];
+        const pendingImgs = imgs.filter((img) => !img.complete);
+
+        if (pendingImgs.length === 0) {
+            window.requestAnimationFrame(() => {
+                window.setTimeout(() => {
+                    window.print();
+                }, 150);
+            });
+            return;
+        }
+
+        let settled = false;
+        const doPrintOnce = () => {
+            if (settled) return;
+            settled = true;
+            window.requestAnimationFrame(() => {
+                window.setTimeout(() => {
+                    window.print();
+                }, 120);
+            });
+        };
+
+        let remaining = pendingImgs.length;
+        const onImgDone = () => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                doPrintOnce();
+            }
+        };
+
+        pendingImgs.forEach((img) => {
+            img.addEventListener('load', onImgDone, { once: true });
+            img.addEventListener('error', onImgDone, { once: true });
+        });
+
+        // Fallback tối đa 600ms nếu ảnh tải chậm
+        window.setTimeout(doPrintOnce, 600);
+    };
+
+    thermalBtnPrint?.addEventListener('click', triggerBrowserThermalPrint);
+    thermalBtnDone?.addEventListener('click', closeThermalModal);
+    thermalBtnClose?.addEventListener('click', closeThermalModal);
+    thermalModal?.addEventListener('click', (e) => {
+        if (e.target === thermalModal) closeThermalModal();
+    });
+
+    const buildCustomerInvoiceSlipHtml = (bill) => {
+        const qr = bill.qr_info || {
+            merchant_title: 'HKD MIX FOOD',
+            merchant_code: 'MS00T01136681533909',
+            bank_name: 'TECHCOMBANK',
+            account_holder: 'HO KINH DOANH MIX FOOD AM THUC THAI',
+            account_number: '1903 6559 2140 22',
+            qr_image_url: '/static/images/mixfood_qr_only.jpg',
+        };
+        const items = Array.isArray(bill.items) ? bill.items : [];
+        const itemsRowsHtml = items.map((it) => {
+            const unitLabel = it.unit || 'Phần';
+            const displayName = it.display_name || `${String(it.product_name || '').toUpperCase()} (${unitLabel})`;
+            const uPriceFmt = it.unit_price_formatted || formatDotNum(it.unit_price);
+            const totFmt = it.total_amount_formatted || formatDotNum(it.total_amount);
+            return `
+                <tr>
+                    <td>${escapeHtml(displayName)}</td>
+                    <td class="c-sl">${Number(it.quantity || 1)}</td>
+                    <td class="c-price">${escapeHtml(uPriceFmt)}</td>
+                    <td class="c-total">${escapeHtml(totFmt)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const discAmt = Number(bill.discount_amount || 0);
+        const surAmt = Number(bill.surcharge_amount || 0);
+        const taxAmt = Number(bill.tax_amount || 0);
+        const receiptNo = bill.receipt_no || `132550${String(bill.invoice_code || '0001').padStart(4, '0')}`;
+        const tableDisplay = bill.table_display || (bill.table_name && bill.table_name !== 'Mang về' ? `Bàn ${bill.table_name} (${bill.area_name || 'Ngoài trời'})` : 'Mang về');
+
+        return `
+            <div class="pos-k80-slip">
+                <div class="cup-icon-wrap" aria-hidden="true">
+                    <svg width="44" height="34" viewBox="0 0 64 50" fill="#111111">
+                        <path d="M12 8h32v18c0 7.7-6.3 14-14 14h-4c-7.7 0-14-6.3-14-14V8z"/>
+                        <path d="M44 11h5c4.4 0 8 3.6 8 8s-3.6 8-8 8h-5v-4h5c2.2 0 4-1.8 4-4s-1.8-4-4-4h-5v-4z"/>
+                        <path d="M6 42h44l-3 5H9l-3-5z"/>
+                    </svg>
+                </div>
+                <div class="brand-main">${escapeHtml(bill.store_name || 'MIX FOOD')}</div>
+                <div class="brand-sub">${escapeHtml(bill.store_subtitle || 'ẨM THỰC THÁI')}</div>
+                <div class="brand-addr">${escapeHtml(bill.store_address || 'K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng')}</div>
+
+                <div class="bill-table-title">${escapeHtml(tableDisplay)}</div>
+                <div class="bill-meta-row">
+                    <span>Thời gian: ${escapeHtml(bill.time_range_display || bill.paid_at_display || '')}</span>
+                </div>
+                <div class="bill-meta-row">
+                    <span>Nhân viên: ${escapeHtml(bill.cashier_name || 'Thu Ngân 1')}</span>
+                    <span>No.${escapeHtml(receiptNo)}</span>
+                </div>
+
+                <table class="bill-items-tbl">
+                    <thead>
+                        <tr>
+                            <th>TÊN MÓN</th>
+                            <th class="c-sl">SL</th>
+                            <th class="c-price">Đ.GIÁ</th>
+                            <th class="c-total">T.TIỀN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsRowsHtml}
+                    </tbody>
+                </table>
+
+                <div class="line-solid"></div>
+
+                <div class="sum-bold-row">
+                    <span>TỔNG CỘNG:</span>
+                    <span>${escapeHtml(bill.subtotal_formatted || formatDotNum(bill.subtotal))}</span>
+                </div>
+
+                ${discAmt > 0 ? `
+                    <div class="sum-italic-row">
+                        <span>Giảm giá:</span>
+                        <span>${bill.discount_percent_label ? escapeHtml(bill.discount_percent_label) + '&nbsp;&nbsp;&nbsp;' : ''}${escapeHtml(bill.discount_formatted || formatDotNum(discAmt))}</span>
+                    </div>
+                ` : ''}
+
+                ${surAmt > 0 ? `
+                    <div class="sum-italic-row">
+                        <span>Phụ thu:</span>
+                        <span>${escapeHtml(bill.surcharge_formatted || formatDotNum(surAmt))}</span>
+                    </div>
+                ` : ''}
+
+                ${taxAmt > 0 ? `
+                    <div class="sum-italic-row">
+                        <span>VAT:</span>
+                        <span>${escapeHtml(bill.tax_formatted || formatDotNum(taxAmt))}</span>
+                    </div>
+                ` : ''}
+
+                <div class="sum-grand-row">
+                    <span>THÀNH TIỀN (đ):</span>
+                    <span>${escapeHtml(bill.total_amount_formatted || formatDotNum(bill.total_amount))}</span>
+                </div>
+
+                <div class="line-double"></div>
+
+                <div class="qr-box">
+                    <div class="qr-m-title">${escapeHtml(qr.merchant_title)}</div>
+                    <div class="qr-m-code">${escapeHtml(qr.merchant_code)}</div>
+                    <div class="qr-bank-name">${escapeHtml(qr.bank_name)}</div>
+                    <img src="${escapeHtml(qr.qr_image_url || '/static/images/mixfood_qr_only.jpg')}" alt="QR Thanh Toán MIX FOOD">
+                    <div class="qr-napas">VietQR &bull; napas 247</div>
+                    <div class="qr-holder">${escapeHtml(qr.account_holder)}</div>
+                    <div class="qr-acc">${escapeHtml(qr.account_number)}</div>
+                </div>
+
+                <div class="bill-footer">
+                    <div class="ft-1">HÂN HẠNH ĐƯỢC PHỤC VỤ QUÝ KHÁCH!</div>
+                    <div class="ft-2">Giải pháp được cung cấp bởi quanso.vn</div>
+                </div>
+            </div>
+        `;
+    };
+
+    const buildShiftReportSlipHtml = (report, customHeading = 'BÁO CÁO KẾT CA', subtitle = '') => {
+        const pmap = report.payments_by_key || {};
+        const cashRow = pmap.cash || { label: 'Hóa đơn tiền mặt:', count: 0, amount_formatted: '0' };
+        const cardRow = pmap.card || { label: 'Hóa đơn thẻ ngân hàng:', count: 0, amount_formatted: '0' };
+        const ewRow = pmap.e_wallet || { label: 'Hóa đơn ví điện tử:', count: 0, amount_formatted: '0' };
+        const thermalRows = Array.isArray(report.thermal_payment_rows) && report.thermal_payment_rows.length
+            ? report.thermal_payment_rows
+            : [cashRow, cardRow, ewRow];
+
+        const payHtml = thermalRows.map((r) => `
+            <tr>
+                <td>${escapeHtml(r.label)}</td>
+                <td class="c-cnt">${Number(r.count || 0)}</td>
+                <td class="c-amt">${escapeHtml(r.amount_formatted || '0')}</td>
+            </tr>
+        `).join('');
+
+        return `
+            <div class="pos-k80-slip">
+                <div class="shift-report-heading">${escapeHtml(customHeading)}</div>
+                ${subtitle ? `<div class="shift-report-sub">${escapeHtml(subtitle)}</div>` : ''}
+
+                <div class="shift-top-grid">
+                    <span>Ca trước giao lúc:</span>
+                    <span>${escapeHtml(report.prev_shift_display || '--')}</span>
+
+                    <span>Thời điểm kết ca:</span>
+                    <span>${escapeHtml(report.close_shift_display || report.as_of_display || '--')}</span>
+
+                    <span>Số hóa đơn:</span>
+                    <span>${Number(report.total_invoices || 0)}</span>
+
+                    <span>Số tiền bán:</span>
+                    <span>${escapeHtml(report.total_revenue_formatted || formatDotNum(report.total_revenue))} đ</span>
+                </div>
+
+                <table class="shift-pay-tbl">
+                    <tbody>
+                        ${payHtml}
+                    </tbody>
+                </table>
+
+                <div class="shift-note-lines">
+                    <div>Có ${Number(report.discount_invoice_count || 0)} hóa đơn giảm giá (${Number(report.coupon_count || 0)} mã giảm, ${Number(report.vip_count || 0)} thẻ vip, ${Number(report.gift_count || 0)} tặng món)</div>
+                    <div>Giảm ${escapeHtml(report.discount_total_formatted || '0')} đ</div>
+                </div>
+
+                <div class="shift-note-lines">
+                    <div>Có ${Number(report.edit_price_discount_count || 0)} lần sửa đơn giá/giảm giá món</div>
+                    <div>Có ${Number(report.cancel_return_item_count || 0)} lần trả/hủy món, ${Number(report.edit_delete_invoice_count || 0)} lần sửa/xóa hóa đơn</div>
+                </div>
+
+                <div class="shift-unpaid-grid">
+                    <span>Hóa đơn chưa thu:</span>
+                    <span class="c-cnt">${Number(report.unpaid_count || 0)}</span>
+                    <span>${escapeHtml(report.unpaid_amount_formatted || formatDotNum(report.unpaid_amount))}</span>
+                </div>
+            </div>
+        `;
+    };
+
+    // 10.1. In bill thanh toán khách hàng (kèm mã QR cửa hàng)
+    window.printPosThermalBill = (billData, options = {}) => {
+        if (!thermalModal || !thermalHost || !billData) {
+            if (typeof options.onClose === 'function') options.onClose();
+            return;
+        }
+        currentThermalOnClose = options.onClose || null;
+        thermalDialog?.classList.add('single-slip');
+        if (thermalBadge) thermalBadge.textContent = options.isReprint ? 'IN LẠI HÓA ĐƠN • K80' : 'THANH TOÁN & IN BILL • K80';
+        if (thermalTitle) {
+            thermalTitle.textContent = `${options.isReprint ? 'In lại hóa đơn' : 'Hóa đơn thanh toán'} #${billData.invoice_code || ''} — ${billData.table_display || ''}`;
+        }
+        if (thermalBtnDone) {
+            thermalBtnDone.textContent = options.doneText || 'Hoàn tất / Đóng';
+        }
+        if (thermalBtnOpenTab) {
+            const pUrl = billData.print_url || `/sales/invoices/print/${billData.invoice_code}/`;
+            thermalBtnOpenTab.href = pUrl;
+            thermalBtnOpenTab.hidden = false;
+        }
+        ensureThermalModalOnBody();
+        thermalHost.innerHTML = buildCustomerInvoiceSlipHtml(billData);
+        thermalModal.hidden = false;
+        document.body.classList.add('pos-printing-thermal');
+
+        if (options.autoPrint !== false) {
+            triggerBrowserThermalPrint();
+        }
+    };
+
+    // 10.2. Tải chi tiết hóa đơn theo mã và in lại bill K80 kèm QR
+    window.reprintPosInvoiceByCode = async (invoiceCode) => {
+        const cleanCode = String(invoiceCode || '').replace(/^#/, '').trim();
+        if (!cleanCode) return;
+        try {
+            const resp = await fetch(`/sales/invoices/detail/${encodeURIComponent(cleanCode)}/`, {
+                headers: { 'Accept': 'application/json' },
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.ok || !data.invoice) {
+                showNotice(data.error || `Không thể tải hóa đơn #${cleanCode} để in lại.`);
+                return;
+            }
+            window.printPosThermalBill(data.invoice, {
+                isReprint: true,
+                autoPrint: true,
+                doneText: 'Đóng cửa sổ',
+            });
+        } catch (err) {
+            showNotice('Lỗi kết nối khi tải hóa đơn in lại.');
+        }
+    };
+
+    // 10.3. In bill BÁO CÁO KẾT CA (khổ K80 chuẩn ảnh chụp thực tế)
+    window.printPosShiftCloseReport = (shiftReport, options = {}) => {
+        if (!thermalModal || !thermalHost || !shiftReport) {
+            if (typeof options.onClose === 'function') options.onClose();
+            return;
+        }
+        currentThermalOnClose = options.onClose || null;
+        thermalDialog?.classList.add('single-slip');
+        if (thermalBadge) thermalBadge.textContent = 'KẾT CA LÀM VIỆC • K80';
+        if (thermalTitle) {
+            thermalTitle.textContent = `Báo cáo kết ca — ${shiftReport.cashier_display || ''}`;
+        }
+        if (thermalBtnDone) {
+            thermalBtnDone.textContent = options.doneText || 'Hoàn tất & Đăng xuất ca';
+        }
+        if (thermalBtnOpenTab) {
+            if (shiftReport.print_url) {
+                thermalBtnOpenTab.href = shiftReport.print_url;
+                thermalBtnOpenTab.hidden = false;
+            } else {
+                thermalBtnOpenTab.hidden = true;
+            }
+        }
+        ensureThermalModalOnBody();
+        thermalHost.innerHTML = buildShiftReportSlipHtml(
+            shiftReport,
+            'BÁO CÁO KẾT CA',
+            `Nhân viên: ${shiftReport.cashier_display || ''}`
+        );
+        thermalModal.hidden = false;
+        document.body.classList.add('pos-printing-thermal');
+
+        if (options.autoPrint !== false) {
+            triggerBrowserThermalPrint();
+        }
+    };
+
+    // 10.4. In bill BÁO CÁO CUỐI NGÀY dành cho cả 2 ca (thungan1 & thungan2)
+    window.printPosEndOfDayReport = (eodData, shiftFilter = 'all', unpaidStats = null) => {
+        if (!thermalModal || !thermalHost || !eodData) return;
+        currentThermalOnClose = null;
+
+        const unpaidCnt = unpaidStats && unpaidStats.count !== undefined ? unpaidStats.count : (eodData.unpaid_count || 0);
+        const unpaidAmt = unpaidStats && unpaidStats.amount !== undefined ? unpaidStats.amount : (eodData.unpaid_amount || 0);
+        const unpaidFmt = formatDotNum(unpaidAmt);
+
+        const shiftsByKey = eodData.shifts_by_key || {};
+        const ca1 = { ...(shiftsByKey.thungan1 || eodData), unpaid_count: unpaidCnt, unpaid_amount_formatted: unpaidFmt };
+        const ca2 = { ...(shiftsByKey.thungan2 || eodData), unpaid_count: unpaidCnt, unpaid_amount_formatted: unpaidFmt };
+        const combined = { ...(shiftsByKey.all || eodData), unpaid_count: unpaidCnt, unpaid_amount_formatted: unpaidFmt };
+
+        if (thermalBadge) thermalBadge.textContent = 'BÁO CÁO CUỐI NGÀY (2 CA THUNGAN1 & 2) • K80';
+        if (thermalTitle) {
+            thermalTitle.textContent = `Báo cáo cuối ngày (${eodData.date_display || ''}) — Ca 1 (thungan1) & Ca 2 (thungan2)`;
+        }
+        if (thermalBtnDone) {
+            thermalBtnDone.textContent = 'Đóng cửa sổ';
+        }
+        if (thermalBtnOpenTab) {
+            const params = new URLSearchParams({
+                mode: 'summary',
+                shift: shiftFilter || 'all',
+                unpaid_count: String(unpaidCnt),
+                unpaid_amount: String(unpaidAmt),
+            });
+            thermalBtnOpenTab.href = `/sales/end-of-day/print/?${params.toString()}`;
+            thermalBtnOpenTab.hidden = false;
+        }
+
+        let slipsHtml = '';
+        if (shiftFilter === 'thungan1') {
+            thermalDialog?.classList.add('single-slip');
+            slipsHtml = buildShiftReportSlipHtml(ca1, 'BÁO CÁO KẾT CA', 'Ca 1 - Thu Ngân 1 (thungan1)');
+        } else if (shiftFilter === 'thungan2') {
+            thermalDialog?.classList.add('single-slip');
+            slipsHtml = buildShiftReportSlipHtml(ca2, 'BÁO CÁO KẾT CA', 'Ca 2 - Thu Ngân 2 (thungan2)');
+        } else {
+            thermalDialog?.classList.remove('single-slip');
+            slipsHtml =
+                buildShiftReportSlipHtml(ca1, 'BÁO CÁO KẾT CA', 'Ca 1 - Thu Ngân 1 (thungan1)') +
+                buildShiftReportSlipHtml(ca2, 'BÁO CÁO KẾT CA', 'Ca 2 - Thu Ngân 2 (thungan2)') +
+                buildShiftReportSlipHtml(combined, 'BÁO CÁO CUỐI NGÀY', 'Tổng hợp cả 2 ca: Thu Ngân 1 & Thu Ngân 2');
+        }
+
+        ensureThermalModalOnBody();
+        thermalHost.innerHTML = slipsHtml;
+        thermalModal.hidden = false;
+        document.body.classList.add('pos-printing-thermal');
+
+        triggerBrowserThermalPrint();
+    };
 });

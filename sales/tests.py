@@ -623,3 +623,143 @@ class TableOrderSyncTests(TestCase):
         self.assertEqual(pepsi_ing.prep_stock, Decimal('48'))
         self.assertEqual(pepsi_ing.portions_wait_display, '48 lon đang chờ bán')
 
+
+class ThermalBillAndShiftReportTests(TestCase):
+    # Class này dùng để kiểm thử tự động các chức năng in bill nhiệt K80: Thanh toán kèm mã QR cửa hàng, In lại hóa đơn, Báo cáo kết ca và Báo cáo cuối ngày cho cả 2 ca thungan1 & thungan2.
+    def setUp(self):
+        # Hàm này dùng để khởi tạo dữ liệu cho 2 thu ngân thungan1 và thungan2, bàn ăn và món ăn mẫu.
+        User = get_user_model()
+        self.cashier_group, _ = Group.objects.get_or_create(name='Cashier')
+        self.sales_group, _ = Group.objects.get_or_create(name='Sales')
+
+        self.thungan1 = User.objects.create_user('thungan1', password='123456', first_name='Thu Ngân', last_name='1')
+        self.thungan1.groups.add(self.cashier_group, self.sales_group)
+
+        self.thungan2 = User.objects.create_user('thungan2', password='123456', first_name='Thu Ngân', last_name='2')
+        self.thungan2.groups.add(self.cashier_group, self.sales_group)
+
+        self.category = Category.objects.create(name='Khai vị')
+        self.dish1 = Product.objects.create(category=self.category, code='PTOM', name='Phồng tôm', unit='Phần', price=15000)
+        self.dish2 = Product.objects.create(category=self.category, code='PTHS', name='Pad Thai hải sản', unit='Phần', price=90000)
+        self.area = Area.objects.create(name='Ngoài trời')
+        self.table = DiningTable.objects.create(area=self.area, name='2', code='NT-02')
+
+    def test_checkout_returns_thermal_bill_with_qr_and_print_page_works(self):
+        # Hàm này dùng để kiểm thử thanh toán trả về đầy đủ dữ liệu bill K80 kèm QR cửa hàng và trang in lại hóa đơn hoạt động chuẩn.
+        self.client.force_login(self.thungan2)
+        resp = self.client.post(
+            reverse('sales:checkout'),
+            data=json.dumps({
+                'table_id': self.table.pk,
+                'payment_method': Payment.Method.BANK,
+                'discount_amount': 10500,
+                'items': [
+                    {'product_id': self.dish1.pk, 'quantity': 1, 'unit_price': 15000},
+                    {'product_id': self.dish2.pk, 'quantity': 1, 'unit_price': 90000},
+                ],
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('bill', data)
+        bill = data['bill']
+        self.assertEqual(bill['table_display'], 'Bàn 2 (Ngoài trời)')
+        self.assertEqual(bill['subtotal_formatted'], '105.000')
+        self.assertEqual(bill['discount_formatted'], '10.500')
+        self.assertEqual(bill['discount_percent_label'], '10%')
+        self.assertEqual(bill['total_amount_formatted'], '94.500')
+        self.assertEqual(bill['qr_info']['account_number'], '1903 6559 2140 22')
+        self.assertEqual(bill['qr_info']['merchant_title'], 'HKD MIX FOOD')
+
+        # Kiểm tra trang in bill K80 (/sales/invoices/print/<code/>)
+        print_resp = self.client.get(reverse('sales:invoice_print', kwargs={'invoice_code': data['invoice_code']}))
+        self.assertEqual(print_resp.status_code, 200)
+        self.assertContains(print_resp, 'Bàn 2 (Ngoài trời)')
+        self.assertContains(print_resp, 'PHỒNG TÔM (Phần)')
+        self.assertContains(print_resp, '1903 6559 2140 22')
+        self.assertContains(print_resp, 'HÂN HẠNH ĐƯỢC PHỤC VỤ QUÝ KHÁCH!')
+
+    def test_close_shift_returns_thermal_shift_report_and_opens_next_shift(self):
+        # Hàm này dùng để kiểm thử kết ca trả về phiếu nhiệt BÁO CÁO KẾT CA và tự động mở ca tiếp theo.
+        from .models import Shift
+
+        self.client.force_login(self.thungan1)
+        self.client.post(
+            reverse('sales:checkout'),
+            data=json.dumps({
+                'table_id': self.table.pk,
+                'payment_method': Payment.Method.BANK,
+                'items': [{'product_id': self.dish2.pk, 'quantity': 2}],
+            }),
+            content_type='application/json',
+        )
+        close_resp = self.client.post(
+            reverse('dashboard:close_shift'),
+            data=json.dumps({'unpaid_count': 4, 'unpaid_amount': 423400}),
+            content_type='application/json',
+        )
+        self.assertEqual(close_resp.status_code, 200)
+        res_data = close_resp.json()
+        self.assertTrue(res_data['ok'])
+        self.assertIn('shift_report', res_data)
+        s_rep = res_data['shift_report']
+        self.assertEqual(s_rep['title'], 'BÁO CÁO KẾT CA')
+        self.assertEqual(s_rep['total_invoices'], 1)
+        self.assertEqual(s_rep['total_revenue_formatted'], '180.000')
+        self.assertEqual(s_rep['unpaid_count'], 4)
+        self.assertEqual(s_rep['unpaid_amount_formatted'], '423.400')
+        self.assertTrue(Shift.objects.filter(status=Shift.Status.OPEN).exists())
+
+        # Kiểm tra trang in báo cáo kết ca
+        shift_print_resp = self.client.get(s_rep['print_url'])
+        self.assertEqual(shift_print_resp.status_code, 200)
+        self.assertContains(shift_print_resp, 'BÁO CÁO KẾT CA')
+        self.assertContains(shift_print_resp, '423.400')
+
+    def test_end_of_day_report_includes_both_shifts_thungan1_and_thungan2(self):
+        # Hàm này dùng để kiểm thử Báo cáo cuối ngày tổng hợp đầy đủ cả 2 ca thungan1 (Ca 1) và thungan2 (Ca 2).
+        # Ca 1 (thungan1) bán 1 đơn 90.000 đ (Tiền mặt)
+        self.client.force_login(self.thungan1)
+        self.client.post(
+            reverse('sales:checkout'),
+            data=json.dumps({
+                'table_id': self.table.pk,
+                'payment_method': Payment.Method.CASH,
+                'items': [{'product_id': self.dish2.pk, 'quantity': 1}],
+            }),
+            content_type='application/json',
+        )
+
+        # Ca 2 (thungan2) bán 1 đơn 180.000 đ (Chuyển khoản)
+        self.client.force_login(self.thungan2)
+        self.client.post(
+            reverse('sales:checkout'),
+            data=json.dumps({
+                'table_id': self.table.pk,
+                'payment_method': Payment.Method.BANK,
+                'items': [{'product_id': self.dish2.pk, 'quantity': 2}],
+            }),
+            content_type='application/json',
+        )
+
+        eod_api_resp = self.client.get(reverse('sales:end_of_day_api'))
+        self.assertEqual(eod_api_resp.status_code, 200)
+        eod = eod_api_resp.json()
+        self.assertTrue(eod['ok'])
+        self.assertEqual(eod['total_invoices'], 2)
+        self.assertEqual(eod['total_revenue_formatted'], '270.000')
+        self.assertIn('shifts_by_key', eod)
+        self.assertEqual(eod['shifts_by_key']['thungan1']['total_invoices'], 1)
+        self.assertEqual(eod['shifts_by_key']['thungan1']['total_revenue_formatted'], '90.000')
+        self.assertEqual(eod['shifts_by_key']['thungan2']['total_invoices'], 1)
+        self.assertEqual(eod['shifts_by_key']['thungan2']['total_revenue_formatted'], '180.000')
+
+        # Kiểm tra trang in Báo cáo cuối ngày hiển thị cả Ca 1 (thungan1) và Ca 2 (thungan2)
+        eod_print_resp = self.client.get(reverse('sales:end_of_day_print'))
+        self.assertEqual(eod_print_resp.status_code, 200)
+        self.assertContains(eod_print_resp, 'Ca 1 - Thu Ngân 1 (thungan1)')
+        self.assertContains(eod_print_resp, 'Ca 2 - Thu Ngân 2 (thungan2)')
+        self.assertContains(eod_print_resp, '270.000 đ')
+
+

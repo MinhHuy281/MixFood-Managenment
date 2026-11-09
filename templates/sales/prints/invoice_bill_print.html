@@ -1,0 +1,407 @@
+<!-- # File này chịu trách nhiệm hiển thị và in hóa đơn thanh toán khổ nhiệt K80 (80mm) chuẩn thực tế của MIX FOOD - ẨM THỰC THÁI kèm mã QR VietQR Techcombank của cửa hàng. -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if bill %}Hóa đơn #{{ bill.invoice_code }} - {{ bill.table_display }} | MIX FOOD{% else %}In hóa đơn | MIX FOOD{% endif %}</title>
+    <style>
+        /* # Định dạng chuẩn hóa đơn nhiệt K80 (80mm) đồng bộ ảnh mẫu thực tế MIX FOOD */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #e2e8f0;
+            color: #111827;
+            font-family: "Times New Roman", Times, Georgia, serif;
+            padding: 20px 12px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .no-print-toolbar {
+            width: 100%;
+            max-width: 340px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 14px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .btn-print-bar {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        .btn-print-bar.primary {
+            background: #059669;
+            border-color: #059669;
+            color: #ffffff;
+        }
+        .btn-print-bar.primary:hover {
+            background: #047857;
+        }
+        .k80-paper {
+            width: 315px;
+            max-width: 100%;
+            background: #ffffff;
+            padding: 18px 14px 22px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+            color: #000000;
+            line-height: 1.35;
+        }
+        .k80-cup-logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 6px;
+        }
+        .k80-brand-title {
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+        .k80-brand-subtitle {
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            line-height: 1.25;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+        .k80-address {
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11.5px;
+            font-style: italic;
+            color: #111111;
+            margin-bottom: 10px;
+        }
+        .k80-table-heading {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .k80-meta-line {
+            font-size: 12.5px;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 6px;
+        }
+        .k80-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        .k80-items-table thead th {
+            border-bottom: 1.5px solid #111111;
+            padding: 4px 2px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .k80-items-table thead th.col-sl {
+            text-align: center;
+            width: 32px;
+        }
+        .k80-items-table thead th.col-price,
+        .k80-items-table thead th.col-total {
+            text-align: right;
+            width: 68px;
+        }
+        .k80-items-table tbody td {
+            padding: 4px 2px 2px;
+            vertical-align: top;
+            font-size: 13px;
+        }
+        .k80-items-table tbody td.col-name {
+            padding-right: 4px;
+            word-break: break-word;
+        }
+        .k80-items-table tbody td.col-sl {
+            text-align: center;
+        }
+        .k80-items-table tbody td.col-price,
+        .k80-items-table tbody td.col-total {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .k80-divider-solid {
+            border-top: 1.5px solid #111111;
+            margin: 8px 0 6px;
+        }
+        .k80-divider-double {
+            border-top: 1px solid #111111;
+            border-bottom: 1px solid #111111;
+            height: 3px;
+            margin: 10px 0 10px;
+        }
+        .k80-summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 15px;
+            font-weight: 700;
+            margin: 3px 0;
+        }
+        .k80-summary-subrow {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 14px;
+            font-style: italic;
+            margin: 2px 0;
+        }
+        .k80-summary-subrow .sub-right {
+            display: flex;
+            gap: 16px;
+            align-items: baseline;
+        }
+        .k80-grand-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 17px;
+            font-weight: 700;
+            margin: 8px 0 6px;
+        }
+        /* # Khu vực Mã QR thanh toán cửa hàng HKD MIX FOOD */
+        .k80-qr-section {
+            margin: 10px 0 8px;
+            padding: 8px 6px;
+            border: 1px dashed #374151;
+            border-radius: 6px;
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .k80-qr-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            color: #000000;
+        }
+        .k80-qr-subcode {
+            font-size: 10px;
+            color: #374151;
+            margin-bottom: 3px;
+        }
+        .k80-qr-bank {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #b91c1c;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .k80-qr-img-wrap {
+            display: flex;
+            justify-content: center;
+            margin: 2px 0 4px;
+        }
+        .k80-qr-img-wrap img {
+            width: 165px;
+            height: 165px;
+            object-fit: contain;
+            display: block;
+        }
+        .k80-qr-badges {
+            font-size: 10px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 3px;
+        }
+        .k80-qr-holder {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.25;
+        }
+        .k80-qr-acc {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #000000;
+            margin-top: 1px;
+        }
+        .k80-footer {
+            text-align: center;
+            margin-top: 8px;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .k80-footer-thanks {
+            font-size: 12px;
+            font-style: italic;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+        .k80-footer-powered {
+            font-size: 11px;
+            font-style: italic;
+            margin-top: 2px;
+        }
+        @media print {
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+            body {
+                background: #ffffff;
+                padding: 0;
+            }
+            .no-print-toolbar {
+                display: none !important;
+            }
+            .k80-paper {
+                width: 100%;
+                max-width: 80mm;
+                box-shadow: none;
+                padding: 8px 6px 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-toolbar">
+        <button type="button" class="btn-print-bar primary" onclick="window.print()">🖨️ In hóa đơn (K80)</button>
+        <button type="button" class="btn-print-bar" onclick="window.close()">✕ Đóng</button>
+    </div>
+
+    {% if error %}
+        <div class="k80-paper">
+            <p style="text-align:center; padding: 24px 0; color:#dc2626; font-weight:700;">{{ error }}</p>
+        </div>
+    {% elif bill %}
+        <div class="k80-paper" id="k80-invoice-bill">
+            <!-- # Biểu tượng tách cà phê chuẩn mẫu bill MIX FOOD -->
+            <div class="k80-cup-logo" aria-hidden="true">
+                <svg width="46" height="36" viewBox="0 0 64 50" fill="#111111">
+                    <path d="M12 8h32v18c0 7.7-6.3 14-14 14h-4c-7.7 0-14-6.3-14-14V8z"/>
+                    <path d="M44 11h5c4.4 0 8 3.6 8 8s-3.6 8-8 8h-5v-4h5c2.2 0 4-1.8 4-4s-1.8-4-4-4h-5v-4z"/>
+                    <path d="M6 42h44l-3 5H9l-3-5z"/>
+                </svg>
+            </div>
+
+            <div class="k80-brand-title">{{ bill.store_name }}</div>
+            <div class="k80-brand-subtitle">{{ bill.store_subtitle }}</div>
+            <div class="k80-address">{{ bill.store_address }}</div>
+
+            <div class="k80-table-heading">{{ bill.table_display }}</div>
+            <div class="k80-meta-line">
+                <span>Thời gian: {{ bill.time_range_display }}</span>
+            </div>
+            <div class="k80-meta-line">
+                <span>Nhân viên: {{ bill.cashier_name }}</span>
+                <span>No.{{ bill.receipt_no }}</span>
+            </div>
+
+            <table class="k80-items-table">
+                <thead>
+                    <tr>
+                        <th>TÊN MÓN</th>
+                        <th class="col-sl">SL</th>
+                        <th class="col-price">Đ.GIÁ</th>
+                        <th class="col-total">T.TIỀN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in bill.items %}
+                    <tr>
+                        <td class="col-name">{{ item.display_name }}</td>
+                        <td class="col-sl">{{ item.quantity }}</td>
+                        <td class="col-price">{{ item.unit_price_formatted }}</td>
+                        <td class="col-total">{{ item.total_amount_formatted }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="k80-divider-solid"></div>
+
+            <div class="k80-summary-row">
+                <span>TỔNG CỘNG:</span>
+                <span>{{ bill.subtotal_formatted }}</span>
+            </div>
+
+            {% if bill.discount_amount > 0 %}
+            <div class="k80-summary-subrow">
+                <span>Giảm giá:</span>
+                <span class="sub-right">
+                    {% if bill.discount_percent_label %}<span>{{ bill.discount_percent_label }}</span>{% endif %}
+                    <span>{{ bill.discount_formatted }}</span>
+                </span>
+            </div>
+            {% endif %}
+
+            {% if bill.surcharge_amount > 0 %}
+            <div class="k80-summary-subrow">
+                <span>Phụ thu:</span>
+                <span>{{ bill.surcharge_formatted }}</span>
+            </div>
+            {% endif %}
+
+            {% if bill.tax_amount > 0 %}
+            <div class="k80-summary-subrow">
+                <span>VAT:</span>
+                <span>{{ bill.tax_formatted }}</span>
+            </div>
+            {% endif %}
+
+            <div class="k80-grand-total">
+                <span>THÀNH TIỀN (đ):</span>
+                <span>{{ bill.total_amount_formatted }}</span>
+            </div>
+
+            <div class="k80-divider-double"></div>
+
+            <!-- # Mã QR thanh toán cửa hàng HKD MIX FOOD -->
+            <div class="k80-qr-section">
+                <div class="k80-qr-title">{{ bill.qr_info.merchant_title }}</div>
+                <div class="k80-qr-subcode">{{ bill.qr_info.merchant_code }}</div>
+                <div class="k80-qr-bank">{{ bill.qr_info.bank_name }}</div>
+                <div class="k80-qr-img-wrap">
+                    <img src="{% static 'images/mixfood_qr_only.jpg' %}" alt="QR Thanh Toán MIX FOOD">
+                </div>
+                <div class="k80-qr-badges">VietQR &bull; napas 247</div>
+                <div class="k80-qr-holder">{{ bill.qr_info.account_holder }}</div>
+                <div class="k80-qr-acc">{{ bill.qr_info.account_number }}</div>
+            </div>
+
+            <div class="k80-footer">
+                <div class="k80-footer-thanks">HÂN HẠNH ĐƯỢC PHỤC VỤ QUÝ KHÁCH!</div>
+                <div class="k80-footer-powered">Giải pháp được cung cấp bởi quanso.vn</div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if auto_print and bill %}
+    <script>
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                window.print();
+            }, 250);
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

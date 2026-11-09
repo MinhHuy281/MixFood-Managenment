@@ -1212,7 +1212,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveTableOrdersToSession();
             }
             closePaymentDialog();
-            window.location.reload();
+            const printCheckbox = document.querySelector('#print-invoice');
+            const shouldPrintBill = printCheckbox ? printCheckbox.checked : true;
+            if (shouldPrintBill && result.bill && typeof window.printPosThermalBill === 'function') {
+                window.printPosThermalBill(result.bill, {
+                    isReprint: false,
+                    autoPrint: true,
+                    doneText: 'Hoàn tất & Đóng (Cập nhật bàn)',
+                    onClose: () => window.location.reload(),
+                });
+            } else {
+                window.location.reload();
+            }
         } catch (error) {
             systemNotice.textContent = error.message;
             systemNotice.hidden = false;
@@ -1423,15 +1434,36 @@ document.addEventListener('DOMContentLoaded', () => {
     closingConfirm.addEventListener('click', async () => {
         closingConfirm.disabled = true;
         try {
+            const liveUnpaid = typeof window.computePosLiveUnpaidOrders === 'function'
+                ? window.computePosLiveUnpaidOrders()
+                : { count: 0, amount: 0 };
             const response = await fetch(closingDialog.dataset.closeUrl, {
                 method: 'POST',
-                headers: { 'X-CSRFToken': getCsrfToken() },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    unpaid_count: liveUnpaid.count || 0,
+                    unpaid_amount: liveUnpaid.amount || 0,
+                }),
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Không thể kết ca.');
             closingDialog.hidden = true;
-            closingSuccessDialog.hidden = false;
-            window.setTimeout(() => document.querySelector('#closing-logout-form').submit(), 1200);
+            const finishAndLogout = () => {
+                closingSuccessDialog.hidden = false;
+                window.setTimeout(() => document.querySelector('#closing-logout-form').submit(), 900);
+            };
+            if (result.shift_report && typeof window.printPosShiftCloseReport === 'function') {
+                window.printPosShiftCloseReport(result.shift_report, {
+                    autoPrint: true,
+                    doneText: 'Hoàn tất & Đăng xuất ca',
+                    onClose: finishAndLogout,
+                });
+            } else {
+                finishAndLogout();
+            }
         } catch (error) {
             showToast(error.message);
             closingConfirm.disabled = false;
@@ -1830,8 +1862,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         table_name: tName,
                     });
                 } else if (action === 'print') {
+                    const row = selectedInvoiceRow;
+                    const code = getRowInvoiceCode(row);
                     closeInvoiceContextMenu();
-                    const doPrint = () => showToast(invoiceActionMessages.print || 'Đang in lại hóa đơn.');
+                    const doPrint = () => {
+                        if (code && typeof window.reprintPosInvoiceByCode === 'function') {
+                            window.reprintPosInvoiceByCode(code);
+                        } else if (code) {
+                            window.open(`/sales/invoices/print/${encodeURIComponent(code)}/`, '_blank', 'noopener');
+                        } else {
+                            showToast(invoiceActionMessages.print || 'Đang in lại hóa đơn.');
+                        }
+                    };
                     if (typeof window.requirePosPermission === 'function') {
                         window.requirePosPermission('reprint_invoice', doPrint, 'In lại hóa đơn');
                     } else {

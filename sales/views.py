@@ -199,7 +199,121 @@ def checkout(request):
     except Exception:
         return JsonResponse({'error': 'Không thể hoàn tất thanh toán. Vui lòng thử lại.'}, status=500)
 
-    return JsonResponse({'invoice_code': invoice.invoice_code, 'order_code': order.order_code, 'total_amount': str(total_amount)})
+    bill_data = _serialize_invoice_bill_data(invoice)
+    return JsonResponse({
+        'invoice_code': invoice.invoice_code,
+        'order_code': order.order_code,
+        'total_amount': str(total_amount),
+        'print_url': bill_data['print_url'],
+        'bill': bill_data,
+    })
+
+
+def _serialize_invoice_bill_data(invoice):
+    # Hàm này dùng để chuẩn hóa dữ liệu hóa đơn thanh toán sang cấu trúc in bill nhiệt K80 kèm mã QR cửa hàng. Input: invoice. Output: dict chứa thông tin bill và QR thanh toán.
+    order = invoice.order
+    first_payment = invoice.payments.first()
+    payment_method = first_payment.method if first_payment else Payment.Method.CASH
+    payment_method_display = first_payment.get_method_display() if first_payment else 'Tiền mặt'
+
+    if order and order.table:
+        table_name = order.table.name
+        area_name = order.table.area.name if order.table.area else 'Ngoài trời'
+        if str(table_name).lower().startswith('bàn'):
+            table_display = f'{table_name} ({area_name})'
+        elif str(area_name).lower() in ('mang về', 'takeaway'):
+            table_display = f'{table_name} (Mang về)'
+        else:
+            table_display = f'Bàn {table_name} ({area_name})'
+    else:
+        table_name = 'Mang về'
+        area_name = 'Mang về'
+        table_display = 'Mang về'
+
+    paid_local = timezone.localtime(invoice.paid_at) if invoice.paid_at else timezone.localtime()
+    created_local = timezone.localtime(order.created_at) if (order and order.created_at) else paid_local
+    if created_local > paid_local:
+        created_local = paid_local
+
+    start_time_str = created_local.strftime('%d/%m/%Y %I:%M %p')
+    end_time_str = paid_local.strftime('%I:%M %p')
+    time_range_display = f'{start_time_str} - {end_time_str}'
+
+    cashier_name = (invoice.cashier.get_full_name() or invoice.cashier.username) if invoice.cashier else 'Thu Ngân 1'
+    receipt_no = f"132550{str(invoice.invoice_code).zfill(4)}"
+
+    items_data = []
+    if order:
+        for item in order.items.filter(status=OrderItem.Status.ACTIVE):
+            orig_total = item.unit_price * item.quantity
+            discount_pct = float(round((item.discount_amount / orig_total * 100), 1)) if orig_total > 0 else 0
+            unit_label = item.unit or 'Phần'
+            items_data.append({
+                'id': item.id,
+                'product_id': item.product_id,
+                'product_name': item.product_name,
+                'product_name_upper': (item.product_name or '').upper(),
+                'unit': unit_label,
+                'display_name': f"{(item.product_name or '').upper()} ({unit_label})",
+                'unit_price': float(item.unit_price),
+                'unit_price_formatted': _fmt_dot(item.unit_price),
+                'quantity': item.quantity,
+                'line_gross': float(orig_total),
+                'line_gross_formatted': _fmt_dot(orig_total),
+                'discount_percent': discount_pct,
+                'discount_amount': float(item.discount_amount),
+                'discount_formatted': _fmt_dot(item.discount_amount),
+                'total_amount': float(item.total_amount),
+                'total_amount_formatted': _fmt_dot(item.total_amount),
+                'note': item.note or '',
+            })
+
+    discount_percent_label = ''
+    if invoice.subtotal and invoice.subtotal > 0 and invoice.discount_amount and invoice.discount_amount > 0:
+        pct_val = round(float(invoice.discount_amount) * 100.0 / float(invoice.subtotal), 1)
+        if pct_val == int(pct_val):
+            discount_percent_label = f'{int(pct_val)}%'
+        else:
+            discount_percent_label = f'{pct_val}%'
+
+    return {
+        'invoice_code': invoice.invoice_code,
+        'receipt_no': receipt_no,
+        'store_name': 'MIX FOOD',
+        'store_subtitle': 'ẨM THỰC THÁI',
+        'store_address': 'K38/37 Nguyễn Duy Hiệu - Q.Sơn Trà - TP. Đà Nẵng',
+        'table_name': table_name,
+        'area_name': area_name,
+        'table_display': table_display,
+        'time_range_display': time_range_display,
+        'paid_at_display': paid_local.strftime('%d/%m/%Y %I:%M %p'),
+        'cashier_id': invoice.cashier_id,
+        'cashier_name': cashier_name,
+        'payment_method': payment_method,
+        'payment_method_display': payment_method_display,
+        'subtotal': float(invoice.subtotal),
+        'subtotal_formatted': _fmt_dot(invoice.subtotal),
+        'surcharge_amount': float(invoice.surcharge_amount),
+        'surcharge_formatted': _fmt_dot(invoice.surcharge_amount),
+        'discount_amount': float(invoice.discount_amount),
+        'discount_formatted': _fmt_dot(invoice.discount_amount),
+        'discount_percent_label': discount_percent_label,
+        'tax_amount': float(invoice.tax_amount),
+        'tax_formatted': _fmt_dot(invoice.tax_amount),
+        'total_amount': float(invoice.total_amount),
+        'total_amount_formatted': _fmt_dot(invoice.total_amount),
+        'items': items_data,
+        'print_url': f'/sales/invoices/print/{invoice.invoice_code}/',
+        'qr_info': {
+            'merchant_title': 'HKD MIX FOOD',
+            'merchant_code': 'MS00T01136681533909',
+            'bank_name': 'TECHCOMBANK',
+            'account_holder': 'HO KINH DOANH MIX FOOD AM THUC THAI',
+            'account_number': '1903 6559 2140 22',
+            'qr_image_url': '/static/images/mixfood_qr_only.jpg',
+            'qr_card_url': '/static/images/mixfood_qr_card.jpg',
+        },
+    }
 
 
 def _format_order_items(order, show_full_name=False):
@@ -438,10 +552,10 @@ def invoice_list(request):
 
 
 @login_required
-@role_required('Owner', 'Manager', 'Sales')
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
 @require_GET
 def invoice_detail_api(request, invoice_code):
-    # Hàm này dùng để: API lấy thông tin chi tiết một hóa đơn để phục vụ modal Sửa hóa đơn. (Input: request, invoice_code; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
+    # Hàm này dùng để: API lấy thông tin chi tiết một hóa đơn để phục vụ modal Sửa hóa đơn và In lại hóa đơn. (Input: request, invoice_code; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     from django.contrib.auth import get_user_model
     User = get_user_model()
 
@@ -454,56 +568,43 @@ def invoice_detail_api(request, invoice_code):
 
     cashiers = [{'id': u.id, 'name': u.get_full_name() or u.username} for u in User.objects.filter(is_active=True).order_by('username')]
 
-    first_payment = invoice.payments.first()
-    payment_method = first_payment.method if first_payment else Payment.Method.CASH
-
-    order = invoice.order
-    table_name = order.table.name if (order and order.table) else ('Mang về' if (order and order.order_type == Order.OrderType.TAKEAWAY) else '-')
-
-    items_data = []
-    if order:
-        for item in order.items.filter(status=OrderItem.Status.ACTIVE):
-            orig_total = item.unit_price * item.quantity
-            discount_pct = float(round((item.discount_amount / orig_total * 100), 1)) if orig_total > 0 else 0
-            items_data.append({
-                'id': item.id,
-                'product_id': item.product_id,
-                'product_name': item.product_name,
-                'unit': item.unit,
-                'unit_price': float(item.unit_price),
-                'quantity': item.quantity,
-                'discount_percent': discount_pct,
-                'discount_amount': float(item.discount_amount),
-                'total_amount': float(item.total_amount),
-                'note': item.note,
-            })
-
     products = [
         {'id': p.id, 'code': p.code, 'name': p.name, 'price': float(p.price), 'unit': p.unit}
         for p in Product.objects.filter(is_active=True).order_by('name')
     ]
 
     payment_methods = [{'code': code, 'name': label} for code, label in Payment.Method.choices]
+    bill_data = _serialize_invoice_bill_data(invoice)
 
     return JsonResponse({
         'ok': True,
-        'invoice': {
-            'invoice_code': invoice.invoice_code,
-            'table_name': table_name,
-            'cashier_id': invoice.cashier_id,
-            'cashier_name': invoice.cashier.get_full_name() or invoice.cashier.username,
-            'payment_method': payment_method,
-            'payment_method_display': first_payment.get_method_display() if first_payment else 'Tiền mặt',
-            'subtotal': float(invoice.subtotal),
-            'surcharge_amount': float(invoice.surcharge_amount),
-            'discount_amount': float(invoice.discount_amount),
-            'tax_amount': float(invoice.tax_amount),
-            'total_amount': float(invoice.total_amount),
-            'items': items_data,
-        },
+        'invoice': bill_data,
         'cashiers': cashiers,
         'payment_methods': payment_methods,
         'products': products,
+    })
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+@require_GET
+def invoice_print_view(request, invoice_code):
+    # Hàm này dùng để: Hiển thị bản in nhiệt K80 cho hóa đơn thanh toán kèm mã QR cửa hàng. (Input: request, invoice_code; Output: trang HTML in bill K80).
+    invoice = Invoice.objects.select_related(
+        'order', 'cashier', 'order__table', 'order__table__area'
+    ).prefetch_related('order__items', 'payments').filter(invoice_code=invoice_code).first()
+
+    if not invoice:
+        return render(request, 'sales/prints/invoice_bill_print.html', {
+            'error': f'Không tìm thấy hóa đơn số #{invoice_code}.',
+            'bill': None,
+        }, status=404)
+
+    bill_data = _serialize_invoice_bill_data(invoice)
+    auto_print = request.GET.get('autoprint', '1') != '0'
+    return render(request, 'sales/prints/invoice_bill_print.html', {
+        'bill': bill_data,
+        'auto_print': auto_print,
     })
 
 
@@ -1635,37 +1736,19 @@ def _fmt_dot(value):
     return f'{val:,.0f}'.replace(',', '.')
 
 
-def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
-    # Hàm này dùng để: Tính toán toàn bộ số liệu Báo cáo cuối ngày đồng bộ với ảnh mẫu DRS Manager / MixFood POS: - Tính đến thời điểm: dd/mm/yyyy hh:mm AM/PM - Tổng số hóa đơn & Tổng số tiền bán (đ) - 9 dòng phương thức thanh toán / loại hóa đơn: + Hóa đơn tiền mặt + Hóa đơn thẻ ngân hàng + Hóa đơn ví điện tử + Hóa đơn thẻ trả trước (hiển thị trong ngoặc đơn) + Hóa đơn thẻ tích điểm (hiển thị trong ngoặc đơn) + Hóa đơn hệ thống khác + Hóa đơn tiếp khách (hiển thị trong ngoặc đơn) + Hóa đơn ghi nợ + Hóa đơn nạp tiền - Thống kê giảm giá: Có X hóa đơn giảm giá (0 mã giảm, 0 thẻ vip, 0 tặng món) - Giảm Y đ - Thống kê thao tác kiểm soát: + Có X lần sửa đơn giá/giảm giá món + Có Y lần trả/hủy món, Z lần sửa/xóa hóa đơn - Hóa đơn chưa thanh toán: số lượng & thành tiền (Input: target_date, is_yesterday; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
-    from datetime import datetime, time, timedelta
-
-    now_local = timezone.localtime()
-    if target_date is None:
-        if is_yesterday:
-            target_date = now_local.date() - timedelta(days=1)
-        else:
-            target_date = now_local.date()
-
-    day_start = timezone.make_aware(datetime.combine(target_date, time.min))
-    day_end = day_start + timedelta(days=1)
-
-    if target_date < now_local.date():
-        as_of_dt = timezone.make_aware(datetime.combine(target_date, time(23, 59)))
-    else:
-        as_of_dt = now_local
-
-    invoices = list(
-        Invoice.objects.filter(
-            status=Invoice.Status.PAID,
-            paid_at__gte=day_start,
-            paid_at__lt=day_end,
-        )
-        .select_related('order', 'cashier', 'order__table', 'order__table__area')
-        .prefetch_related('payments', 'order__items', 'order__items__product')
-        .order_by('paid_at')
-    )
-
-    total_invoices = len(invoices)
+def _compute_shift_or_eod_block(
+    invoices_list,
+    logs_qs,
+    prev_shift_display='',
+    close_shift_display='',
+    shift_key='all',
+    shift_label='Cả 2 ca (Thu Ngân 1 & Thu Ngân 2)',
+    cashier_display='Thu Ngân 1 & Thu Ngân 2',
+    unpaid_count=0,
+    unpaid_amount=Decimal('0'),
+):
+    # Hàm này dùng để tính toán khối dữ liệu báo cáo cho 1 ca làm việc (Ca 1 - thungan1, Ca 2 - thungan2) hoặc tổng hợp cuối ngày. Input: invoices_list, logs_qs, thông tin ca. Output: dict số liệu chuẩn K80.
+    total_invoices = len(invoices_list)
     total_revenue = Decimal('0')
 
     pay_buckets = {
@@ -1686,7 +1769,7 @@ def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
     item_price_or_discount_changes = 0
     cancelled_order_items_count = 0
 
-    for inv in invoices:
+    for inv in invoices_list:
         total_revenue += inv.total_amount
         if inv.discount_amount and inv.discount_amount > 0:
             discount_invoice_count += 1
@@ -1723,32 +1806,33 @@ def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
                 elif item.product and item.unit_price != item.product.price:
                     item_price_or_discount_changes += 1
 
-    # Đếm các thao tác trong Nhật ký hoạt động của ngày đó
-    day_logs = ActivityLog.objects.filter(
-        created_at__gte=day_start,
-        created_at__lt=day_end,
+    log_edit_price_count = logs_qs.filter(action=ActivityLog.Action.EDIT_PRICE).count() if logs_qs is not None else 0
+    log_cancel_return_count = (
+        logs_qs.filter(
+            action__in=[
+                ActivityLog.Action.CANCEL_ITEM,
+                ActivityLog.Action.RETURN_ITEM,
+                ActivityLog.Action.DELETE_ORDER,
+            ]
+        ).count()
+        if logs_qs is not None
+        else 0
     )
-
-    log_edit_price_count = day_logs.filter(action=ActivityLog.Action.EDIT_PRICE).count()
-    log_cancel_return_count = day_logs.filter(
-        action__in=[
-            ActivityLog.Action.CANCEL_ITEM,
-            ActivityLog.Action.RETURN_ITEM,
-            ActivityLog.Action.DELETE_ORDER,
-        ]
-    ).count()
-    log_edit_delete_invoice_count = day_logs.filter(
-        action__in=[
-            ActivityLog.Action.EDIT_INVOICE,
-            ActivityLog.Action.DELETE_INVOICE,
-        ]
-    ).count()
+    log_edit_delete_invoice_count = (
+        logs_qs.filter(
+            action__in=[
+                ActivityLog.Action.EDIT_INVOICE,
+                ActivityLog.Action.DELETE_INVOICE,
+            ]
+        ).count()
+        if logs_qs is not None
+        else 0
+    )
 
     edit_price_discount_count = max(log_edit_price_count, item_price_or_discount_changes)
     cancel_return_item_count = max(log_cancel_return_count, cancelled_order_items_count)
     edit_delete_invoice_count = log_edit_delete_invoice_count
 
-    # Định dạng danh sách 9 dòng phương thức thanh toán
     payment_order = ['cash', 'card', 'e_wallet', 'prepaid', 'points', 'other', 'guest', 'debt', 'topup']
     payment_rows = []
     for key in payment_order:
@@ -1765,14 +1849,21 @@ def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
             'paren': b['paren'],
         })
 
+    thermal_keys = ['cash', 'card', 'e_wallet']
+    thermal_payment_rows = [r for r in payment_rows if r['key'] in thermal_keys]
+
     return {
-        'date': target_date.strftime('%Y-%m-%d'),
-        'date_display': target_date.strftime('%d/%m/%Y'),
-        'as_of_display': as_of_dt.strftime('%d/%m/%Y %I:%M %p'),
+        'shift_key': shift_key,
+        'shift_label': shift_label,
+        'cashier_display': cashier_display,
+        'prev_shift_display': prev_shift_display,
+        'close_shift_display': close_shift_display,
+        'as_of_display': close_shift_display,
         'total_invoices': total_invoices,
         'total_revenue': float(total_revenue),
         'total_revenue_formatted': _fmt_dot(total_revenue),
         'payment_rows': payment_rows,
+        'thermal_payment_rows': thermal_payment_rows,
         'payments_by_key': {r['key']: r for r in payment_rows},
         'discount_invoice_count': discount_invoice_count,
         'coupon_count': coupon_invoice_count,
@@ -1783,6 +1874,162 @@ def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
         'edit_price_discount_count': edit_price_discount_count,
         'cancel_return_item_count': cancel_return_item_count,
         'edit_delete_invoice_count': edit_delete_invoice_count,
+        'unpaid_count': unpaid_count,
+        'unpaid_amount': float(unpaid_amount),
+        'unpaid_amount_formatted': _fmt_dot(unpaid_amount),
+    }
+
+
+def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
+    # Hàm này dùng để: Tính toán toàn bộ số liệu Báo cáo cuối ngày dành cho cả 2 ca (thungan1 - Thu Ngân 1 và thungan2 - Thu Ngân 2) cũng như tổng hợp toàn ngày. (Input: target_date, is_yesterday; Output: dict dữ liệu báo cáo cuối ngày).
+    from datetime import datetime, time, timedelta
+    from django.db.models import Q, Sum
+    from .models import Shift
+
+    now_local = timezone.localtime()
+    if target_date is None:
+        if is_yesterday:
+            target_date = now_local.date() - timedelta(days=1)
+        else:
+            target_date = now_local.date()
+
+    day_start = timezone.make_aware(datetime.combine(target_date, time.min))
+    day_end = day_start + timedelta(days=1)
+    shift_split_dt = timezone.make_aware(datetime.combine(target_date, time(15, 0)))
+
+    if target_date < now_local.date():
+        as_of_dt = timezone.make_aware(datetime.combine(target_date, time(23, 59)))
+    else:
+        as_of_dt = now_local
+
+    invoices = list(
+        Invoice.objects.filter(
+            status=Invoice.Status.PAID,
+            paid_at__gte=day_start,
+            paid_at__lt=day_end,
+        )
+        .select_related('order', 'cashier', 'order__table', 'order__table__area')
+        .prefetch_related('payments', 'order__items', 'order__items__product')
+        .order_by('paid_at')
+    )
+
+    day_logs = ActivityLog.objects.filter(
+        created_at__gte=day_start,
+        created_at__lt=day_end,
+    )
+
+    # Phân tách hóa đơn theo Ca 1 (thungan1 - Thu Ngân 1) và Ca 2 (thungan2 - Thu Ngân 2)
+    ca1_invoices = []
+    ca2_invoices = []
+    for inv in invoices:
+        uname = (inv.cashier.username if inv.cashier else '').lower()
+        if uname == 'thungan1':
+            ca1_invoices.append(inv)
+        elif uname == 'thungan2':
+            ca2_invoices.append(inv)
+        else:
+            paid_loc = timezone.localtime(inv.paid_at) if inv.paid_at else as_of_dt
+            if paid_loc.hour < 15:
+                ca1_invoices.append(inv)
+            else:
+                ca2_invoices.append(inv)
+
+    ca1_logs = day_logs.filter(
+        Q(actor__username__iexact='thungan1')
+        | (~Q(actor__username__iexact='thungan2') & Q(created_at__lt=shift_split_dt))
+    )
+    ca2_logs = day_logs.filter(
+        Q(actor__username__iexact='thungan2')
+        | (~Q(actor__username__iexact='thungan1') & Q(created_at__gte=shift_split_dt))
+    )
+
+    # Xác định thời điểm giao ca của Ca 1 và Ca 2
+    prev_day_last_shift = (
+        Shift.objects.filter(status=Shift.Status.CLOSED, ended_at__lt=day_start)
+        .order_by('-ended_at')
+        .first()
+    )
+    day_closed_shifts = list(
+        Shift.objects.filter(status=Shift.Status.CLOSED, ended_at__gte=day_start, ended_at__lt=day_end)
+        .order_by('ended_at')
+    )
+
+    if prev_day_last_shift and prev_day_last_shift.ended_at:
+        ca1_prev_str = timezone.localtime(prev_day_last_shift.ended_at).strftime('%d/%m/%Y %I:%M %p')
+    else:
+        prev_night = timezone.make_aware(datetime.combine(target_date - timedelta(days=1), time(22, 0)))
+        ca1_prev_str = timezone.localtime(prev_night).strftime('%d/%m/%Y %I:%M %p')
+
+    if day_closed_shifts:
+        ca1_end_dt = timezone.localtime(day_closed_shifts[0].ended_at)
+        ca1_close_str = ca1_end_dt.strftime('%d/%m/%Y %I:%M %p')
+    elif ca1_invoices:
+        ca1_end_dt = timezone.localtime(ca1_invoices[-1].paid_at)
+        if ca1_end_dt.hour < 15:
+            ca1_end_dt = timezone.make_aware(datetime.combine(target_date, time(15, 0)))
+        ca1_close_str = timezone.localtime(ca1_end_dt).strftime('%d/%m/%Y %I:%M %p')
+    else:
+        ca1_close_str = timezone.localtime(shift_split_dt).strftime('%d/%m/%Y %I:%M %p')
+
+    ca2_prev_str = ca1_close_str
+    if len(day_closed_shifts) >= 2 and day_closed_shifts[-1].ended_at:
+        ca2_close_str = timezone.localtime(day_closed_shifts[-1].ended_at).strftime('%d/%m/%Y %I:%M %p')
+    else:
+        ca2_close_str = as_of_dt.strftime('%d/%m/%Y %I:%M %p')
+
+    # Tính số hóa đơn chưa thu trực tiếp từ DB (các bàn đang mở)
+    if is_yesterday:
+        db_unpaid_count = 0
+        db_unpaid_amount = Decimal('0')
+    else:
+        open_orders_qs = Order.objects.filter(status__in=[Order.Status.DRAFT, Order.Status.CONFIRMED])
+        db_unpaid_count = open_orders_qs.count()
+        db_unpaid_amount = open_orders_qs.aggregate(s=Sum('total_amount'))['s'] or Decimal('0')
+
+    combined_block = _compute_shift_or_eod_block(
+        invoices_list=invoices,
+        logs_qs=day_logs,
+        prev_shift_display=ca1_prev_str,
+        close_shift_display=as_of_dt.strftime('%d/%m/%Y %I:%M %p'),
+        shift_key='all',
+        shift_label='Cả 2 ca (Thu Ngân 1 & Thu Ngân 2)',
+        cashier_display='Thu Ngân 1 (thungan1) & Thu Ngân 2 (thungan2)',
+        unpaid_count=db_unpaid_count,
+        unpaid_amount=db_unpaid_amount,
+    )
+    ca1_block = _compute_shift_or_eod_block(
+        invoices_list=ca1_invoices,
+        logs_qs=ca1_logs,
+        prev_shift_display=ca1_prev_str,
+        close_shift_display=ca1_close_str,
+        shift_key='thungan1',
+        shift_label='Ca 1 - Thu Ngân 1 (thungan1)',
+        cashier_display='Thu Ngân 1 (thungan1)',
+        unpaid_count=db_unpaid_count,
+        unpaid_amount=db_unpaid_amount,
+    )
+    ca2_block = _compute_shift_or_eod_block(
+        invoices_list=ca2_invoices,
+        logs_qs=ca2_logs,
+        prev_shift_display=ca2_prev_str,
+        close_shift_display=ca2_close_str,
+        shift_key='thungan2',
+        shift_label='Ca 2 - Thu Ngân 2 (thungan2)',
+        cashier_display='Thu Ngân 2 (thungan2)',
+        unpaid_count=db_unpaid_count,
+        unpaid_amount=db_unpaid_amount,
+    )
+
+    return {
+        'date': target_date.strftime('%Y-%m-%d'),
+        'date_display': target_date.strftime('%d/%m/%Y'),
+        **combined_block,
+        'shifts_data': [ca1_block, ca2_block],
+        'shifts_by_key': {
+            'all': combined_block,
+            'thungan1': ca1_block,
+            'thungan2': ca2_block,
+        },
     }
 
 
@@ -1790,7 +2037,7 @@ def _compute_end_of_day_report_data(target_date=None, is_yesterday=False):
 @role_required('Owner', 'Manager', 'Sales', 'Cashier')
 @require_GET
 def end_of_day_report_api(request):
-    # Hàm này dùng để: API trả về số liệu Báo cáo cuối ngày. (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
+    # Hàm này dùng để: API trả về số liệu Báo cáo cuối ngày (gồm cả 2 ca thungan1, thungan2 và tổng hợp). (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     day_param = str(request.GET.get('day', 'today') or 'today').strip().lower()
     is_yesterday = (day_param == 'yesterday')
     data = _compute_end_of_day_report_data(is_yesterday=is_yesterday)
@@ -1801,32 +2048,45 @@ def end_of_day_report_api(request):
 @role_required('Owner', 'Manager', 'Sales', 'Cashier')
 @require_GET
 def end_of_day_report_print(request):
-    # Hàm này dùng để: Trang in Báo cáo cuối ngày: - mode='summary' (mặc định khi nhấn OK): In phiếu tổng hợp Báo cáo cuối ngày. - mode='detail_today' (Giữ CTRL + nhấn OK): In báo cáo chi tiết hôm nay (kèm chi tiết món bán). - mode='detail_yesterday' (Giữ SHIFT + nhấn OK): In báo cáo chi tiết hôm qua (kèm chi tiết món bán hôm qua). (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
+    # Hàm này dùng để: Trang in Báo cáo cuối ngày cho cả 2 ca thungan1 và thungan2: - mode='summary' (mặc định khi nhấn OK): In phiếu tổng hợp Báo cáo cuối ngày (gồm Ca 1, Ca 2 và Tổng cuối ngày). - mode='detail_today' (Giữ CTRL + nhấn OK): In báo cáo chi tiết hôm nay (kèm chi tiết món bán). - mode='detail_yesterday' (Giữ SHIFT + nhấn OK): In báo cáo chi tiết hôm qua (kèm chi tiết món bán hôm qua). (Input: request; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     from datetime import datetime, time, timedelta
     from .statistics import get_sales_statistics_data
 
     mode = str(request.GET.get('mode', 'summary') or 'summary').strip().lower()
+    shift_filter = str(request.GET.get('shift', 'all') or 'all').strip().lower()
     is_yesterday = (mode == 'detail_yesterday')
     is_detailed = mode in ('detail_today', 'detail_yesterday')
 
     eod = _compute_end_of_day_report_data(is_yesterday=is_yesterday)
 
-    try:
-        unpaid_count = max(0, int(request.GET.get('unpaid_count', 0) or 0))
-    except (TypeError, ValueError):
-        unpaid_count = 0
+    raw_unpaid_cnt = request.GET.get('unpaid_count')
+    raw_unpaid_amt = request.GET.get('unpaid_amount')
+    if raw_unpaid_cnt is not None and str(raw_unpaid_cnt).strip() != '':
+        try:
+            unpaid_count = max(0, int(raw_unpaid_cnt))
+        except (TypeError, ValueError):
+            unpaid_count = eod.get('unpaid_count', 0)
+    else:
+        unpaid_count = eod.get('unpaid_count', 0)
 
-    try:
-        unpaid_amount = max(Decimal('0'), Decimal(str(request.GET.get('unpaid_amount', '0') or '0')))
-    except (InvalidOperation, TypeError, ValueError):
-        unpaid_amount = Decimal('0')
+    if raw_unpaid_amt is not None and str(raw_unpaid_amt).strip() != '':
+        try:
+            unpaid_amount = max(Decimal('0'), Decimal(str(raw_unpaid_amt)))
+        except (InvalidOperation, TypeError, ValueError):
+            unpaid_amount = Decimal(str(eod.get('unpaid_amount', 0)))
+    else:
+        unpaid_amount = Decimal(str(eod.get('unpaid_amount', 0)))
 
     if is_yesterday:
         unpaid_count = 0
         unpaid_amount = Decimal('0')
 
+    unpaid_fmt = _fmt_dot(unpaid_amount)
     eod['unpaid_count'] = unpaid_count
-    eod['unpaid_amount_formatted'] = _fmt_dot(unpaid_amount)
+    eod['unpaid_amount_formatted'] = unpaid_fmt
+    for s_block in eod.get('shifts_data', []):
+        s_block['unpaid_count'] = unpaid_count
+        s_block['unpaid_amount_formatted'] = unpaid_fmt
 
     stats = None
     if is_detailed:
@@ -1838,6 +2098,7 @@ def end_of_day_report_print(request):
 
     return render(request, 'sales/prints/end_of_day_print.html', {
         'eod': eod,
+        'shift_filter': shift_filter,
         'mode': mode,
         'is_detailed': is_detailed,
         'is_yesterday': is_yesterday,

@@ -613,12 +613,7 @@ def permission_api_clear_elevation(request):
 
 @require_POST
 def api_forgot_password(request):
-    """
-    Hàm này dùng để xử lý yêu cầu đặt lại mật khẩu của người dùng khi quên mật khẩu.
-    Xác thực qua Tên đăng nhập và Số điện thoại đăng ký (UserProfile.phone).
-    Input: HttpRequest (JSON chứa username, phone, new_password).
-    Output: JsonResponse ({ok: True/False, message: ...}).
-    """
+    # Hàm này dùng để xử lý yêu cầu đặt lại mật khẩu của người dùng khi quên mật khẩu qua Tên đăng nhập và Số điện thoại đăng ký. (Input: request; Output: JsonResponse).
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -664,12 +659,7 @@ def api_forgot_password(request):
 
 @require_POST
 def api_register_user(request):
-    """
-    Hàm này dùng để xử lý đăng ký tài khoản nhân viên mới từ trang đăng nhập.
-    Tạo mới User, UserProfile và gán quyền hạn tương ứng theo bộ phận đăng ký.
-    Input: HttpRequest (JSON chứa full_name, username, password, phone, department).
-    Output: JsonResponse ({ok: True/False, message: ...}).
-    """
+    # Hàm này dùng để xử lý đăng ký tài khoản nhân viên mới từ trang đăng nhập, tạo User, UserProfile và gán quyền hạn theo bộ phận. (Input: request; Output: JsonResponse).
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -727,12 +717,7 @@ def api_register_user(request):
 
 @require_POST
 def api_change_password(request):
-    """
-    Hàm này dùng để xử lý yêu cầu đổi mật khẩu trực tiếp từ màn hình đăng nhập hoặc modal.
-    Xác thực Tên đăng nhập và Mật khẩu hiện tại trước khi cập nhật mật khẩu mới.
-    Input: HttpRequest (JSON chứa username, old_password, new_password).
-    Output: JsonResponse ({ok: True/False, message: ...}).
-    """
+    # Hàm này dùng để xử lý yêu cầu đổi mật khẩu trực tiếp từ màn hình đăng nhập hoặc modal. (Input: request; Output: JsonResponse).
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:

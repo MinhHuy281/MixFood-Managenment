@@ -136,7 +136,10 @@
                         <td><span class="area-pill">${inv.area}</span></td>
                         <td><span class="table-pill">${inv.table}</span></td>
                         <td class="items-notes-cell" title="${inv.items_full || ''}">${itemsDisplay}</td>
-                        <td class="text-center" style="width: 75px;">
+                        <td class="text-center" style="width: 135px; white-space: nowrap;">
+                            <button type="button" class="btn-inv-row-edit btn-inv-row-print" data-code="${inv.invoice_code}" title="In lại hóa đơn #${inv.invoice_code}" style="margin-right: 4px; background: #ecfdf5; color: #059669; border-color: #a7f3d0;">
+                                🖨️ In
+                            </button>
                             <button type="button" class="btn-inv-row-edit" data-code="${inv.invoice_code}" title="Sửa hóa đơn #${inv.invoice_code}">
                                 ✏️ Sửa
                             </button>
@@ -145,7 +148,7 @@
                 `;
             }).join('');
 
-            // Attach event listeners for editing invoice
+            // Attach event listeners for editing & reprinting invoice
             tbody.querySelectorAll('.invoice-row-clickable').forEach(tr => {
                 const code = tr.dataset.code;
                 tr.addEventListener('dblclick', () => {
@@ -153,7 +156,26 @@
                 });
             });
 
-            tbody.querySelectorAll('.btn-inv-row-edit').forEach(btn => {
+            tbody.querySelectorAll('.btn-inv-row-print').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const code = btn.dataset.code;
+                    const doReprint = () => {
+                        if (typeof window.reprintPosInvoiceByCode === 'function') {
+                            window.reprintPosInvoiceByCode(code);
+                        } else {
+                            window.open(`/sales/invoices/print/${encodeURIComponent(code)}/`, '_blank', 'noopener');
+                        }
+                    };
+                    if (typeof window.requirePosPermission === 'function') {
+                        window.requirePosPermission('reprint_invoice', doReprint, 'In lại hóa đơn');
+                    } else {
+                        doReprint();
+                    }
+                });
+            });
+
+            tbody.querySelectorAll('.btn-inv-row-edit:not(.btn-inv-row-print)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const code = btn.dataset.code;

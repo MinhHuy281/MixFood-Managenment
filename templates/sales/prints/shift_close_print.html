@@ -1,0 +1,205 @@
+<!-- # File này chịu trách nhiệm hiển thị và in phiếu nhiệt BÁO CÁO KẾT CA khổ K80 (80mm) đồng bộ với mẫu hóa đơn kết ca thực tế. -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo cáo kết ca - {{ report.cashier_display }} | MIX FOOD</title>
+    <style>
+        /* # Định dạng phiếu nhiệt BÁO CÁO KẾT CA khổ K80 chuẩn ảnh chụp thực tế */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #e2e8f0;
+            color: #111827;
+            font-family: "Times New Roman", Times, Georgia, serif;
+            padding: 20px 12px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .no-print-toolbar {
+            width: 100%;
+            max-width: 340px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 14px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .btn-print-bar {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-print-bar.primary {
+            background: #059669;
+            border-color: #059669;
+            color: #ffffff;
+        }
+        .k80-shift-paper {
+            width: 315px;
+            max-width: 100%;
+            background: #ffffff;
+            padding: 18px 14px 22px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+            color: #000000;
+            line-height: 1.45;
+            font-size: 13.5px;
+        }
+        .shift-title {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+        .shift-cashier-sub {
+            font-size: 12.5px;
+            margin-bottom: 6px;
+            color: #1f2937;
+        }
+        .shift-grid-top {
+            display: grid;
+            grid-template-columns: 125px 1fr;
+            row-gap: 3px;
+            margin-bottom: 10px;
+        }
+        .shift-pay-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0 10px;
+        }
+        .shift-pay-table td {
+            padding: 2px 0;
+            font-size: 13.5px;
+        }
+        .shift-pay-table td.col-cnt {
+            text-align: right;
+            width: 34px;
+            padding-right: 14px;
+        }
+        .shift-pay-table td.col-amt {
+            text-align: left;
+            width: 90px;
+        }
+        .shift-note-block {
+            margin: 8px 0;
+            line-height: 1.45;
+        }
+        .shift-unpaid-row {
+            display: grid;
+            grid-template-columns: 155px 34px 1fr;
+            margin-top: 10px;
+            padding-top: 4px;
+        }
+        .shift-unpaid-row .cnt {
+            text-align: right;
+            padding-right: 14px;
+        }
+        @media print {
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+            body {
+                background: #ffffff;
+                padding: 0;
+            }
+            .no-print-toolbar {
+                display: none !important;
+            }
+            .k80-shift-paper {
+                width: 100%;
+                max-width: 80mm;
+                box-shadow: none;
+                padding: 10px 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-toolbar">
+        <button type="button" class="btn-print-bar primary" onclick="window.print()">🖨️ In báo cáo kết ca</button>
+        <button type="button" class="btn-print-bar" onclick="window.close()">✕ Đóng</button>
+    </div>
+
+    <div class="k80-shift-paper">
+        <div class="shift-title">BÁO CÁO KẾT CA</div>
+        <div class="shift-cashier-sub">Nhân viên: <strong>{{ report.cashier_display }}</strong></div>
+
+        <div class="shift-grid-top">
+            <span>Ca trước giao lúc:</span>
+            <span>{{ report.prev_shift_display }}</span>
+
+            <span>Thời điểm kết ca:</span>
+            <span>{{ report.close_shift_display }}</span>
+
+            <span>Số hóa đơn:</span>
+            <span>{{ report.total_invoices }}</span>
+
+            <span>Số tiền bán:</span>
+            <span>{{ report.total_revenue_formatted }} đ</span>
+        </div>
+
+        <table class="shift-pay-table">
+            <tbody>
+                {% for row in report.thermal_payment_rows %}
+                <tr>
+                    <td>{{ row.label }}</td>
+                    <td class="col-cnt">{{ row.count }}</td>
+                    <td class="col-amt">{{ row.amount_formatted }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if report.discount_invoice_count > 0 or report.discount_total_amount > 0 %}
+        <div class="shift-note-block">
+            <div>Có {{ report.discount_invoice_count }} hóa đơn giảm giá ({{ report.coupon_count }} mã giảm, {{ report.vip_count }} thẻ vip, {{ report.gift_count }} tặng món)</div>
+            <div>Giảm {{ report.discount_total_formatted }} đ</div>
+        </div>
+        {% else %}
+        <div class="shift-note-block">
+            <div>Có 0 hóa đơn giảm giá (0 mã giảm, 0 thẻ vip, 0 tặng món)</div>
+            <div>Giảm 0 đ</div>
+        </div>
+        {% endif %}
+
+        <div class="shift-note-block">
+            <div>Có {{ report.edit_price_discount_count }} lần sửa đơn giá/giảm giá món</div>
+            <div>Có {{ report.cancel_return_item_count }} lần trả/hủy món, {{ report.edit_delete_invoice_count }} lần sửa/xóa hóa đơn</div>
+        </div>
+
+        <div class="shift-unpaid-row">
+            <span>Hóa đơn chưa thu:</span>
+            <span class="cnt">{{ report.unpaid_count }}</span>
+            <span>{{ report.unpaid_amount_formatted }}</span>
+        </div>
+    </div>
+
+    {% if auto_print %}
+    <script>
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                window.print();
+            }, 250);
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

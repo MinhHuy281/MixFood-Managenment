@@ -148,14 +148,93 @@ def home(request):
     })
 
 
+def _build_shift_report_data(shift, ended_at, actor_user, unpaid_count=None, unpaid_amount=None):
+    # Hàm này dùng để tính toán dữ liệu phiếu nhiệt BÁO CÁO KẾT CA (khổ K80) cho một ca làm việc cụ thể. Input: shift, ended_at, actor_user, unpaid_count, unpaid_amount. Output: dict dữ liệu báo cáo kết ca.
+    from decimal import Decimal
+    from sales.views import _compute_shift_or_eod_block
+
+    prev_shift = (
+        Shift.objects.filter(status=Shift.Status.CLOSED, ended_at__isnull=False)
+        .exclude(pk=shift.pk)
+        .order_by('-ended_at')
+        .first()
+    )
+    prev_dt = prev_shift.ended_at if (prev_shift and prev_shift.ended_at) else shift.started_at
+    prev_shift_str = timezone.localtime(prev_dt).strftime('%d/%m/%Y %I:%M %p')
+    close_shift_str = timezone.localtime(ended_at).strftime('%d/%m/%Y %I:%M %p')
+
+    shift_invoices_qs = (
+        Invoice.objects.filter(
+            status=Invoice.Status.PAID,
+            paid_at__gte=shift.started_at,
+            paid_at__lte=ended_at,
+        )
+        .select_related('order', 'cashier', 'order__table', 'order__table__area')
+        .prefetch_related('payments', 'order__items', 'order__items__product')
+        .order_by('paid_at')
+    )
+    shift_logs_qs = ActivityLog.objects.filter(
+        created_at__gte=shift.started_at,
+        created_at__lte=ended_at,
+    )
+
+    if unpaid_count is None or unpaid_amount is None:
+        open_orders_qs = Order.objects.filter(status__in=[Order.Status.DRAFT, Order.Status.CONFIRMED])
+        if unpaid_count is None:
+            unpaid_count = open_orders_qs.count()
+        if unpaid_amount is None:
+            unpaid_amount = open_orders_qs.aggregate(s=Sum('total_amount'))['s'] or Decimal('0')
+
+    cashier_name = (actor_user.get_full_name() or actor_user.username) if actor_user else 'Thu Ngân 1'
+    cashier_username = actor_user.username if actor_user else 'thungan1'
+
+    block = _compute_shift_or_eod_block(
+        invoices_list=list(shift_invoices_qs),
+        logs_qs=shift_logs_qs,
+        prev_shift_display=prev_shift_str,
+        close_shift_display=close_shift_str,
+        shift_key=cashier_username,
+        shift_label=f'Ca làm việc - {cashier_name}',
+        cashier_display=cashier_name,
+        unpaid_count=int(unpaid_count or 0),
+        unpaid_amount=Decimal(str(unpaid_amount or 0)),
+    )
+    block['shift_id'] = shift.pk
+    block['title'] = 'BÁO CÁO KẾT CA'
+    block['print_url'] = (
+        f"/close-shift/print/{shift.pk}/?unpaid_count={block['unpaid_count']}&unpaid_amount={int(block['unpaid_amount'])}"
+    )
+    return block
+
+
 @login_required
 @role_required('Owner', 'Manager', 'Sales', 'Cashier')
 @require_POST
 def close_shift(request):
     # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'close_shift' trong phân hệ dashboard/views.py. Input: đối tượng HttpRequest (request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
+    from decimal import Decimal, InvalidOperation
+
     shift = Shift.objects.filter(status=Shift.Status.OPEN).order_by('started_at').first()
     if shift is None:
-        return JsonResponse({'error': 'Không có ca đang mở.'}, status=400)
+        last_closed = Shift.objects.filter(status=Shift.Status.CLOSED, ended_at__isnull=False).order_by('-ended_at').first()
+        start_time = last_closed.ended_at if last_closed else timezone.make_aware(datetime.combine(timezone.localdate(), time.min))
+        shift = Shift.objects.create(opened_by=request.user, status=Shift.Status.OPEN)
+        Shift.objects.filter(pk=shift.pk).update(started_at=start_time)
+        shift.started_at = start_time
+
+    unpaid_count = None
+    unpaid_amount = None
+    if request.body:
+        try:
+            payload = json.loads(request.body)
+            if isinstance(payload, dict):
+                if 'unpaid_count' in payload:
+                    unpaid_count = max(0, int(payload.get('unpaid_count') or 0))
+                if 'unpaid_amount' in payload:
+                    unpaid_amount = max(Decimal('0'), Decimal(str(payload.get('unpaid_amount') or '0')))
+        except (json.JSONDecodeError, TypeError, ValueError, InvalidOperation):
+            pass
+
     ended_at = timezone.now()
     shift_invoices = Invoice.objects.filter(status=Invoice.Status.PAID, paid_at__gte=shift.started_at, paid_at__lte=ended_at)
     payment_totals = {
@@ -165,10 +244,27 @@ def close_shift(request):
         )
     }
     total = shift_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+
+    shift_report = _build_shift_report_data(
+        shift=shift,
+        ended_at=ended_at,
+        actor_user=request.user,
+        unpaid_count=unpaid_count,
+        unpaid_amount=unpaid_amount,
+    )
+
     shift.status = Shift.Status.CLOSED
     shift.ended_at = ended_at
     shift.closed_by = request.user
     shift.save(update_fields=('status', 'ended_at', 'closed_by'))
+
+    # Mở sẵn ca tiếp theo bắt đầu từ đúng thời điểm kết ca hiện tại để ca sau ghi nhận chuẩn "Ca trước giao lúc"
+    Shift.objects.create(
+        opened_by=request.user,
+        started_at=ended_at,
+        status=Shift.Status.OPEN,
+    )
+
     total_fmt = f'{total:,.0f}'.replace(',', '.')
     ActivityLog.objects.create(
         actor=request.user,
@@ -182,7 +278,64 @@ def close_shift(request):
         status_code=200,
         ip_address=request.META.get('REMOTE_ADDR'),
     )
-    return JsonResponse({'ok': True, 'invoice_count': shift_invoices.count(), 'total': str(total), 'payments': {method: {'count': row['count'], 'total': str(row['total'] or 0)} for method, row in payment_totals.items()}})
+    return JsonResponse({
+        'ok': True,
+        'invoice_count': shift_invoices.count(),
+        'total': str(total),
+        'payments': {
+            method: {'count': row['count'], 'total': str(row['total'] or 0)}
+            for method, row in payment_totals.items()
+        },
+        'shift_report': shift_report,
+        'print_url': shift_report['print_url'],
+    })
+
+
+@login_required
+@role_required('Owner', 'Manager', 'Sales', 'Cashier')
+def shift_close_print_view(request, shift_id=None):
+    # Hàm này dùng để hiển thị trang in nhiệt K80 cho BÁO CÁO KẾT CA (hoặc xem lại ca vừa kết). Input: request, shift_id. Output: HttpResponse trang in K80.
+    from decimal import Decimal, InvalidOperation
+
+    if shift_id:
+        shift = Shift.objects.filter(pk=shift_id).first()
+    else:
+        shift = Shift.objects.filter(status=Shift.Status.CLOSED).order_by('-ended_at').first()
+        if not shift:
+            shift = Shift.objects.order_by('-started_at').first()
+
+    if not shift:
+        now = timezone.now()
+        shift = Shift.objects.create(opened_by=request.user, started_at=now, status=Shift.Status.OPEN)
+
+    unpaid_count = None
+    unpaid_amount = None
+    if 'unpaid_count' in request.GET:
+        try:
+            unpaid_count = max(0, int(request.GET.get('unpaid_count') or 0))
+        except (TypeError, ValueError):
+            unpaid_count = None
+    if 'unpaid_amount' in request.GET:
+        try:
+            unpaid_amount = max(Decimal('0'), Decimal(str(request.GET.get('unpaid_amount') or '0')))
+        except (InvalidOperation, TypeError, ValueError):
+            unpaid_amount = None
+
+    ended_at = shift.ended_at or timezone.now()
+    actor_user = shift.closed_by or shift.opened_by or request.user
+    shift_report = _build_shift_report_data(
+        shift=shift,
+        ended_at=ended_at,
+        actor_user=actor_user,
+        unpaid_count=unpaid_count,
+        unpaid_amount=unpaid_amount,
+    )
+    auto_print = request.GET.get('autoprint', '1') != '0'
+
+    return render(request, 'sales/prints/shift_close_print.html', {
+        'report': shift_report,
+        'auto_print': auto_print,
+    })
 
 
 @login_required

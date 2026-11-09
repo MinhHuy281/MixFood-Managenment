@@ -1,4 +1,4 @@
-// # File này chịu trách nhiệm xử lý hộp thoại Báo cáo cuối ngày (End of Day Report): nạp dữ liệu tổng kết doanh thu, phương thức thanh toán, món bán và mở trang in.
+// # File này chịu trách nhiệm xử lý hộp thoại Báo cáo cuối ngày (End of Day Report) cho cả 2 ca thungan1 & thungan2: nạp dữ liệu theo từng ca hoặc tổng hợp và in bill nhiệt K80.
 (function initEndOfDayReportModal() {
     const modal = document.getElementById('modal-end-of-day-report');
     if (!modal) return;
@@ -7,9 +7,12 @@
     const okBtn = document.getElementById('eod-report-modal-ok');
     const cancelBtn = document.getElementById('eod-report-modal-cancel');
 
+    const prevShiftTimeEl = document.getElementById('eod-prev-shift-time');
     const asOfTimeEl = document.getElementById('eod-as-of-time');
     const totalInvoicesEl = document.getElementById('eod-total-invoices');
     const totalRevenueEl = document.getElementById('eod-total-revenue');
+    const ca1BriefEl = document.getElementById('eod-ca1-brief');
+    const ca2BriefEl = document.getElementById('eod-ca2-brief');
 
     const payRefs = {
         cash: {
@@ -58,6 +61,8 @@
 
     const POS_STORAGE_KEY = 'mixfood_pos_table_orders_v1';
     let latestUnpaidStats = { count: 0, amount: 0 };
+    let cachedEodData = null;
+    let activeShiftTab = 'all';
 
     function formatDot(val) {
         const num = Math.round(Number(val) || 0);
@@ -107,17 +112,70 @@
         return { count, amount: totalAmount };
     }
 
-    async function fetchAndRenderEndOfDay() {
-        const apiUrl = modal.dataset.apiUrl;
-        if (!apiUrl) return;
-
+    function renderShiftBlock(block) {
+        if (!block) return;
         const hideNumbers =
             typeof window.posGetExtraOption === 'function' &&
             Boolean(window.posGetExtraOption('hide_shift_close_numbers'));
 
+        if (prevShiftTimeEl) prevShiftTimeEl.textContent = block.prev_shift_display || '--/--/---- --:-- --';
+        if (asOfTimeEl) asOfTimeEl.textContent = block.close_shift_display || block.as_of_display || '';
+        if (totalInvoicesEl) totalInvoicesEl.textContent = hideNumbers ? '***' : String(block.total_invoices ?? 0);
+        if (totalRevenueEl) totalRevenueEl.textContent = hideNumbers ? '*** đ' : `${block.total_revenue_formatted || '0'} đ`;
+
+        const pmap = block.payments_by_key || {};
+        Object.entries(payRefs).forEach(([key, refs]) => {
+            const row = pmap[key];
+            const defaultParen = ['prepaid', 'points', 'guest'].includes(key);
+            if (refs.count) {
+                refs.count.textContent = hideNumbers ? '*' : String(row ? row.count : 0);
+            }
+            if (refs.amount) {
+                if (hideNumbers) {
+                    refs.amount.textContent = defaultParen ? '(***)' : '***';
+                } else {
+                    refs.amount.textContent = row ? row.amount_formatted : (defaultParen ? '(0)' : '0');
+                }
+            }
+        });
+
+        if (discountSummaryEl) {
+            const dCount = hideNumbers ? '*' : (block.discount_invoice_count ?? 0);
+            const dAmt = hideNumbers ? '***' : (block.discount_total_formatted || '0');
+            discountSummaryEl.innerHTML =
+                `Có ${dCount} hóa đơn giảm giá (${block.coupon_count ?? 0} mã giảm, ${block.vip_count ?? 0} thẻ vip, ${block.gift_count ?? 0} tặng món) -<br>` +
+                `Giảm ${dAmt} đ`;
+        }
+
+        if (editPriceSummaryEl) {
+            editPriceSummaryEl.textContent = `Có ${block.edit_price_discount_count ?? 0} lần sửa đơn giá/giảm giá món`;
+        }
+        if (cancelEditSummaryEl) {
+            cancelEditSummaryEl.textContent =
+                `Có ${block.cancel_return_item_count ?? 0} lần trả/hủy món, ${block.edit_delete_invoice_count ?? 0} lần sửa/xóa hóa đơn`;
+        }
+
+        const unpaidCnt = latestUnpaidStats.count > 0 ? latestUnpaidStats.count : (block.unpaid_count ?? 0);
+        const unpaidAmt = latestUnpaidStats.count > 0 ? latestUnpaidStats.amount : (block.unpaid_amount ?? 0);
+        if (unpaidCountEl) unpaidCountEl.textContent = hideNumbers ? '***' : String(unpaidCnt);
+        if (unpaidAmountEl) unpaidAmountEl.textContent = hideNumbers ? '***' : formatDot(unpaidAmt);
+    }
+
+    function updateShiftTabButtons() {
+        modal.querySelectorAll('.eod-shift-tab').forEach((btn) => {
+            const isAct = btn.dataset.shiftTab === activeShiftTab;
+            btn.classList.toggle('active', isAct);
+            btn.style.background = isAct ? '#059669' : '#f8fafc';
+            btn.style.color = isAct ? '#ffffff' : '#1e293b';
+            btn.style.borderColor = isAct ? '#059669' : '#cbd5e1';
+        });
+    }
+
+    async function fetchAndRenderEndOfDay() {
+        const apiUrl = modal.dataset.apiUrl;
+        if (!apiUrl) return;
+
         latestUnpaidStats = computeLiveUnpaidOrders();
-        if (unpaidCountEl) unpaidCountEl.textContent = hideNumbers ? '***' : String(latestUnpaidStats.count);
-        if (unpaidAmountEl) unpaidAmountEl.textContent = hideNumbers ? '***' : formatDot(latestUnpaidStats.amount);
 
         try {
             const response = await fetch(apiUrl, {
@@ -128,52 +186,38 @@
                 throw new Error(data.error || 'Không thể tải dữ liệu báo cáo cuối ngày.');
             }
 
-            if (asOfTimeEl) asOfTimeEl.textContent = data.as_of_display || '';
-            if (totalInvoicesEl) totalInvoicesEl.textContent = hideNumbers ? '***' : String(data.total_invoices ?? 0);
-            if (totalRevenueEl) totalRevenueEl.textContent = hideNumbers ? '*** đ' : `${data.total_revenue_formatted || '0'} đ`;
+            cachedEodData = data;
+            const shiftsByKey = data.shifts_by_key || {};
+            const ca1 = shiftsByKey.thungan1;
+            const ca2 = shiftsByKey.thungan2;
 
-            const pmap = data.payments_by_key || {};
-            Object.entries(payRefs).forEach(([key, refs]) => {
-                const row = pmap[key];
-                const defaultParen = ['prepaid', 'points', 'guest'].includes(key);
-                if (refs.count) {
-                    refs.count.textContent = hideNumbers ? '*' : String(row ? row.count : 0);
-                }
-                if (refs.amount) {
-                    if (hideNumbers) {
-                        refs.amount.textContent = defaultParen ? '(***)' : '***';
-                    } else {
-                        refs.amount.textContent = row ? row.amount_formatted : (defaultParen ? '(0)' : '0');
-                    }
-                }
-            });
-
-            if (discountSummaryEl) {
-                const dCount = hideNumbers ? '*' : (data.discount_invoice_count ?? 0);
-                const dAmt = hideNumbers ? '***' : (data.discount_total_formatted || '0');
-                discountSummaryEl.innerHTML =
-                    `Có ${dCount} hóa đơn giảm giá (${data.coupon_count ?? 0} mã giảm, ${data.vip_count ?? 0} thẻ vip, ${data.gift_count ?? 0} tặng món) -<br>` +
-                    `Giảm ${dAmt} đ`;
+            if (ca1BriefEl && ca1) {
+                ca1BriefEl.textContent = `${ca1.total_invoices} HĐ • ${ca1.total_revenue_formatted} đ`;
+            }
+            if (ca2BriefEl && ca2) {
+                ca2BriefEl.textContent = `${ca2.total_invoices} HĐ • ${ca2.total_revenue_formatted} đ`;
             }
 
-            if (editPriceSummaryEl) {
-                editPriceSummaryEl.textContent = `Có ${data.edit_price_discount_count ?? 0} lần sửa đơn giá/giảm giá món`;
-            }
-            if (cancelEditSummaryEl) {
-                cancelEditSummaryEl.textContent =
-                    `Có ${data.cancel_return_item_count ?? 0} lần trả/hủy món, ${data.edit_delete_invoice_count ?? 0} lần sửa/xóa hóa đơn`;
-            }
+            const selectedBlock = shiftsByKey[activeShiftTab] || data;
+            renderShiftBlock(selectedBlock);
         } catch (err) {
             if (asOfTimeEl) asOfTimeEl.textContent = 'Lỗi tải dữ liệu';
         }
     }
 
+    modal.querySelectorAll('.eod-shift-tab').forEach((tabBtn) => {
+        tabBtn.addEventListener('click', () => {
+            activeShiftTab = tabBtn.dataset.shiftTab || 'all';
+            updateShiftTabButtons();
+            if (cachedEodData) {
+                const shiftsByKey = cachedEodData.shifts_by_key || {};
+                renderShiftBlock(shiftsByKey[activeShiftTab] || cachedEodData);
+            }
+        });
+    });
+
     function triggerPrintReport(event) {
         const printUrl = modal.dataset.printUrl;
-        if (!printUrl) {
-            closeModal();
-            return;
-        }
         let mode = 'summary';
         if (event && (event.ctrlKey || event.metaKey)) {
             mode = 'detail_today';
@@ -181,10 +225,33 @@
             mode = 'detail_yesterday';
         }
 
+        const unpaidCnt = latestUnpaidStats.count > 0
+            ? latestUnpaidStats.count
+            : (cachedEodData?.unpaid_count || 0);
+        const unpaidAmt = latestUnpaidStats.count > 0
+            ? latestUnpaidStats.amount
+            : (cachedEodData?.unpaid_amount || 0);
+
+        // Nếu nhấn OK bình thường và có bộ in nhiệt K80 trực tiếp trên POS -> mở bản in nhiệt K80 cả 2 ca thungan1 & thungan2 ngay lập tức
+        if (mode === 'summary' && cachedEodData && typeof window.printPosEndOfDayReport === 'function') {
+            closeModal();
+            window.printPosEndOfDayReport(cachedEodData, activeShiftTab, {
+                count: unpaidCnt,
+                amount: unpaidAmt,
+            });
+            return;
+        }
+
+        if (!printUrl) {
+            closeModal();
+            return;
+        }
+
         const params = new URLSearchParams({
             mode,
-            unpaid_count: String(latestUnpaidStats.count || 0),
-            unpaid_amount: String(latestUnpaidStats.amount || 0),
+            shift: activeShiftTab || 'all',
+            unpaid_count: String(unpaidCnt),
+            unpaid_amount: String(unpaidAmt),
         });
         window.open(`${printUrl}?${params.toString()}`, '_blank', 'noopener');
         closeModal();
@@ -197,6 +264,8 @@
             if (btn) btn.setAttribute('aria-expanded', 'false');
         });
 
+        activeShiftTab = 'all';
+        updateShiftTabButtons();
         modal.hidden = false;
         fetchAndRenderEndOfDay();
         window.setTimeout(() => okBtn?.focus(), 40);
@@ -208,6 +277,7 @@
 
     window.openEndOfDayReportModal = openModal;
     window.closeEndOfDayReportModal = closeModal;
+    window.computePosLiveUnpaidOrders = computeLiveUnpaidOrders;
 
     document.querySelectorAll('#open-end-of-day-report-menu, [data-open-eod-report]').forEach((trigger) => {
         trigger.addEventListener('click', (e) => {
