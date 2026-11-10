@@ -1,0 +1,13 @@
+# File này chịu trách nhiệm loại trừ các thư mục môi trường ảo, bộ nhớ đệm và file nhạy cảm khi đóng gói Docker Image.
+.git
+.gitignore
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+db.sqlite3
+staticfiles/
+media/
+.pytest_cache/
+.vscode/

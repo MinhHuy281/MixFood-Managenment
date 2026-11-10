@@ -1,0 +1,43 @@
+# File này chịu trách nhiệm định nghĩa cấu hình Docker Compose khởi chạy đồng bộ Database MySQL 8.0 và Web Server Django MixFood-Management.
+services:
+  db:
+    image: mysql:8.0
+    container_name: mixfood_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-mixfood_manager}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-1234}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - mixfood_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_PASSWORD:-1234}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mixfood_web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-django-production-secret-key-mixfood-2026}
+      DEBUG: ${DEBUG:-True}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost,0.0.0.0}
+      DB_NAME: ${DB_NAME:-mixfood_manager}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-1234}
+      DB_HOST: db
+      DB_PORT: "3306"
+    ports:
+      - "8000:8000"
+
+volumes:
+  mixfood_mysql_data:

@@ -1,0 +1,174 @@
+# File này chịu trách nhiệm định nghĩa quy trình CI/CD tự động trên GitHub Actions: kiểm tra cú pháp, đồng bộ migrations, chạy 73 Unit Tests với MySQL 8.0, đóng gói Docker Image và triển khai Production.
+name: MixFood Management CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  DJANGO_SETTINGS_MODULE: "config.settings"
+
+jobs:
+  # ============================================================================
+  # JOB 1: KIỂM TRA CHẤT LƯỢNG CODE, CÚ PHÁP PYTHON & STATIC FILES (CI - LINT)
+  # ============================================================================
+  code-quality-and-security:
+    name: "1. Kiểm tra Cú pháp & Static Files (CI)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout mã nguồn dự án
+        uses: actions/checkout@v4
+
+      - name: Cài đặt thư viện hệ thống cho MySQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config default-libmysqlclient-dev build-essential
+
+      - name: Thiết lập môi trường Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Cài đặt dependencies từ requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Kiểm tra biên dịch cú pháp toàn bộ mã nguồn Python
+        run: |
+          python -m compileall -q accounts audit catalog config dashboard dining inventory sales manage.py
+
+      - name: Kiểm tra đóng gói tài nguyên tĩnh (collectstatic)
+        env:
+          SECRET_KEY: "ci-static-check-secret-key-mixfood-2026"
+          DEBUG: "False"
+          ALLOWED_HOSTS: "127.0.0.1,localhost,testserver"
+        run: |
+          python manage.py collectstatic --noinput --clear
+
+  # ============================================================================
+  # JOB 2: KIỂM THỬ TÍCH HỢP VỚI MYSQL 8.0 & CHẠY TOÀN BỘ 73 UNIT TESTS (CI)
+  # ============================================================================
+  test-and-migrate-mysql:
+    name: "2. Kiểm thử MySQL 8.0 & 73 Unit Tests (CI)"
+    runs-on: ubuntu-latest
+    needs: code-quality-and-security
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_ci_password
+          MYSQL_DATABASE: mixfood_manager
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_ci_password --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+          --character-set-server=utf8mb4
+          --collation-server=utf8mb4_unicode_ci
+
+    env:
+      SECRET_KEY: "ci-test-secret-key-mixfood-pos-2026"
+      DEBUG: "True"
+      ALLOWED_HOSTS: "127.0.0.1,localhost,testserver"
+      DB_NAME: "mixfood_manager"
+      DB_USER: "root"
+      DB_PASSWORD: "root_ci_password"
+      DB_HOST: "127.0.0.1"
+      DB_PORT: "3306"
+
+    steps:
+      - name: Checkout mã nguồn dự án
+        uses: actions/checkout@v4
+
+      - name: Cài đặt thư viện hệ thống cho MySQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config default-libmysqlclient-dev build-essential mysql-client
+
+      - name: Thiết lập môi trường Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Cài đặt dependencies từ requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Cấp quyền tạo Test Database trên MySQL 8.0
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot_ci_password -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+
+      - name: Kiểm tra cấu hình hệ thống Django (manage.py check)
+        run: |
+          python manage.py check
+
+      - name: Kiểm tra đồng bộ Model & Migrations (makemigrations --check)
+        run: |
+          python manage.py makemigrations --check --dry-run
+
+      - name: Thực thi Database Migrations & Khởi tạo dữ liệu mẫu
+        run: |
+          python manage.py migrate --noinput
+          python manage.py setup_roles
+          python manage.py seed_demo
+
+      - name: Chạy toàn bộ bộ kiểm thử tự động (73 Unit Tests)
+        run: |
+          python manage.py test --verbosity=2
+
+  # ============================================================================
+  # JOB 3: CONTINUOUS DELIVERY / DEPLOYMENT (ĐÓNG GÓI DOCKER & TRIỂN KHAI CD)
+  # ============================================================================
+  cd-build-and-deploy:
+    name: "3. Đóng gói Docker & Triển khai Hệ thống (CD)"
+    runs-on: ubuntu-latest
+    needs:
+      - code-quality-and-security
+      - test-and-migrate-mysql
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout mã nguồn dự án
+        uses: actions/checkout@v4
+
+      - name: Thiết lập Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Đóng gói & Kiểm tra Production Docker Image (mixfood-pos)
+        run: |
+          docker build -t mixfood-pos:${{ github.sha }} -t mixfood-pos:latest .
+
+      - name: Kích hoạt Webhook Triển khai Production (Nếu đã cấu hình Secret)
+        env:
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DEPLOY_WEBHOOK_URL" ]; then
+            echo "Đang kích hoạt triển khai tự động qua DEPLOY_WEBHOOK_URL..."
+            curl -fsSL -X POST "$DEPLOY_WEBHOOK_URL"
+            echo "Đã gửi tín hiệu triển khai thành công!"
+          else
+            echo "CI/CD Pipeline hoàn tất thành công! (Chưa cấu hình DEPLOY_WEBHOOK_URL trong GitHub Secrets nên bỏ qua bước gọi Webhook ngoài)."
+          fi
