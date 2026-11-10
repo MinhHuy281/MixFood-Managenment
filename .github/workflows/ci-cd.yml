@@ -118,10 +118,10 @@ jobs:
       - name: Khởi tạo & Cấp quyền Test Database trên MySQL 8.0
         run: |
           python -c "
-          import time, MySQLdb
+          import time, pymysql
           for i in range(30):
               try:
-                  conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='root', passwd='root_ci_password')
+                  conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root_ci_password')
                   cur = conn.cursor()
                   cur.execute('ALTER DATABASE mixfood_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;')
                   cur.execute(\"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;\")
