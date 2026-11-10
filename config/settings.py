@@ -12,7 +12,13 @@ load_dotenv(BASE_DIR / '.env', override=True)
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-development-only-change-me')
 DEBUG = os.getenv('DEBUG', 'True').lower() in {'1', 'true', 'yes'}
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,testserver').split(',') if host.strip()]
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
+if '.vercel.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.vercel.app')
+
+raw_csrf = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://*.vercel.app')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in raw_csrf.split(',') if origin.strip()]
+if 'https://*.vercel.app' not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append('https://*.vercel.app')
 
 # Danh sách các ứng dụng (Phân hệ chức năng) trong hệ thống
 INSTALLED_APPS = [
@@ -34,6 +40,7 @@ INSTALLED_APPS = [
 # Chuỗi Middleware xử lý request/response
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'accounts.middleware.DualSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'audit.middleware.ActivityLogMiddleware',
@@ -91,10 +98,19 @@ USE_I18N = True
 USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Cấu hình đường dẫn Static Files (CSS, JS)
+# Cấu hình đường dẫn Static Files (CSS, JS) và WhiteNoise cho Vercel / Production
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = BASE_DIR / 'staticfiles_build' / 'static'
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 # Đường dẫn điều hướng Xác thực người dùng
 LOGIN_URL = 'accounts:login'

@@ -8,6 +8,7 @@ __pycache__/
 .env
 db.sqlite3
 staticfiles/
+staticfiles_build/
 media/
 .pytest_cache/
 .vscode/
