@@ -71,15 +71,20 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Cấu hình kết nối Cơ sở dữ liệu MySQL
+db_options = {'charset': 'utf8mb4'}
+db_host = os.getenv('DB_HOST', '127.0.0.1')
+if os.getenv('DB_SSL', 'False').lower() in {'1', 'true', 'yes'} or 'aivencloud.com' in db_host:
+    db_options['ssl'] = {'check_hostname': False}
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DB_NAME', 'mixfood_manager'),
         'USER': os.getenv('DB_USER', 'root'),
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+        'HOST': db_host,
         'PORT': os.getenv('DB_PORT', '3306'),
-        'OPTIONS': {'charset': 'utf8mb4'},
+        'OPTIONS': db_options,
     }
 }
 
