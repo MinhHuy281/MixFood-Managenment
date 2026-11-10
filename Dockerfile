@@ -22,11 +22,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Sao chép toàn bộ mã nguồn dự án
 COPY . /app/
 
-# Phân quyền thực thi cho script khởi chạy và kiểm tra collectstatic
-RUN chmod +x /app/scripts/entrypoint.sh && \
+# Chuẩn hóa xuống dòng LF cho script khởi chạy trên Linux và kiểm tra collectstatic
+RUN sed -i 's/\r$//' /app/scripts/entrypoint.sh && \
+    chmod +x /app/scripts/entrypoint.sh && \
     SECRET_KEY="docker-build-temp-secret" DEBUG="False" ALLOWED_HOSTS="127.0.0.1,localhost" \
     python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "/app/scripts/entrypoint.sh"]

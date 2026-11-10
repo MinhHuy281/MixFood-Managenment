@@ -83,9 +83,7 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_ci_password --silent"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=10
-          --character-set-server=utf8mb4
-          --collation-server=utf8mb4_unicode_ci
+          --health-retries=15
 
     env:
       SECRET_KEY: "ci-test-secret-key-mixfood-pos-2026"
@@ -104,7 +102,7 @@ jobs:
       - name: Cài đặt thư viện hệ thống cho MySQL Client
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends pkg-config default-libmysqlclient-dev build-essential mysql-client
+          sudo apt-get install -y --no-install-recommends pkg-config default-libmysqlclient-dev build-essential
 
       - name: Thiết lập môi trường Python 3.12
         uses: actions/setup-python@v5
@@ -117,9 +115,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Cấp quyền tạo Test Database trên MySQL 8.0
+      - name: Khởi tạo & Cấp quyền Test Database trên MySQL 8.0
         run: |
-          mysql -h 127.0.0.1 -P 3306 -uroot -proot_ci_password -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+          python -c "
+          import time, MySQLdb
+          for i in range(30):
+              try:
+                  conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='root', passwd='root_ci_password')
+                  cur = conn.cursor()
+                  cur.execute('ALTER DATABASE mixfood_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;')
+                  cur.execute(\"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;\")
+                  cur.execute('FLUSH PRIVILEGES;')
+                  conn.close()
+                  print('MySQL 8.0 is ready and configured!')
+                  break
+              except Exception as e:
+                  print(f'Waiting for MySQL ({i+1}/30): {e}')
+                  time.sleep(2)
+          else:
+              raise RuntimeError('Could not connect to MySQL service')
+          "
 
       - name: Kiểm tra cấu hình hệ thống Django (manage.py check)
         run: |
