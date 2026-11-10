@@ -115,10 +115,20 @@ class AccountLoginView(LoginView):
 
     def post(self, request, *args, **kwargs):
         # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'post' trong phân hệ accounts/views.py. Input: đối tượng HttpRequest (request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
+        post_data = request.POST.copy()
+        raw_username = (post_data.get('username') or '').strip()
+        raw_password = (post_data.get('password') or '').strip()
+
+        # Chuẩn hóa tên đăng nhập không phân biệt hoa thường và loại bỏ khoảng trắng thừa
+        if raw_username:
+            matched_user_by_name = User.objects.filter(username__iexact=raw_username, is_active=True).first()
+            if matched_user_by_name:
+                post_data['username'] = matched_user_by_name.username
+        post_data['password'] = raw_password
+        request.POST = post_data
+
         config = UserSystemConfig.get_solo()
         if config.allow_numeric_password_only:
-            raw_username = (request.POST.get('username') or '').strip()
-            raw_password = (request.POST.get('password') or '').strip()
             pin_candidate = raw_password or raw_username
             # Nếu người dùng chỉ nhập mật khẩu số (hoặc để trống tên đăng nhập)
             if (not raw_username and raw_password) or (not raw_password and raw_username.isdigit()):
