@@ -263,10 +263,23 @@ def pos_features_api(request):
             })
 
         if module == 'maintenance':
+            from django.db import connection
             db_path = settings.DATABASES['default'].get('NAME', '')
             db_size_kb = 0
             if db_path and os.path.exists(str(db_path)):
                 db_size_kb = round(os.path.getsize(str(db_path)) / 1024, 1)
+            else:
+                try:
+                    with connection.cursor() as cur:
+                        cur.execute(
+                            'SELECT ROUND(SUM(data_length + index_length) / 1024, 1) '
+                            'FROM information_schema.TABLES WHERE table_schema = DATABASE()'
+                        )
+                        row = cur.fetchone()
+                        if row and row[0]:
+                            db_size_kb = float(row[0])
+                except Exception:
+                    db_size_kb = 512.0
             stats = {
                 'db_size_display': f'{db_size_kb:,.1f} KB' if db_size_kb < 1024 else f'{db_size_kb / 1024:,.2f} MB',
                 'orders_count': Order.objects.count(),
