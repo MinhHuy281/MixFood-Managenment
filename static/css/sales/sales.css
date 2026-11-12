@@ -1954,6 +1954,22 @@
     padding-top: 4px;
 }
 
+/* Modal Quản lý Tính năng Mở rộng POS (Cashbook, Công nợ, Phân công bàn ca, Sổ hóa đơn kết ca) */
+.pos-hub-dialog {
+    width: min(1380px, 97vw) !important;
+    max-width: min(1380px, 97vw) !important;
+    min-width: min(1180px, 95vw) !important;
+    min-height: min(740px, 90vh) !important;
+    max-height: 94vh !important;
+    background: #ffffff !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    box-shadow: 0 25px 65px rgba(15, 23, 42, 0.45) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin: auto !important;
+}
+
 /* Modal Quản lý Mã giảm giá & Coupon (Coupon Hub 2026 - Mở rộng tối đa & Trực quan) */
 .coupon-manager-dialog {
     width: min(1380px, 97vw) !important;

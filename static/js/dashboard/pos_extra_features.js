@@ -881,23 +881,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td><strong style="color:#0f172a;">${escapeHtml(s.full_name)}</strong></td>
                                     <td><span class="pos-hub-pill blue">${escapeHtml(s.department)}</span></td>
                                     <td>
-                                        <select class="sa-area" style="height:36px;border-radius:6px;border:1px solid #cbd5e1;padding:0 10px;width:100%;background:#ffffff;font-size:13px;outline:none;">
+                                        <select class="sa-area" style="height:38px;border-radius:7px;border:1px solid #cbd5e1;padding:0 10px;width:100%;background:#ffffff;font-size:13.5px;outline:none;">
                                             <option value="ALL" ${s.area_code === 'ALL' ? 'selected' : ''}>Toàn bộ khu vực bàn (ALL)</option>
                                             ${areas.map((a) => `<option value="${escapeHtml(a)}" ${s.area_code === a ? 'selected' : ''}>${escapeHtml(a)}</option>`).join('')}
                                         </select>
                                     </td>
                                     <td>
-                                        <select class="sa-shift" style="height:36px;border-radius:6px;border:1px solid #cbd5e1;padding:0 10px;width:100%;background:#ffffff;font-size:13px;outline:none;">
+                                        <select class="sa-shift" style="height:38px;border-radius:7px;border:1px solid #cbd5e1;padding:0 10px;width:100%;background:#ffffff;font-size:13.5px;outline:none;">
                                             <option value="Ca Sáng (06:00 - 14:00)" ${s.shift_name.includes('Sáng') ? 'selected' : ''}>Ca Sáng (06:00 - 14:00)</option>
                                             <option value="Ca Chiều (14:00 - 22:00)" ${s.shift_name.includes('Chiều') ? 'selected' : ''}>Ca Chiều (14:00 - 22:00)</option>
                                             <option value="Ca Gãy / Toàn thời gian (08:00 - 22:00)" ${s.shift_name.includes('Gãy') ? 'selected' : ''}>Ca Gãy / Toàn thời gian (08:00 - 22:00)</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <input type="text" class="sa-note" value="${escapeHtml(s.note)}" style="height:36px;border-radius:6px;border:1px solid #cbd5e1;padding:0 10px;width:100%;font-size:13px;outline:none;" placeholder="Ghi chú phân công...">
+                                        <input type="text" class="sa-note" value="${escapeHtml(s.note)}" style="height:38px;border-radius:7px;border:1px solid #cbd5e1;padding:0 10px;width:100%;font-size:13.5px;outline:none;" placeholder="Ghi chú phân công...">
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="pos-hub-btn primary sa-btn-save" style="height:34px;padding:0 14px;font-size:12.5px;">💾 Lưu</button>
+                                        <button type="button" class="pos-hub-btn primary sa-btn-save" style="height:36px;padding:0 16px;font-size:13px;">💾 Lưu</button>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -1033,13 +1033,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                             ${escapeHtml(inv.status_display)}
                                         </span>
                                     </td>
-                                    <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(inv.items_text)}">
+                                    <td style="min-width:180px;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(inv.items_text)}">
                                         ${escapeHtml(inv.items_text)}
                                     </td>
                                     <td class="text-center" style="position:sticky;right:0;background:#ffffff;z-index:2;box-shadow:-2px 0 5px rgba(0,0,0,0.04);">
-                                        <div style="display:inline-flex;gap:4px;">
-                                            <button type="button" class="pos-hub-btn primary si-btn-reprint" data-code="${escapeHtml(inv.invoice_code)}" style="height:26px;padding:0 7px;font-size:11px;" title="In lại bill K80">🖨️ In bill</button>
-                                            <button type="button" class="pos-hub-btn secondary si-btn-edit" data-code="${escapeHtml(inv.invoice_code)}" style="height:26px;padding:0 7px;font-size:11px;" title="Sửa hoặc hoàn món">✏️ Sửa</button>
+                                        <div style="display:inline-flex;gap:5px;">
+                                            <button type="button" class="pos-hub-btn primary si-btn-reprint" data-code="${escapeHtml(inv.invoice_code)}" style="height:28px;padding:0 9px;font-size:11.5px;" title="In lại bill K80">🖨️ In bill</button>
+                                            <button type="button" class="pos-hub-btn secondary si-btn-edit" data-code="${escapeHtml(inv.invoice_code)}" style="height:28px;padding:0 9px;font-size:11.5px;" title="Sửa hoặc hoàn món">✏️ Sửa</button>
                                         </div>
                                     </td>
                                 </tr>
