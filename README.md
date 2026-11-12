@@ -1,96 +1,129 @@
-# MixFood Manager
+# MixFood Management
 
-Hệ thống quản lý bán hàng cho cửa hàng đồ ăn Thái, xây dựng bằng Django,
-MySQL, HTML/CSS và JavaScript. Dữ liệu món ăn, bàn, đơn hàng, hóa đơn, kho
-và báo cáo đều được lưu trong cơ sở dữ liệu.
+> Hệ thống quản lý bán hàng (POS) và quản lý kho nhà hàng, xây dựng trên nền tảng Python/Django kết hợp MySQL và giao diện thuần HTML/CSS/JavaScript.
 
-## Chức năng đã hoàn thành
+Dự án tập trung giải quyết bài toán kiểm soát nguyên vật liệu thực tế cho mô hình F&B: từ lúc nhập hàng vào kho, thiết lập định lượng công thức cho từng món ăn (BOM), đến khi thu ngân thanh toán trên POS và tự động khấu trừ tồn kho theo thời gian thực.
 
-- Đăng nhập, phân quyền `Owner`, `Manager`, `Sales`, `Warehouse` và nhật ký hoạt động.
-- Quản lý danh mục, món ăn, nguyên liệu, khu vực và bàn.
-- POS: chọn bàn/món, thanh toán, tạo đơn hàng, hóa đơn và thanh toán.
-- Công thức món, nhập kho và tự động trừ nguyên liệu khi thanh toán.
-- Danh sách hóa đơn, dashboard và báo cáo doanh thu theo khoảng ngày.
-- Validation checkout, trang lỗi 403/404/500 và cấu hình bảo mật production.
+---
 
-## Yêu cầu
+## Tính năng chính
 
-- Python 3.14+ (hoặc phiên bản tương thích với các package trong `requirements.txt`)
-- MySQL 8+
-- Pip và MySQL client development libraries (cần thiết để cài `mysqlclient`)
+- **Tự động trừ kho khi bán hàng:** Ngay khi đơn hàng được thanh toán, hệ thống tự tính và trừ lượng nguyên vật liệu tương ứng trong kho. Nếu thu ngân chỉnh sửa, hủy hoặc trả món, phần nguyên liệu đã trừ sẽ được hoàn lại tự động.
+- **Định lượng công thức món (BOM):** Cho phép khai báo chi tiết thành phần nguyên liệu cho từng món ăn, thức uống theo đơn vị tính (gram, ml, cái, phần...). Hỗ trợ sao chép nhanh công thức giữa các món và import/export bằng file Excel.
+- **Quản lý kho theo danh mục:** Phân nhóm nguyên liệu rõ ràng (thực phẩm tươi sống, hàng khô/đóng gói, đồ uống...), theo dõi phiếu nhập kho, xuất kho, lịch sử biến động và tồn kho hiện tại.
+- **Bán hàng POS & Sơ đồ bàn:** Hỗ trợ chọn bàn theo khu vực, gọi món, báo bếp, tách/gộp bàn, áp dụng mã giảm giá và in hóa đơn khổ K80 kèm mã QR.
+- **Phân quyền & Nhật ký thao tác:** Chia tách quyền hạn rõ ràng theo từng vị trí (`Owner`, `Manager`, `Sales`, `Warehouse`), lưu lại lịch sử thao tác quan trọng và tách riêng phiên đăng nhập giữa màn hình thu ngân với trang quản trị (`/admin/`).
 
-## Cài đặt môi trường phát triển
+---
+
+## Công nghệ sử dụng
+
+- **Backend:** Python 3.12+, Django 5.2
+- **Frontend:** HTML5, CSS3, JavaScript (thuần, không dùng framework ngoài)
+- **Cơ sở dữ liệu:** MySQL 8.0+ (sử dụng driver `PyMySQL`)
+- **Static & Triển khai:** WhiteNoise, Gunicorn, Docker, Vercel
+
+---
+
+## Cấu trúc dự án
+
+Mã nguồn được tổ chức theo hướng **Modular**, mỗi nghiệp vụ nằm trong một app Django riêng biệt. Giao diện (`templates/`) và tài nguyên tĩnh (`static/`) được tách hoàn toàn khỏi phần xử lý logic ở Backend. Các class và function quan trọng đều có comment giải thích rõ ràng.
+
+```text
+MixFood-Management/
+├── accounts/           # Đăng nhập, phân quyền và quản lý phiên (DualSessionMiddleware)
+├── audit/              # Lưu nhật ký hoạt động của nhân viên
+├── catalog/            # Quản lý danh mục, thực đơn món ăn và nguyên vật liệu
+├── dining/             # Quản lý khu vực và sơ đồ bàn ăn
+├── inventory/          # Quản lý kho, phiếu nhập/xuất và công thức món (BOM)
+├── sales/              # Xử lý gọi món POS, thanh toán, hóa đơn và in bill K80
+├── dashboard/          # Màn hình POS chính và trang quản trị Mobile (/admin/)
+├── config/             # Cấu hình chung của Django (settings, urls, wsgi)
+├── templates/          # Giao diện HTML chia theo từng phân hệ
+├── static/             # CSS, JS và hình ảnh dùng chung cho Frontend
+├── scripts/            # Các script phục vụ khởi tạo và chạy Docker
+├── Dockerfile
+├── docker-compose.yml
+├── vercel.json
+├── requirements.txt
+└── manage.py
+```
+
+---
+
+## Cài đặt môi trường
+
+### Yêu cầu trước khi cài đặt
+- Python 3.12 trở lên
+- MySQL 8.0 trở lên
+- Git
+
+### Các bước thực hiện
+
+**1. Tải mã nguồn về máy**
+```bash
+git clone https://github.com/MinhHuy281/MixFood-Managenment.git
+cd MixFood-Management
+```
+
+**2. Tạo môi trường ảo và cài đặt thư viện**
+
+> Nên chạy dự án trong môi trường ảo (`.venv`) để tránh xung đột với các thư viện Python khác trên máy.
 
 ```powershell
+# Windows (PowerShell)
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-Copy-Item .env.example .env
+pip install -r requirements.txt
 ```
 
-Tạo cơ sở dữ liệu và tài khoản MySQL, sau đó thay các giá trị `DB_*` trong
-`.env`. Không commit file `.env`.
+```bash
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
+**3. Cấu hình biến môi trường và Database**
+
+Tạo file `.env` từ file mẫu:
+```bash
+cp .env.example .env
+```
+Mở `.env` và điền thông tin kết nối MySQL của bạn (`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`). Sau đó tạo database trống trong MySQL:
 ```sql
-CREATE DATABASE thai_food_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'mixfood'@'localhost' IDENTIFIED BY 'a-strong-password';
-GRANT ALL PRIVILEGES ON thai_food_manager.* TO 'mixfood'@'localhost';
-FLUSH PRIVILEGES;
+CREATE DATABASE mixfood_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Chạy migration, tạo nhóm quyền và tài khoản quản trị:
-
-```powershell
+**4. Khởi tạo bảng dữ liệu và phân quyền**
+```bash
 python manage.py migrate
 python manage.py setup_roles
 python manage.py createsuperuser
-python manage.py seed_demo
+```
+
+---
+
+## Hướng dẫn sử dụng
+
+Khởi chạy server phát triển ở Local:
+```bash
 python manage.py runserver
 ```
 
-Truy cập `http://127.0.0.1:8000/accounts/login/` để đăng nhập. `seed_demo`
-là tùy chọn và có thể chạy lại an toàn để tạo dữ liệu minh họa.
+Sau khi chạy lệnh trên, truy cập vào trình duyệt:
+- Màn hình bán hàng POS & Kho: `http://127.0.0.1:8000/`
+- Trang quản trị Admin: `http://127.0.0.1:8000/admin/`
 
-## Kiểm thử
-
-```powershell
+Để chạy bộ kiểm thử tự động (Unit Tests) kiểm tra lại toàn bộ nghiệp vụ:
+```bash
 python manage.py check
 python manage.py test accounts audit catalog dining dashboard sales inventory
 ```
 
-Các test kiểm tra phân quyền, CRUD chính, POS checkout, chống tạo dữ liệu dở
-dang khi request lỗi, trừ kho theo công thức, báo cáo và nhật ký hoạt động.
-
-## Chuẩn bị triển khai
-
-1. Sao chép `.env.example` thành `.env`; đặt `DEBUG=False`, secret key mới,
-   `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` và thông tin MySQL production.
-2. Chạy migration và thu thập static:
-
+Hoặc chạy nhanh toàn bộ hệ thống (gồm Web và MySQL) bằng Docker:
 ```bash
-python manage.py migrate
-python manage.py collectstatic --noinput
-python manage.py check --deploy
+docker-compose up --build -d
 ```
 
-3. Đặt Django sau reverse proxy HTTPS (ví dụ Nginx). Khi HTTPS đã hoạt động,
-   giữ `SECURE_SSL_REDIRECT=True`; khi chưa có HTTPS, đặt nó là `False` để
-   tránh vòng chuyển hướng.
-4. Trên Linux, có thể chạy ứng dụng bằng Gunicorn:
-
-```bash
-gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3
-```
-
-Nginx/IIS cần phục vụ thư mục `staticfiles/` và chuyển request ứng dụng đến
-Gunicorn (hoặc WSGI server tương đương). Không chạy `runserver` trong môi
-trường production.
-
-## Lệnh hữu ích
-
-```powershell
-python manage.py makemigrations
-python manage.py migrate
-python manage.py test
-python manage.py check --deploy
-```
+---
