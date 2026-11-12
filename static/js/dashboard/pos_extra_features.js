@@ -449,12 +449,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // 5. SỔ THU CHI TIỀN MẶT (CASHBOOK)
     // =========================================================================
-    const renderCashbookModule = async () => {
+    const renderCashbookModule = async (filterType = 'all') => {
         hubBadge.textContent = 'QUẢN LÝ • SỔ THU CHI TIỀN MẶT';
         hubTitle.textContent = 'Sổ Thu Chi Tiền Mặt & Quản Lý Quỹ Tại Quầy';
         const data = await fetchHubData('cashbook');
-        const vouchers = data.vouchers || [];
+        let vouchers = data.vouchers || [];
         const kpis = data.kpis || {};
+
+        if (filterType === 'in') {
+            vouchers = vouchers.filter((v) => v.type === 'in');
+        } else if (filterType === 'out') {
+            vouchers = vouchers.filter((v) => v.type === 'out');
+        }
 
         hubBody.innerHTML = `
             <div class="pos-hub-kpis">
@@ -479,17 +485,18 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="pos-hub-form-card">
                 <div class="pos-hub-form-title">
                     <span>📝 Lập Phiếu Thu (PT) / Phiếu Chi (PC) mới vào Sổ Quỹ</span>
+                    <span style="font-size:12px;font-weight:600;color:#64748b;">Hệ thống tự động đồng bộ tồn quỹ tiền mặt theo thời gian thực</span>
                 </div>
-                <div class="pos-hub-form-grid">
+                <div class="pos-hub-form-grid" style="grid-template-columns: 160px 220px 180px 200px 1fr auto;">
                     <div class="pos-hub-field">
-                        <label>Loại phiếu</label>
+                        <label>Loại phiếu *</label>
                         <select id="cb-type">
                             <option value="out">Phiếu Chi tiền (-)</option>
                             <option value="in">Phiếu Thu tiền (+)</option>
                         </select>
                     </div>
                     <div class="pos-hub-field">
-                        <label>Hạng mục thu/chi</label>
+                        <label>Hạng mục thu/chi *</label>
                         <input type="text" id="cb-category" placeholder="VD: Mua đá viên, Nộp quỹ đầu ca...">
                     </div>
                     <div class="pos-hub-field">
@@ -502,31 +509,43 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="pos-hub-field">
                         <label>Diễn giải chi tiết</label>
-                        <input type="text" id="cb-note" placeholder="Ghi chú chứng từ...">
+                        <input type="text" id="cb-note" placeholder="Ghi chú chứng từ, lý do chi...">
                     </div>
-                    <button type="button" class="pos-hub-btn primary" id="cb-btn-save">+ Lưu Phiếu Sổ Quỹ</button>
+                    <button type="button" class="pos-hub-btn primary" id="cb-btn-save" style="margin-bottom:1px;">+ Lưu Phiếu</button>
+                </div>
+            </div>
+
+            <div class="pos-hub-filter-bar">
+                <div class="pos-hub-filter-group">
+                    <span style="font-size:12.5px;font-weight:700;color:#475569;">Lọc phiếu:</span>
+                    <button type="button" class="pos-hub-tab-btn ${filterType === 'all' ? 'active' : ''}" data-cb-filter="all">Tất cả chứng từ (${(data.vouchers || []).length})</button>
+                    <button type="button" class="pos-hub-tab-btn ${filterType === 'in' ? 'active' : ''}" data-cb-filter="in">Chỉ Phiếu Thu (+)</button>
+                    <button type="button" class="pos-hub-tab-btn ${filterType === 'out' ? 'active' : ''}" data-cb-filter="out">Chỉ Phiếu Chi (-)</button>
+                </div>
+                <div class="pos-hub-filter-group">
+                    <input type="text" id="cb-filter-search" placeholder="🔍 Tìm mã, hạng mục, người nhận..." style="height:34px;padding:0 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12.5px;width:240px;">
                 </div>
             </div>
 
             <div class="pos-hub-table-card">
-                <div class="pos-hub-table-wrap">
-                    <table class="pos-hub-table">
+                <div class="pos-hub-table-wrap" style="max-height:calc(92vh - 360px);min-height:340px;">
+                    <table class="pos-hub-table" id="cb-table">
                         <thead>
                             <tr>
-                                <th>Mã phiếu</th>
-                                <th>Loại</th>
-                                <th>Thời gian</th>
-                                <th>Hạng mục</th>
-                                <th>Người giao/nhận</th>
-                                <th>Diễn giải</th>
-                                <th class="text-right">Số tiền</th>
-                                <th class="text-center">Xóa</th>
+                                <th style="width:100px;">Mã phiếu</th>
+                                <th style="width:130px;">Loại phiếu</th>
+                                <th style="width:150px;">Thời gian</th>
+                                <th style="width:180px;">Hạng mục</th>
+                                <th style="width:160px;">Người giao/nhận</th>
+                                <th>Diễn giải chi tiết</th>
+                                <th class="text-right" style="width:140px;">Số tiền</th>
+                                <th class="text-center" style="width:70px;">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${vouchers.map((v) => `
+                            ${vouchers.length ? vouchers.map((v) => `
                                 <tr>
-                                    <td><strong>${escapeHtml(v.code)}</strong></td>
+                                    <td><strong style="color:#0369a1;">${escapeHtml(v.code)}</strong></td>
                                     <td>
                                         <span class="pos-hub-pill ${v.type === 'in' ? 'green' : 'red'}">
                                             ${v.type === 'in' ? 'Phiếu Thu (+)' : 'Phiếu Chi (-)'}
@@ -535,20 +554,44 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td>${escapeHtml(v.created_at)}</td>
                                     <td><strong>${escapeHtml(v.category)}</strong></td>
                                     <td>${escapeHtml(v.person || '-')}</td>
-                                    <td>${escapeHtml(v.note || '-')}</td>
-                                    <td class="text-right" style="font-weight:700;color:${v.type === 'in' ? '#059669' : '#e11d48'};">
+                                    <td style="max-width:280px;white-space:normal;">${escapeHtml(v.note || '-')}</td>
+                                    <td class="text-right" style="font-weight:800;font-size:13.5px;color:${v.type === 'in' ? '#059669' : '#e11d48'};">
                                         ${v.type === 'in' ? '+' : '-'}${fmtMoney(v.amount)}
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="pos-hub-btn danger cb-btn-del" data-id="${v.id}" style="height:26px;padding:0 8px;font-size:11.5px;">Xóa</button>
+                                        <button type="button" class="pos-hub-btn danger cb-btn-del" data-id="${v.id}" style="height:28px;padding:0 9px;font-size:12px;">Xóa</button>
                                     </td>
                                 </tr>
-                            `).join('')}
+                            `).join('') : `
+                                <tr>
+                                    <td colspan="8" style="text-align:center;padding:36px;color:#64748b;">
+                                        Không có chứng từ thu chi nào phù hợp điều kiện lọc.
+                                    </td>
+                                </tr>
+                            `}
                         </tbody>
                     </table>
                 </div>
             </div>
         `;
+
+        // Tab filters
+        hubBody.querySelectorAll('.pos-hub-tab-btn[data-cb-filter]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                renderCashbookModule(btn.dataset.cbFilter);
+            });
+        });
+
+        // Search
+        const searchInput = document.getElementById('cb-filter-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                const term = searchInput.value.trim().toLowerCase();
+                hubBody.querySelectorAll('#cb-table tbody tr').forEach((tr) => {
+                    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+                });
+            });
+        }
 
         document.getElementById('cb-btn-save')?.addEventListener('click', async () => {
             const type = document.getElementById('cb-type')?.value || 'out';
@@ -570,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (res.ok) {
                 showNotice(res.message);
-                renderCashbookModule();
+                renderCashbookModule(filterType);
             } else {
                 showNotice(res.error || 'Không thể lưu phiếu thu chi.');
             }
@@ -581,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await postHubAction({ action: 'delete_voucher', id: btn.dataset.id });
                 if (res.ok) {
                     showNotice(res.message);
-                    renderCashbookModule();
+                    renderCashbookModule(filterType);
                 }
             });
         });
@@ -590,12 +633,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // 6. QUẢN LÝ CÔNG NỢ KHÁCH HÀNG & NHÀ CUNG CẤP (DEBT)
     // =========================================================================
-    const renderDebtModule = async () => {
+    const renderDebtModule = async (filterType = 'all') => {
         hubBadge.textContent = 'QUẢN LÝ • CÔNG NỢ ĐỐI TÁC';
         hubTitle.textContent = 'Quản lý Công nợ Khách hàng & Nhà cung cấp (Tự động kết chuyển Sổ quỹ)';
         const data = await fetchHubData('debt');
-        const debts = data.debts || [];
+        let debts = data.debts || [];
         const kpis = data.kpis || {};
+
+        if (filterType === 'customer') {
+            debts = debts.filter((d) => d.debt_type === 'customer');
+        } else if (filterType === 'supplier') {
+            debts = debts.filter((d) => d.debt_type === 'supplier');
+        }
 
         hubBody.innerHTML = `
             <div class="pos-hub-kpis">
@@ -620,10 +669,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="pos-hub-form-card">
                 <div class="pos-hub-form-title">
                     <span>📋 Ghi nhận khoản Công nợ mới (Khách nợ quán / Quán nợ Nhà cung cấp)</span>
+                    <span style="font-size:12px;font-weight:600;color:#64748b;">Khoản thu hồi hoặc chi trả nợ sẽ tự động lập phiếu vào Sổ thu chi tiền mặt</span>
                 </div>
-                <div class="pos-hub-form-grid">
+                <div class="pos-hub-form-grid" style="grid-template-columns: 220px 220px 180px 180px 1fr auto;">
                     <div class="pos-hub-field">
-                        <label>Phân loại công nợ</label>
+                        <label>Phân loại công nợ *</label>
                         <select id="debt-type">
                             <option value="customer">Khách hàng nợ quán (Phải thu)</option>
                             <option value="supplier">Quán nợ Nhà cung cấp (Phải trả)</option>
@@ -638,62 +688,103 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="text" id="debt-phone" placeholder="VD: 0905111222">
                     </div>
                     <div class="pos-hub-field">
-                        <label>Tổng tiền công nợ (đ) *</label>
+                        <label>Tổng tiền nợ (đ) *</label>
                         <input type="number" id="debt-total" min="1000" step="10000" placeholder="VD: 2000000">
                     </div>
                     <div class="pos-hub-field">
-                        <label>Ghi chú hóa đơn / đợt nhập</label>
-                        <input type="text" id="debt-note" placeholder="Nội dung công nợ...">
+                        <label>Ghi chú hóa đơn / đợt hàng</label>
+                        <input type="text" id="debt-note" placeholder="Nội dung, tiệc liên hoan, đợt nhập...">
                     </div>
-                    <button type="button" class="pos-hub-btn primary" id="debt-btn-save">+ Ghi Nhận Công Nợ</button>
+                    <button type="button" class="pos-hub-btn primary" id="debt-btn-save" style="margin-bottom:1px;">+ Ghi Nhận Nợ</button>
+                </div>
+            </div>
+
+            <div class="pos-hub-filter-bar">
+                <div class="pos-hub-filter-group">
+                    <span style="font-size:12.5px;font-weight:700;color:#475569;">Lọc đối tác:</span>
+                    <button type="button" class="pos-hub-tab-btn ${filterType === 'all' ? 'active' : ''}" data-debt-filter="all">Tất cả đối tác (${(data.debts || []).length})</button>
+                    <button type="button" class="pos-hub-tab-btn ${filterType === 'customer' ? 'active' : ''}" data-debt-filter="customer">Phải thu Khách hàng</button>
+                    <button type="button" class="pos-hub-tab-btn ${filterType === 'supplier' ? 'active' : ''}" data-debt-filter="supplier">Phải trả Nhà cung cấp</button>
+                </div>
+                <div class="pos-hub-filter-group">
+                    <input type="text" id="debt-filter-search" placeholder="🔍 Tìm đối tác, SĐT, ghi chú..." style="height:34px;padding:0 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12.5px;width:240px;">
                 </div>
             </div>
 
             <div class="pos-hub-table-card">
-                <div class="pos-hub-table-wrap">
-                    <table class="pos-hub-table">
+                <div class="pos-hub-table-wrap" style="max-height:calc(92vh - 360px);min-height:340px;">
+                    <table class="pos-hub-table" id="debt-table">
                         <thead>
                             <tr>
-                                <th>Mã CN</th>
-                                <th>Loại</th>
-                                <th>Đối tác (Khách / NCC)</th>
-                                <th class="text-right">Tổng phát sinh</th>
-                                <th class="text-right">Đã thanh toán</th>
-                                <th class="text-right">Còn nợ lại</th>
-                                <th>Ghi chú</th>
-                                <th class="text-center">Tất toán nhanh</th>
+                                <th style="width:100px;">Mã CN</th>
+                                <th style="width:140px;">Phân loại</th>
+                                <th style="width:220px;">Đối tác (Khách / NCC)</th>
+                                <th class="text-right" style="width:140px;">Tổng phát sinh</th>
+                                <th class="text-right" style="width:140px;">Đã thanh toán</th>
+                                <th class="text-right" style="width:150px;">Còn nợ lại</th>
+                                <th>Ghi chú chi tiết</th>
+                                <th class="text-center" style="width:120px;">Tất toán nhanh</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${debts.map((d) => {
+                            ${debts.length ? debts.map((d) => {
                                 const rem = Number(d.remaining_amount || 0);
                                 return `
                                 <tr>
-                                    <td><strong>${escapeHtml(d.code)}</strong></td>
+                                    <td><strong style="color:#0369a1;">${escapeHtml(d.code)}</strong></td>
                                     <td>
                                         <span class="pos-hub-pill ${d.debt_type === 'customer' ? 'blue' : 'amber'}">
                                             ${d.debt_type === 'customer' ? 'Phải thu KH' : 'Phải trả NCC'}
                                         </span>
                                     </td>
-                                    <td><strong>${escapeHtml(d.partner_name)}</strong><br><small style="color:#64748b;">${escapeHtml(d.phone || '')}</small></td>
+                                    <td>
+                                        <strong>${escapeHtml(d.partner_name)}</strong>
+                                        ${d.phone ? `<br><small style="color:#64748b;">📞 ${escapeHtml(d.phone)}</small>` : ''}
+                                    </td>
                                     <td class="text-right">${fmtMoney(d.total_amount)}</td>
-                                    <td class="text-right" style="color:#059669;">${fmtMoney(d.paid_amount)}</td>
-                                    <td class="text-right" style="font-weight:800;color:${rem > 0 ? '#e11d48' : '#059669'};">${fmtMoney(rem)}</td>
-                                    <td>${escapeHtml(d.note || '-')}</td>
+                                    <td class="text-right" style="color:#059669;font-weight:600;">${fmtMoney(d.paid_amount)}</td>
+                                    <td class="text-right" style="font-weight:800;font-size:13.5px;color:${rem > 0 ? '#e11d48' : '#059669'};">
+                                        ${fmtMoney(rem)}
+                                    </td>
+                                    <td style="max-width:280px;white-space:normal;">${escapeHtml(d.note || '-')}</td>
                                     <td class="text-center">
                                         ${rem > 0
-                                            ? `<button type="button" class="pos-hub-btn primary debt-btn-pay" data-id="${d.id}" data-rem="${rem}" style="height:28px;padding:0 10px;font-size:11.5px;">Tất toán đủ</button>`
+                                            ? `<button type="button" class="pos-hub-btn primary debt-btn-pay" data-id="${d.id}" data-rem="${rem}" style="height:28px;padding:0 12px;font-size:12px;">Tất toán đủ</button>`
                                             : `<span class="pos-hub-pill green">Đã tất toán</span>`
                                         }
                                     </td>
                                 </tr>
                                 `;
-                            }).join('')}
+                            }).join('') : `
+                                <tr>
+                                    <td colspan="8" style="text-align:center;padding:36px;color:#64748b;">
+                                        Không có khoản công nợ nào phù hợp điều kiện lọc.
+                                    </td>
+                                </tr>
+                            `}
                         </tbody>
                     </table>
                 </div>
             </div>
         `;
+
+        // Filter tabs
+        hubBody.querySelectorAll('.pos-hub-tab-btn[data-debt-filter]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                renderDebtModule(btn.dataset.debtFilter);
+            });
+        });
+
+        // Search
+        const searchInput = document.getElementById('debt-filter-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                const term = searchInput.value.trim().toLowerCase();
+                hubBody.querySelectorAll('#debt-table tbody tr').forEach((tr) => {
+                    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+                });
+            });
+        }
 
         document.getElementById('debt-btn-save')?.addEventListener('click', async () => {
             const debt_type = document.getElementById('debt-type')?.value || 'customer';
@@ -716,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (res.ok) {
                 showNotice(res.message);
-                renderDebtModule();
+                renderDebtModule(filterType);
             }
         });
 
@@ -729,7 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (res.ok) {
                     showNotice(res.message);
-                    renderDebtModule();
+                    renderDebtModule(filterType);
                 }
             });
         });
@@ -745,45 +836,68 @@ document.addEventListener('DOMContentLoaded', () => {
         const staff = data.staff || [];
         const areas = data.areas || ['Ngoài trời', 'Tầng 1', 'Tầng 2', 'Mang về'];
 
+        const sangCount = staff.filter((s) => (s.shift_name || '').includes('Sáng')).length;
+        const chieuCount = staff.filter((s) => (s.shift_name || '').includes('Chiều')).length;
+        const gayCount = staff.length - sangCount - chieuCount;
+
         hubBody.innerHTML = `
+            <div class="pos-hub-kpis">
+                <div class="pos-hub-kpi-card emerald">
+                    <div class="kpi-label">Tổng Nhân Sự Hệ Thống</div>
+                    <div class="kpi-val">${staff.length} nhân sự</div>
+                </div>
+                <div class="pos-hub-kpi-card blue">
+                    <div class="kpi-label">Ca Sáng (06:00 - 14:00)</div>
+                    <div class="kpi-val">${sangCount} nhân viên</div>
+                </div>
+                <div class="pos-hub-kpi-card amber">
+                    <div class="kpi-label">Ca Chiều (14:00 - 22:00)</div>
+                    <div class="kpi-val">${chieuCount} nhân viên</div>
+                </div>
+                <div class="pos-hub-kpi-card rose">
+                    <div class="kpi-label">Ca Gãy / Toàn Thời Gian</div>
+                    <div class="kpi-val">${gayCount} nhân viên</div>
+                </div>
+            </div>
+
             <div class="pos-hub-table-card">
-                <div class="pos-hub-table-wrap" style="max-height:460px;">
+                <div class="pos-hub-table-wrap" style="max-height:calc(92vh - 280px);min-height:360px;">
                     <table class="pos-hub-table">
                         <thead>
                             <tr>
-                                <th>Tài khoản</th>
-                                <th>Họ và tên nhân viên</th>
-                                <th>Bộ phận</th>
-                                <th>Khu vực bàn phụ trách</th>
-                                <th>Ca làm việc</th>
-                                <th>Trạng thái trực</th>
-                                <th class="text-center">Lưu</th>
+                                <th style="width:130px;">Tài khoản</th>
+                                <th style="width:190px;">Họ và tên nhân viên</th>
+                                <th style="width:140px;">Bộ phận / Vai trò</th>
+                                <th style="min-width:240px;">Khu vực bàn phụ trách</th>
+                                <th style="min-width:260px;">Ca làm việc phân công</th>
+                                <th style="min-width:220px;">Trạng thái / Ghi chú ca</th>
+                                <th class="text-center" style="width:100px;">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${staff.map((s) => `
                                 <tr data-uid="${s.user_id}">
-                                    <td><strong>${escapeHtml(s.username)}</strong></td>
-                                    <td>${escapeHtml(s.full_name)}</td>
+                                    <td><strong style="color:#0369a1;">${escapeHtml(s.username)}</strong></td>
+                                    <td><strong style="color:#0f172a;">${escapeHtml(s.full_name)}</strong></td>
                                     <td><span class="pos-hub-pill blue">${escapeHtml(s.department)}</span></td>
                                     <td>
-                                        <select class="sa-area" style="height:32px;border-radius:6px;border:1px solid #cbd5e1;padding:0 8px;">
-                                            <option value="ALL" ${s.area_code === 'ALL' ? 'selected' : ''}>Toàn bộ khu vực (ALL)</option>
+                                        <select class="sa-area" style="height:36px;border-radius:6px;border:1px solid #cbd5e1;padding:0 10px;width:100%;background:#ffffff;font-size:13px;outline:none;">
+                                            <option value="ALL" ${s.area_code === 'ALL' ? 'selected' : ''}>Toàn bộ khu vực bàn (ALL)</option>
                                             ${areas.map((a) => `<option value="${escapeHtml(a)}" ${s.area_code === a ? 'selected' : ''}>${escapeHtml(a)}</option>`).join('')}
                                         </select>
                                     </td>
                                     <td>
-                                        <select class="sa-shift" style="height:32px;border-radius:6px;border:1px solid #cbd5e1;padding:0 8px;">
+                                        <select class="sa-shift" style="height:36px;border-radius:6px;border:1px solid #cbd5e1;padding:0 10px;width:100%;background:#ffffff;font-size:13px;outline:none;">
                                             <option value="Ca Sáng (06:00 - 14:00)" ${s.shift_name.includes('Sáng') ? 'selected' : ''}>Ca Sáng (06:00 - 14:00)</option>
                                             <option value="Ca Chiều (14:00 - 22:00)" ${s.shift_name.includes('Chiều') ? 'selected' : ''}>Ca Chiều (14:00 - 22:00)</option>
-                                            <option value="Ca Gãy / Toàn thời gian (08:00 - 22:00)" ${s.shift_name.includes('Gãy') ? 'selected' : ''}>Ca Gãy / Toàn thời gian</option>
+                                            <option value="Ca Gãy / Toàn thời gian (08:00 - 22:00)" ${s.shift_name.includes('Gãy') ? 'selected' : ''}>Ca Gãy / Toàn thời gian (08:00 - 22:00)</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <input type="text" class="sa-note" value="${escapeHtml(s.note)}" style="height:32px;border-radius:6px;border:1px solid #cbd5e1;padding:0 8px;width:130px;">
+                                        <input type="text" class="sa-note" value="${escapeHtml(s.note)}" style="height:36px;border-radius:6px;border:1px solid #cbd5e1;padding:0 10px;width:100%;font-size:13px;outline:none;" placeholder="Ghi chú phân công...">
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="pos-hub-btn primary sa-btn-save" style="height:30px;padding:0 10px;font-size:12px;">Lưu</button>
+                                        <button type="button" class="pos-hub-btn primary sa-btn-save" style="height:34px;padding:0 14px;font-size:12.5px;">💾 Lưu</button>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -805,6 +919,216 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (res.ok) showNotice(res.message);
             });
+        });
+    };
+
+    // =========================================================================
+    // 7b. SỔ HÓA ĐƠN KẾT CA (SHIFT INVOICES LEDGER)
+    // =========================================================================
+    const renderShiftInvoicesModule = async (shiftParam = 'my', dateParam = '') => {
+        hubBadge.textContent = 'QUẢN LÝ • SỔ HÓA ĐƠN KẾT CA';
+        hubTitle.textContent = 'Sổ Hóa Đơn Kết Ca — Danh Sách & Tổng Hợp Hóa Đơn Theo Ca Làm Việc';
+        hubBody.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;"><div class="spinner-inline"></div> Đang tải sổ hóa đơn kết ca...</div>';
+
+        const params = { module: 'shift_invoices', shift: shiftParam };
+        if (dateParam) params.date = dateParam;
+        const data = await fetchHubData('shift_invoices', params);
+        if (!data.ok) {
+            hubBody.innerHTML = `<div style="padding:24px;color:#dc2626;text-align:center;">⚠️ Không thể tải dữ liệu sổ hóa đơn kết ca: ${escapeHtml(data.error || 'Lỗi không xác định')}</div>`;
+            return;
+        }
+
+        const kpis = data.kpis || {};
+        const invoices = data.invoices || [];
+        const currentShift = data.shift || 'my';
+        const currentDate = data.date || '';
+
+        hubBody.innerHTML = `
+            <div class="pos-hub-kpis" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="pos-hub-kpi-card emerald">
+                    <div class="kpi-label">Tổng Số Hóa Đơn Kết Ca</div>
+                    <div class="kpi-val">${Number(kpis.total_invoices || 0)} <small style="font-size:13px;font-weight:600;color:#059669;">(${Number(kpis.paid_count || 0)} đã thu)</small></div>
+                </div>
+                <div class="pos-hub-kpi-card blue">
+                    <div class="kpi-label">Tổng Doanh Thu Ca</div>
+                    <div class="kpi-val">${escapeHtml(kpis.total_revenue_fmt || '0 đ')}</div>
+                </div>
+                <div class="pos-hub-kpi-card amber">
+                    <div class="kpi-label">Thu Tiền Mặt Ca</div>
+                    <div class="kpi-val">${escapeHtml(kpis.cash_revenue_fmt || '0 đ')}</div>
+                </div>
+                <div class="pos-hub-kpi-card">
+                    <div class="kpi-label">Thu Chuyển Khoản &amp; Thẻ</div>
+                    <div class="kpi-val">${escapeHtml(kpis.bank_revenue_fmt || '0 đ')}</div>
+                </div>
+                <div class="pos-hub-kpi-card rose">
+                    <div class="kpi-label">Tổng Giảm Giá &amp; Hủy</div>
+                    <div class="kpi-val">${escapeHtml(kpis.discount_total_fmt || '0 đ')} <small style="font-size:12px;font-weight:600;color:#e11d48;">(${Number(kpis.cancelled_count || 0)} HĐ hủy)</small></div>
+                </div>
+            </div>
+
+            <div class="pos-hub-filter-bar">
+                <div class="pos-hub-filter-group">
+                    <span style="font-size:12.5px;font-weight:700;color:#475569;margin-right:2px;">Chọn ca:</span>
+                    <button type="button" class="pos-hub-tab-btn ${currentShift === 'my' ? 'active' : ''}" data-shift="my">
+                        👤 Ca của tôi (${escapeHtml(data.current_cashier || '')})
+                    </button>
+                    <button type="button" class="pos-hub-tab-btn ${currentShift === 'thungan1' ? 'active' : ''}" data-shift="thungan1">
+                        Ca 1: Thu Ngân 1
+                    </button>
+                    <button type="button" class="pos-hub-tab-btn ${currentShift === 'thungan2' ? 'active' : ''}" data-shift="thungan2">
+                        Ca 2: Thu Ngân 2
+                    </button>
+                    <button type="button" class="pos-hub-tab-btn ${currentShift === 'all' ? 'active' : ''}" data-shift="all">
+                        🌟 Cả 2 ca hôm nay
+                    </button>
+                </div>
+
+                <div class="pos-hub-filter-group">
+                    <label style="font-size:12px;font-weight:600;color:#475569;">Ngày:</label>
+                    <input type="date" id="si-filter-date" value="${escapeHtml(currentDate)}" style="height:34px;padding:0 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12.5px;">
+                    <input type="text" id="si-filter-search" placeholder="🔍 Tìm mã HĐ, bàn, món..." style="height:34px;padding:0 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12.5px;width:190px;">
+                    <button type="button" class="pos-hub-btn primary" id="si-btn-print-shift" style="height:34px;padding:0 12px;font-size:12px;">🖨️ In Báo Cáo Kết Ca (K80)</button>
+                    <a href="/sales/invoices/?export=excel&date_from=${escapeHtml(currentDate)}&date_to=${escapeHtml(currentDate)}${currentShift !== 'all' ? '&cashier=' + encodeURIComponent(currentShift === 'my' ? data.current_cashier : currentShift) : ''}" class="pos-hub-btn secondary" id="si-btn-export-excel" style="height:34px;padding:0 12px;font-size:12px;text-decoration:none;">📥 Xuất Excel</a>
+                </div>
+            </div>
+
+            <div class="pos-hub-table-card">
+                <div class="pos-hub-table-wrap" style="max-height:calc(92vh - 350px);min-height:340px;">
+                    <table class="pos-hub-table" id="si-invoices-table">
+                        <thead>
+                            <tr>
+                                <th style="width:90px;">Số HĐ</th>
+                                <th style="width:130px;">Thời gian</th>
+                                <th style="width:120px;">Điểm bàn</th>
+                                <th style="width:110px;">Khu vực</th>
+                                <th style="width:140px;">Thu ngân ca</th>
+                                <th class="text-right" style="width:110px;">Tiền món</th>
+                                <th class="text-right" style="width:100px;">Giảm giá</th>
+                                <th class="text-right" style="width:90px;">Phụ thu</th>
+                                <th class="text-right" style="width:130px;">Thành tiền</th>
+                                <th style="width:140px;">Kiểu thanh toán</th>
+                                <th style="width:110px;">Trạng thái</th>
+                                <th>Các món / Ghi chú</th>
+                                <th class="text-center" style="width:130px;position:sticky;right:0;background:#f1f5f9;z-index:3;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${invoices.length ? invoices.map((inv) => `
+                                <tr data-inv-code="${escapeHtml(inv.invoice_code)}" style="${inv.status === 'cancelled' ? 'opacity:0.65;background:#fef2f2;' : ''}">
+                                    <td><strong style="color:#0369a1;cursor:pointer;" class="si-view-code" title="Xem chi tiết hóa đơn">#${escapeHtml(inv.invoice_code)}</strong></td>
+                                    <td>${escapeHtml(inv.time)} <small style="color:#64748b;">(${escapeHtml(inv.full_time)})</small></td>
+                                    <td><strong>${escapeHtml(inv.table_name)}</strong></td>
+                                    <td><span class="pos-hub-pill blue">${escapeHtml(inv.area_name)}</span></td>
+                                    <td>${escapeHtml(inv.cashier_name)}</td>
+                                    <td class="text-right">${escapeHtml(inv.subtotal_fmt)}</td>
+                                    <td class="text-right" style="color:#e11d48;">${inv.discount_amount > 0 ? '-' + escapeHtml(inv.discount_fmt) : '0 đ'}</td>
+                                    <td class="text-right">${inv.surcharge_amount > 0 ? '+' + escapeHtml(inv.surcharge_fmt) : '0 đ'}</td>
+                                    <td class="text-right" style="font-weight:800;color:${inv.status === 'cancelled' ? '#64748b' : '#059669'};font-size:13.5px;">
+                                        ${escapeHtml(inv.total_amount_fmt)}
+                                    </td>
+                                    <td><span class="pos-hub-pill ${inv.payment_method.includes('Tiền mặt') ? 'green' : 'amber'}">${escapeHtml(inv.payment_method)}</span></td>
+                                    <td>
+                                        <span class="pos-hub-pill ${inv.status === 'paid' ? 'green' : 'red'}">
+                                            ${escapeHtml(inv.status_display)}
+                                        </span>
+                                    </td>
+                                    <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(inv.items_text)}">
+                                        ${escapeHtml(inv.items_text)}
+                                    </td>
+                                    <td class="text-center" style="position:sticky;right:0;background:#ffffff;z-index:2;box-shadow:-2px 0 5px rgba(0,0,0,0.04);">
+                                        <div style="display:inline-flex;gap:4px;">
+                                            <button type="button" class="pos-hub-btn primary si-btn-reprint" data-code="${escapeHtml(inv.invoice_code)}" style="height:26px;padding:0 7px;font-size:11px;" title="In lại bill K80">🖨️ In bill</button>
+                                            <button type="button" class="pos-hub-btn secondary si-btn-edit" data-code="${escapeHtml(inv.invoice_code)}" style="height:26px;padding:0 7px;font-size:11px;" title="Sửa hoặc hoàn món">✏️ Sửa</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('') : `
+                                <tr>
+                                    <td colspan="13" style="text-align:center;padding:40px;color:#64748b;">
+                                        <div style="font-size:32px;margin-bottom:8px;">🧾</div>
+                                        <div>Không có hóa đơn nào phát sinh trong ca làm việc này.</div>
+                                    </td>
+                                </tr>
+                            `}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        // Sự kiện chuyển đổi Ca làm việc
+        hubBody.querySelectorAll('.pos-hub-tab-btn[data-shift]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const s = btn.dataset.shift;
+                const d = document.getElementById('si-filter-date')?.value || '';
+                renderShiftInvoicesModule(s, d);
+            });
+        });
+
+        // Sự kiện đổi ngày
+        document.getElementById('si-filter-date')?.addEventListener('change', (e) => {
+            renderShiftInvoicesModule(currentShift, e.target.value);
+        });
+
+        // Sự kiện tìm kiếm nhanh
+        const searchInput = document.getElementById('si-filter-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                const term = searchInput.value.trim().toLowerCase();
+                const trs = hubBody.querySelectorAll('#si-invoices-table tbody tr[data-inv-code]');
+                trs.forEach((tr) => {
+                    const text = tr.textContent.toLowerCase();
+                    tr.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+        }
+
+        // Sự kiện In lại bill
+        hubBody.querySelectorAll('.si-btn-reprint').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const code = btn.dataset.code;
+                if (typeof window.reprintPosInvoiceByCode === 'function') {
+                    window.reprintPosInvoiceByCode(code);
+                } else {
+                    window.open(`/sales/invoices/print/${encodeURIComponent(code)}/`, '_blank', 'noopener');
+                }
+            });
+        });
+
+        // Sự kiện Xem / Sửa hóa đơn
+        hubBody.querySelectorAll('.si-btn-edit, .si-view-code').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const code = el.dataset.code || el.closest('tr')?.dataset.invCode;
+                if (window.openInvoiceEditor) {
+                    window.openInvoiceEditor(code);
+                } else if (typeof window.reprintPosInvoiceByCode === 'function') {
+                    window.reprintPosInvoiceByCode(code);
+                }
+            });
+        });
+
+        // Sự kiện In Báo cáo kết ca (K80)
+        document.getElementById('si-btn-print-shift')?.addEventListener('click', async () => {
+            try {
+                const resp = await fetch(`/sales/end-of-day/api/`);
+                const eodData = await resp.json();
+                if (eodData && eodData.ok) {
+                    if (typeof window.printPosShiftCloseReport === 'function') {
+                        const targetShiftKey = currentShift === 'all' ? 'all' : (currentShift === 'thungan1' ? 'thungan1' : (currentShift === 'thungan2' ? 'thungan2' : 'all'));
+                        const shiftData = (eodData.shifts_by_key && eodData.shifts_by_key[targetShiftKey]) || eodData;
+                        window.printPosShiftCloseReport(shiftData, { doneText: 'Đóng báo cáo' });
+                    } else {
+                        window.open(`/sales/end-of-day/print/?mode=summary&shift=${encodeURIComponent(currentShift)}`, '_blank', 'noopener');
+                    }
+                } else {
+                    window.open(`/sales/end-of-day/print/?mode=summary&shift=${encodeURIComponent(currentShift)}`, '_blank', 'noopener');
+                }
+            } catch (err) {
+                window.open(`/sales/end-of-day/print/?mode=summary&shift=${encodeURIComponent(currentShift)}`, '_blank', 'noopener');
+            }
         });
     };
 
@@ -1060,6 +1384,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'shift_assign':
                     renderShiftAssignModule();
                     break;
+                case 'shift_invoices':
+                    renderShiftInvoicesModule();
+                    break;
                 case 'customer_revenue':
                     renderCustomerRevenueReport();
                     break;
@@ -1087,19 +1414,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Bắt sự kiện cho "Phân công bàn ca", "Sổ hóa đơn kết ca" và menu "TRỢ GIÚP"
-    document.querySelectorAll('.management-menu a').forEach((link) => {
+    document.querySelectorAll('.management-menu a, .management-menu button').forEach((link) => {
         const href = link.getAttribute('href') || '';
-        if (href.includes('dining')) {
+        const mgmt = link.dataset.management || '';
+        if (href.includes('dining') || mgmt === 'shift_assign') {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 link.closest('.pos-menu-item')?.classList.remove('open');
                 window.openPosFeatureHub('shift_assign');
             });
-        } else if (href.includes('invoices')) {
+        } else if (href.includes('invoices') || mgmt === 'shift_invoices') {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 link.closest('.pos-menu-item')?.classList.remove('open');
-                document.getElementById('open-sales-stats-menu')?.click();
+                window.openPosFeatureHub('shift_invoices');
             });
         }
     });

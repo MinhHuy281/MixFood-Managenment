@@ -2,8 +2,8 @@
 <style>
 /* # CSS đồng bộ giao diện MixFood Cloud POS 2026 cho Modal tính năng mở rộng */
 .pos-hub-dialog {
-    width: min(1080px, 95vw) !important;
-    max-height: 90vh !important;
+    width: min(1360px, 97vw) !important;
+    max-height: 94vh !important;
     display: flex;
     flex-direction: column;
     border-radius: 14px;
@@ -14,7 +14,7 @@
 .pos-hub-header {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: #f8fafc;
-    padding: 14px 20px;
+    padding: 14px 22px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -36,17 +36,18 @@
     letter-spacing: 0.03em;
 }
 .pos-hub-body {
-    padding: 18px 20px;
+    padding: 18px 22px;
     overflow-y: auto;
     flex: 1;
     background: #f8fafc;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    max-height: calc(94vh - 125px);
 }
 .pos-hub-kpis {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 12px;
 }
 .pos-hub-kpi-card {
@@ -77,7 +78,7 @@
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 14px 18px;
 }
 .pos-hub-form-title {
     font-size: 13px;
@@ -90,8 +91,8 @@
 }
 .pos-hub-form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
     align-items: end;
 }
 .pos-hub-field {
@@ -106,13 +107,14 @@
 }
 .pos-hub-field input,
 .pos-hub-field select {
-    height: 36px;
+    height: 38px;
     padding: 0 10px;
     border: 1px solid #cbd5e1;
     border-radius: 7px;
     font-size: 13px;
     color: #0f172a;
     background: #fff;
+    width: 100%;
 }
 .pos-hub-field input:focus,
 .pos-hub-field select:focus {
@@ -121,8 +123,8 @@
     box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
 }
 .pos-hub-btn {
-    height: 36px;
-    padding: 0 14px;
+    height: 38px;
+    padding: 0 16px;
     border-radius: 7px;
     font-size: 13px;
     font-weight: 700;
@@ -133,6 +135,44 @@
     justify-content: center;
     gap: 6px;
     transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.pos-hub-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: #ffffff;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+.pos-hub-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.pos-hub-tab-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.pos-hub-tab-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.pos-hub-tab-btn.active {
+    background: #059669;
+    color: #ffffff;
+    border-color: #059669;
 }
 .pos-hub-btn.primary {
     background: #059669;
@@ -160,29 +200,32 @@
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 .pos-hub-table-wrap {
-    max-height: 340px;
+    max-height: calc(92vh - 340px);
+    min-height: 320px;
     overflow-y: auto;
 }
 .pos-hub-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
+    white-space: nowrap;
 }
 .pos-hub-table th {
     background: #f1f5f9;
     color: #334155;
     font-weight: 700;
     text-align: left;
-    padding: 10px 12px;
+    padding: 11px 14px;
     border-bottom: 1px solid #e2e8f0;
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 2;
 }
 .pos-hub-table td {
-    padding: 9px 12px;
+    padding: 10px 14px;
     border-bottom: 1px solid #f1f5f9;
     color: #1e293b;
     vertical-align: middle;

@@ -491,6 +491,133 @@ def pos_features_api(request):
                 },
             })
 
+        if module == 'shift_invoices':
+            from datetime import datetime, time, timedelta
+
+            shift_filter = (request.GET.get('shift') or 'my').strip().lower()
+            date_str = (request.GET.get('date') or '').strip()
+
+            now_local = timezone.localtime()
+            if date_str:
+                try:
+                    target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    target_date = now_local.date()
+            else:
+                target_date = now_local.date()
+
+            start_dt = timezone.make_aware(datetime.combine(target_date, time.min))
+            end_dt = timezone.make_aware(datetime.combine(target_date + timedelta(days=1), time.min))
+
+            invoices_qs = (
+                Invoice.objects.filter(paid_at__gte=start_dt, paid_at__lt=end_dt)
+                .select_related('order', 'cashier', 'order__table', 'order__table__area')
+                .prefetch_related('order__items__product', 'payments')
+                .order_by('-paid_at', '-id')
+            )
+
+            # Lọc theo ca làm việc / thu ngân
+            current_user = request.user
+            if shift_filter == 'my':
+                invoices_qs = invoices_qs.filter(cashier=current_user)
+            elif shift_filter == 'thungan1':
+                invoices_qs = invoices_qs.filter(cashier__username__iexact='thungan1')
+            elif shift_filter == 'thungan2':
+                invoices_qs = invoices_qs.filter(cashier__username__iexact='thungan2')
+            # 'all' hiển thị cả 2 ca / toàn bộ hóa đơn trong ngày
+
+            invoices_list = list(invoices_qs)
+
+            total_invoices = len(invoices_list)
+            paid_count = sum(1 for inv in invoices_list if inv.status == Invoice.Status.PAID)
+            cancelled_count = sum(1 for inv in invoices_list if inv.status == Invoice.Status.CANCELLED)
+
+            total_revenue = Decimal('0')
+            cash_revenue = Decimal('0')
+            bank_revenue = Decimal('0')
+            discount_total = Decimal('0')
+            discount_count = 0
+
+            rows = []
+            for inv in invoices_list:
+                is_paid = inv.status == Invoice.Status.PAID
+                if is_paid:
+                    total_revenue += inv.total_amount
+                    if inv.discount_amount and inv.discount_amount > 0:
+                        discount_total += inv.discount_amount
+                        discount_count += 1
+
+                    payments = list(inv.payments.all())
+                    if payments:
+                        for p in payments:
+                            if p.method == Payment.Method.CASH:
+                                cash_revenue += p.amount
+                            else:
+                                bank_revenue += p.amount
+                    else:
+                        cash_revenue += inv.total_amount
+
+                # Điểm bàn / Khu vực
+                table_name = '-'
+                area_name = '-'
+                items_summary = []
+                if inv.order:
+                    if inv.order.table:
+                        table_name = inv.order.table.name
+                        if inv.order.table.area:
+                            area_name = inv.order.table.area.name
+                    elif inv.order.order_type == Order.OrderType.TAKEAWAY:
+                        table_name = 'Mang về'
+                        area_name = 'Mang về'
+                    for item in inv.order.items.all():
+                        if getattr(item, 'status', None) != 'cancelled':
+                            pname = item.product.name if item.product else 'Món'
+                            items_summary.append(f'{pname} x{item.quantity}')
+
+                pay_display = ', '.join([p.get_method_display() for p in inv.payments.all()]) or ('Tiền mặt' if is_paid else '-')
+
+                rows.append({
+                    'id': inv.id,
+                    'invoice_code': inv.invoice_code,
+                    'time': timezone.localtime(inv.paid_at).strftime('%H:%M') if inv.paid_at else '-',
+                    'full_time': timezone.localtime(inv.paid_at).strftime('%d/%m/%Y %H:%M') if inv.paid_at else '-',
+                    'table_name': table_name,
+                    'area_name': area_name,
+                    'cashier_name': inv.cashier.get_full_name() or inv.cashier.username if inv.cashier else 'Hệ thống',
+                    'subtotal': float(inv.subtotal),
+                    'subtotal_fmt': _fmt_money(inv.subtotal) + ' đ',
+                    'discount_amount': float(inv.discount_amount),
+                    'discount_fmt': _fmt_money(inv.discount_amount) + ' đ',
+                    'surcharge_amount': float(inv.surcharge_amount),
+                    'surcharge_fmt': _fmt_money(inv.surcharge_amount) + ' đ',
+                    'total_amount': float(inv.total_amount),
+                    'total_amount_fmt': _fmt_money(inv.total_amount) + ' đ',
+                    'payment_method': pay_display,
+                    'status': inv.status,
+                    'status_display': 'Đã thu tiền' if is_paid else 'Đã hủy',
+                    'items_text': ', '.join(items_summary) if items_summary else '-',
+                })
+
+            return JsonResponse({
+                'ok': True,
+                'shift': shift_filter,
+                'date': target_date.strftime('%Y-%m-%d'),
+                'date_display': target_date.strftime('%d/%m/%Y'),
+                'current_cashier': current_user.get_full_name() or current_user.username,
+                'kpis': {
+                    'total_invoices': total_invoices,
+                    'paid_count': paid_count,
+                    'cancelled_count': cancelled_count,
+                    'total_revenue': float(total_revenue),
+                    'total_revenue_fmt': _fmt_money(total_revenue) + ' đ',
+                    'cash_revenue_fmt': _fmt_money(cash_revenue) + ' đ',
+                    'bank_revenue_fmt': _fmt_money(bank_revenue) + ' đ',
+                    'discount_total_fmt': _fmt_money(discount_total) + ' đ',
+                    'discount_count': discount_count,
+                },
+                'invoices': rows,
+            })
+
         return JsonResponse({'ok': False, 'error': 'Module truy vấn không hợp lệ.'}, status=400)
 
     # Xử lý POST cho các module

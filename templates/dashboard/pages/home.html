@@ -139,12 +139,12 @@
                         <span class="dropdown-icon">📑</span> Quản lý công nợ
                     </button>
                     <span class="dropdown-separator"></span>
-                    <a href="{% url 'dining:home' %}" role="menuitem">
+                    <button type="button" class="dropdown-action management-action" data-management="shift_assign" id="open-shift-assign-menu">
                         <span class="dropdown-icon">📋</span> Phân công bàn ca
-                    </a>
-                    <a href="{% url 'sales:invoices' %}" role="menuitem">
+                    </button>
+                    <button type="button" class="dropdown-action management-action" data-management="shift_invoices" id="open-shift-invoices-menu">
                         <span class="dropdown-icon">🧾</span> Sổ hóa đơn kết ca
-                    </a>
+                    </button>
                 </div>
             </div>
 

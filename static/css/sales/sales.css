@@ -1956,61 +1956,95 @@
 
 /* Modal Quản lý Mã giảm giá & Coupon */
 .coupon-manager-dialog {
-    width: 680px;
-    max-width: 96vw;
+    width: min(1080px, 96vw);
+    max-height: 94vh;
     background: #f8fafc;
-    border-radius: 10px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 24px 55px rgba(15, 23, 42, 0.45);
+    box-shadow: 0 25px 55px rgba(15, 23, 42, 0.45);
+    display: flex;
+    flex-direction: column;
 }
 
 .coupon-manager-body {
-    padding: 16px 18px;
+    padding: 18px 24px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
+    overflow-y: auto;
+    max-height: calc(94vh - 75px);
 }
 
 .coupon-manager-form {
     display: grid;
-    grid-template-columns: 120px 135px 140px 1fr auto;
-    gap: 8px;
+    grid-template-columns: 140px 160px 160px 160px 1fr auto;
+    gap: 10px;
     align-items: center;
     background: #ffffff;
-    padding: 10px;
+    padding: 14px 16px;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
 .cm-input,
 .cm-select {
-    height: 32px;
-    padding: 0 9px;
+    height: 38px;
+    padding: 0 11px;
     border: 1px solid #94a3b8;
-    border-radius: 4px;
-    font-size: 12.5px;
+    border-radius: 6px;
+    font-size: 13px;
     color: #0f172a;
     background: #ffffff;
     outline: none;
+    width: 100%;
+}
+
+.cm-input:focus,
+.cm-select:focus {
+    border-color: #059669;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
 }
 
 .cm-code {
     text-transform: uppercase;
     font-weight: 700;
+    color: #047857;
 }
 
 .cm-btn-save {
-    height: 32px;
-    padding: 0 14px;
+    height: 38px;
+    padding: 0 18px;
     white-space: nowrap;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .coupon-manager-table-wrap {
-    height: 270px;
+    min-height: 340px;
+    max-height: calc(88vh - 240px);
     overflow-y: auto;
     background: #ffffff;
-    border: 1px solid #94a3b8;
-    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.coupon-manager-table th {
+    padding: 11px 14px;
+    background: #f1f5f9;
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.coupon-manager-table td {
+    padding: 10px 14px;
+    font-size: 13px;
+    vertical-align: middle;
 }
 
 .coupon-manager-footer {
@@ -2018,7 +2052,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding-top: 4px;
+    padding-top: 6px;
 }
 
 .btn-cm-del {
@@ -2033,6 +2067,79 @@
 }
 
 .btn-cm-del:hover {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.coupon-code-pill {
+    display: inline-block;
+    padding: 3px 9px;
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+}
+
+.coupon-type-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.coupon-type-badge.percent {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.coupon-type-badge.amount {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.coupon-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-coupon-apply-now {
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 6px;
+    border: 1px solid #059669;
+    background: #059669;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-coupon-apply-now:hover {
+    background: #047857;
+}
+
+.btn-coupon-delete {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-coupon-delete:hover {
     background: #dc2626;
     color: #ffffff;
 }

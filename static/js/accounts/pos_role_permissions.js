@@ -386,8 +386,8 @@
         guardElementWithPermission('.report-action[data-report="cash"]', 'manage_cashbook', 'Thống kê các khoản tiền');
 
         // 6. Quản lý nhân viên, ca (manage_staff_shift)
-        guardElementWithPermission('.management-menu a[href*="dining"]', 'manage_staff_shift', 'Phân công bàn ca');
-        guardElementWithPermission('.management-menu a[href*="invoices"]', 'manage_staff_shift', 'Sổ hóa đơn kết ca');
+        guardElementWithPermission('.management-menu a[href*="dining"], .management-action[data-management="shift_assign"]', 'manage_staff_shift', 'Phân công bàn ca');
+        guardElementWithPermission('.management-menu a[href*="invoices"], .management-action[data-management="shift_invoices"]', 'manage_staff_shift', 'Sổ hóa đơn kết ca');
 
         // 6b. Quản lý kho hàng & Xuất Nhập Tồn (manage_inventory)
         guardElementWithPermission('#open-inventory-manager-menu, #open-inventory-report-menu', 'manage_inventory', 'Quản lý kho hàng & Xuất Nhập Tồn');
