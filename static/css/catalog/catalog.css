@@ -764,7 +764,7 @@
     display: none;
 }
 
-.menu-modal-dialog {
+.menu-modal-dialog:not(.coupon-manager-dialog) {
     background: #ffffff;
     border-radius: 18px;
     width: 90vw;
