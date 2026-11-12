@@ -2222,6 +2222,16 @@ def coupons_api(request):
         _save_system_coupons(coupons)
         return JsonResponse({'ok': True, 'message': f'Đã xóa mã giảm giá {code_del}.', 'coupons': coupons})
 
+    if action in ('toggle', 'toggle_active'):
+        code_toggle = str(payload.get('code', '')).strip().upper()
+        for c in coupons:
+            if str(c.get('code', '')).strip().upper() == code_toggle:
+                c['is_active'] = not c.get('is_active', True)
+                _save_system_coupons(coupons)
+                st = 'kích hoạt' if c['is_active'] else 'tạm ngưng'
+                return JsonResponse({'ok': True, 'message': f'Đã {st} mã giảm giá {code_toggle}.', 'coupons': coupons})
+        return JsonResponse({'ok': False, 'error': f'Không tìm thấy mã giảm giá {code_toggle}.'}, status=404)
+
     coupon_data = payload.get('coupon') if isinstance(payload.get('coupon'), dict) else payload
     code = str(coupon_data.get('code', '')).strip().upper()
     if not code:

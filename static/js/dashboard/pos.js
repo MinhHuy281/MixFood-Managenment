@@ -2973,50 +2973,212 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================================================================
-    // QUẢN LÝ MÃ GIẢM GIÁ & COUPON (CÀI ĐẶT -> MÃ GIẢM GIÁ)
+    // QUẢN LÝ MÃ GIẢM GIÁ & COUPON (COUPON HUB 2026 - MỞ RỘNG TOÀN DIỆN)
     // =========================================================================
     const couponManagerModal = document.querySelector('#modal-coupon-manager');
     const couponManagerClose = document.querySelector('#coupon-manager-close');
     const couponManagerDone = document.querySelector('#coupon-manager-done');
     const couponTableBody = document.querySelector('#coupon-manager-tbody');
     const couponSaveBtn = document.querySelector('#coupon-form-save-btn');
+    const couponResetBtn = document.querySelector('#coupon-form-reset-btn');
+    const couponFormModeTitle = document.querySelector('#coupon-form-mode-title');
     const couponCodeInput = document.querySelector('#coupon-form-code');
     const couponTypeSelect = document.querySelector('#coupon-form-type');
+    const couponTypeHint = document.querySelector('#coupon-form-type-hint');
+    const couponValueSuffix = document.querySelector('#coupon-form-value-suffix');
     const couponValueInput = document.querySelector('#coupon-form-value');
     const couponMinOrderInput = document.querySelector('#coupon-form-min-order');
+    const couponStatusSelect = document.querySelector('#coupon-form-status');
     const couponDescInput = document.querySelector('#coupon-form-desc');
+    const couponSearchInput = document.querySelector('#coupon-search-input');
+    const couponBadgeTotal = document.querySelector('#coupon-badge-total-count');
+
+    let currentCouponFilter = 'all';
+    let couponSearchTerm = '';
+
+    // Cập nhật nhãn và đơn vị khi đổi loại hình thức giảm
+    const updateCouponTypeUI = () => {
+        const cType = couponTypeSelect?.value || 'percent';
+        if (couponValueSuffix) {
+            couponValueSuffix.textContent = (cType === 'percent') ? '%' : 'đ';
+        }
+        if (couponTypeHint) {
+            couponTypeHint.textContent = (cType === 'percent')
+                ? 'Tính theo % tổng hóa đơn (tối đa 100%)'
+                : 'Số tiền cố định trừ trực tiếp vào bill (VNĐ)';
+        }
+        if (couponValueInput) {
+            couponValueInput.placeholder = (cType === 'percent') ? 'VD: 10, 20...' : 'VD: 50000, 100000...';
+            couponValueInput.max = (cType === 'percent') ? '100' : '';
+        }
+    };
+
+    couponTypeSelect?.addEventListener('change', updateCouponTypeUI);
+
+    // Đưa form về trạng thái nhập mới
+    const resetCouponForm = () => {
+        if (couponCodeInput) {
+            couponCodeInput.value = '';
+            couponCodeInput.readOnly = false;
+        }
+        if (couponTypeSelect) couponTypeSelect.value = 'percent';
+        if (couponValueInput) couponValueInput.value = '';
+        if (couponMinOrderInput) couponMinOrderInput.value = '0';
+        if (couponStatusSelect) couponStatusSelect.value = '1';
+        if (couponDescInput) couponDescInput.value = '';
+        if (couponFormModeTitle) couponFormModeTitle.textContent = 'Thêm / Chỉnh sửa Mã Khuyến Mãi';
+        if (couponSaveBtn) couponSaveBtn.innerHTML = '💾 Lưu mã giảm giá';
+        updateCouponTypeUI();
+        couponCodeInput?.focus();
+    };
+
+    couponResetBtn?.addEventListener('click', resetCouponForm);
+
+    // Cập nhật các thẻ KPI và số lượng trên các tab lọc
+    const updateCouponKPIs = (coupons) => {
+        const total = coupons.length;
+        const active = coupons.filter(c => c.is_active !== false).length;
+        const inactive = total - active;
+        const percent = coupons.filter(c => (c.type || 'percent') === 'percent').length;
+        const fixed = coupons.filter(c => c.type === 'fixed').length;
+
+        const setTxt = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+
+        setTxt('cm-kpi-total', total);
+        setTxt('cm-kpi-active', active);
+        setTxt('cm-kpi-percent', percent);
+        setTxt('cm-kpi-fixed', fixed);
+        setTxt('coupon-badge-total-count', `${total} mã`);
+
+        setTxt('tab-cnt-all', total);
+        setTxt('tab-cnt-active', active);
+        setTxt('tab-cnt-inactive', inactive);
+        setTxt('tab-cnt-percent', percent);
+        setTxt('tab-cnt-fixed', fixed);
+    };
+
+    // Điền dữ liệu một coupon lên form để chỉnh sửa nhanh
+    const populateCouponToForm = (c) => {
+        if (!c) return;
+        if (couponCodeInput) {
+            couponCodeInput.value = c.code || '';
+        }
+        if (couponTypeSelect) {
+            couponTypeSelect.value = c.type === 'fixed' ? 'fixed' : 'percent';
+        }
+        if (couponValueInput) {
+            couponValueInput.value = c.value || '';
+        }
+        if (couponMinOrderInput) {
+            couponMinOrderInput.value = c.min_order || 0;
+        }
+        if (couponStatusSelect) {
+            couponStatusSelect.value = (c.is_active !== false) ? '1' : '0';
+        }
+        if (couponDescInput) {
+            couponDescInput.value = c.description || '';
+        }
+        if (couponFormModeTitle) {
+            couponFormModeTitle.innerHTML = `✏️ Đang chỉnh sửa mã: <span style="color:#059669;">${escapeHtml(c.code)}</span>`;
+        }
+        if (couponSaveBtn) {
+            couponSaveBtn.innerHTML = `💾 Cập nhật mã ${escapeHtml(c.code)}`;
+        }
+        updateCouponTypeUI();
+        couponValueInput?.focus();
+    };
 
     const renderCouponManagerTable = (coupons) => {
         if (!couponTableBody) return;
-        if (!Array.isArray(coupons) || !coupons.length) {
-            couponTableBody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 18px; color: #64748b;">Chưa có mã giảm giá nào.</td></tr>';
+        const allList = Array.isArray(coupons) ? coupons : [];
+        updateCouponKPIs(allList);
+
+        // Lọc danh sách theo Tab và Search Term
+        let filtered = allList.filter((c) => {
+            // Lọc theo search term
+            if (couponSearchTerm) {
+                const term = couponSearchTerm.toLowerCase();
+                const codeMatch = String(c.code || '').toLowerCase().includes(term);
+                const descMatch = String(c.description || '').toLowerCase().includes(term);
+                if (!codeMatch && !descMatch) return false;
+            }
+
+            // Lọc theo Tab
+            if (currentCouponFilter === 'active') return c.is_active !== false;
+            if (currentCouponFilter === 'inactive') return c.is_active === false;
+            if (currentCouponFilter === 'percent') return (c.type || 'percent') === 'percent';
+            if (currentCouponFilter === 'fixed') return c.type === 'fixed';
+            return true;
+        });
+
+        if (!filtered.length) {
+            const emptyMsg = allList.length === 0
+                ? 'Hệ thống chưa có mã giảm giá nào. Hãy nhập thông tin phía trên và nhấn "Lưu mã giảm giá" để khởi tạo!'
+                : 'Không tìm thấy mã giảm giá nào phù hợp với bộ lọc hoặc từ khóa tìm kiếm.';
+            couponTableBody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 26px 16px; color: #64748b; font-size: 13.5px;">${emptyMsg}</td></tr>`;
             return;
         }
-        couponTableBody.innerHTML = coupons.map((c) => {
-            const isPct = c.type === 'percent';
+
+        couponTableBody.innerHTML = filtered.map((c, idx) => {
+            const isPct = (c.type || 'percent') === 'percent';
+            const isActive = c.is_active !== false;
             const valFmt = isPct
                 ? `${Number(c.value || 0)}%`
                 : `${Number(c.value || 0).toLocaleString('vi-VN')} đ`;
             const minFmt = Number(c.min_order || 0) > 0
                 ? `${Number(c.min_order).toLocaleString('vi-VN')} đ`
-                : '0 đ';
+                : '<span style="color:#94a3b8; font-weight:normal;">Không giới hạn</span>';
+
             return `
-                <tr>
-                    <td><span class="coupon-code-pill">${escapeHtml(c.code)}</span></td>
-                    <td><span class="coupon-type-badge ${isPct ? 'percent' : 'amount'}">${isPct ? 'Theo %' : 'Số tiền (đ)'}</span></td>
-                    <td class="text-right"><strong>${escapeHtml(valFmt)}</strong></td>
-                    <td class="text-right">${escapeHtml(minFmt)}</td>
-                    <td>${escapeHtml(c.description || '-')}</td>
+                <tr class="${isActive ? '' : 'row-paused'}">
+                    <td class="text-center" style="font-weight: 600; color: #64748b;">${idx + 1}</td>
+                    <td>
+                        <span class="coupon-code-pill" data-code="${escapeHtml(c.code)}" title="Nhấn để nạp vào form chỉnh sửa nhanh">
+                            🎟️ ${escapeHtml(c.code)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="coupon-type-badge ${isPct ? 'percent' : 'amount'}">
+                            ${isPct ? '📉 Theo % bill' : '💵 Tiền mặt (đ)'}
+                        </span>
+                    </td>
+                    <td class="text-right">
+                        <span class="coupon-val-text">${escapeHtml(valFmt)}</span>
+                    </td>
+                    <td class="text-right">
+                        <span class="coupon-min-order-text">${minFmt}</span>
+                    </td>
+                    <td>
+                        <span style="color: #334155; line-height: 1.35; display: inline-block;">
+                            ${escapeHtml(c.description || '-')}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="coupon-status-btn ${isActive ? 'active' : 'inactive'}" data-code="${escapeHtml(c.code)}" title="Nhấn để bật hoặc tắt trạng thái kích hoạt của mã">
+                            ${isActive ? '🟢 Đang áp dụng' : '⚪ Tạm ngưng'}
+                        </button>
+                    </td>
                     <td class="text-center">
                         <div class="coupon-row-actions">
-                            <button type="button" class="btn-coupon-apply-now" data-code="${escapeHtml(c.code)}" title="Áp dụng mã này cho bàn đang mở">Áp dụng</button>
-                            <button type="button" class="btn-coupon-delete" data-code="${escapeHtml(c.code)}" title="Xóa mã giảm giá này">Xóa</button>
+                            <button type="button" class="btn-coupon-apply-now" data-code="${escapeHtml(c.code)}" title="Điền thẳng mã giảm giá này vào hóa đơn của bàn đang chọn">
+                                ⚡ Áp dụng
+                            </button>
+                            <button type="button" class="btn-coupon-edit" data-code="${escapeHtml(c.code)}" title="Chỉnh sửa thông tin mã này">
+                                ✏️ Sửa
+                            </button>
+                            <button type="button" class="btn-coupon-delete" data-code="${escapeHtml(c.code)}" title="Xóa mã giảm giá này">
+                                🗑️ Xóa
+                            </button>
                         </div>
                     </td>
                 </tr>
             `;
         }).join('');
 
+        // 1. Áp dụng cho bàn hiện tại
         couponTableBody.querySelectorAll('.btn-coupon-apply-now').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const code = btn.dataset.code || '';
@@ -3029,11 +3191,66 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        couponTableBody.querySelectorAll('.btn-coupon-delete').forEach((btn) => {
+        // 2. Chỉnh sửa nhanh mã
+        const handleEdit = (code) => {
+            const found = allList.find(c => String(c.code || '').toUpperCase() === String(code || '').toUpperCase());
+            if (found) {
+                populateCouponToForm(found);
+                showToast(`Đã nạp mã ${code} lên form. Hãy chỉnh sửa và bấm Lưu.`);
+            }
+        };
+
+        couponTableBody.querySelectorAll('.btn-coupon-edit').forEach((btn) => {
+            btn.addEventListener('click', () => handleEdit(btn.dataset.code));
+        });
+
+        couponTableBody.querySelectorAll('.coupon-code-pill').forEach((pill) => {
+            pill.addEventListener('click', () => handleEdit(pill.dataset.code));
+        });
+
+        // 3. Bật / Tắt trạng thái nhanh (1-click Toggle)
+        couponTableBody.querySelectorAll('.coupon-status-btn').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 const code = btn.dataset.code || '';
                 if (!code) return;
                 const apiUrl = couponManagerModal?.dataset.apiUrl || '/sales/coupons/api/';
+                btn.disabled = true;
+                try {
+                    const resp = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken(),
+                        },
+                        body: JSON.stringify({ action: 'toggle', code }),
+                    });
+                    const data = await resp.json();
+                    if (resp.ok && data.ok) {
+                        cachedActiveCoupons = data.coupons || [];
+                        renderCouponManagerTable(cachedActiveCoupons);
+                        populateCouponPresetDropdown(cachedActiveCoupons);
+                        showToast(data.message || `Đã cập nhật trạng thái mã ${code}.`);
+                    } else {
+                        showToast(data.error || 'Không thể đổi trạng thái mã giảm giá.');
+                    }
+                } catch (err) {
+                    showToast('Lỗi kết nối khi cập nhật trạng thái.');
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        // 4. Xóa mã giảm giá
+        couponTableBody.querySelectorAll('.btn-coupon-delete').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const code = btn.dataset.code || '';
+                if (!code) return;
+                if (!window.confirm(`Bạn có chắc chắn muốn xóa mã giảm giá "${code}" khỏi hệ thống?`)) {
+                    return;
+                }
+                const apiUrl = couponManagerModal?.dataset.apiUrl || '/sales/coupons/api/';
+                btn.disabled = true;
                 try {
                     const resp = await fetch(apiUrl, {
                         method: 'POST',
@@ -3054,10 +3271,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } catch (err) {
                     showToast('Lỗi kết nối khi xóa mã giảm giá.');
+                } finally {
+                    btn.disabled = false;
                 }
             });
         });
     };
+
+    // Xử lý Tìm kiếm thời gian thực
+    couponSearchInput?.addEventListener('input', (e) => {
+        couponSearchTerm = (e.target.value || '').trim();
+        renderCouponManagerTable(cachedActiveCoupons);
+    });
+
+    // Xử lý chuyển đổi Tab Lọc
+    document.querySelectorAll('.coupon-filter-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.coupon-filter-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentCouponFilter = tab.dataset.filter || 'all';
+            renderCouponManagerTable(cachedActiveCoupons);
+        });
+    });
 
     const loadCouponManagerData = async () => {
         const apiUrl = couponManagerModal?.dataset.apiUrl || '/sales/coupons/api/';
@@ -3078,6 +3313,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!couponManagerModal) return;
         const doOpen = () => {
             couponManagerModal.hidden = false;
+            resetCouponForm();
             loadCouponManagerData();
         };
         if (typeof window.requirePosPermission === 'function') {
@@ -3097,11 +3333,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === couponManagerModal) closeCouponManagerModal();
     });
 
+    // Lưu mã giảm giá (Thêm mới hoặc Cập nhật)
     couponSaveBtn?.addEventListener('click', async () => {
         const code = (couponCodeInput?.value || '').trim().toUpperCase();
         const cType = couponTypeSelect?.value || 'percent';
         const valRaw = String(couponValueInput?.value || '').replace(/[.,]/g, '').trim();
         const minRaw = String(couponMinOrderInput?.value || '0').replace(/[.,]/g, '').trim();
+        const isActive = (couponStatusSelect?.value !== '0');
         const desc = (couponDescInput?.value || '').trim();
 
         if (!code) {
@@ -3112,6 +3350,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const valNum = Number(valRaw);
         if (!valNum || valNum <= 0) {
             showToast('Giá trị giảm giá phải lớn hơn 0.');
+            couponValueInput?.focus();
+            return;
+        }
+        if (cType === 'percent' && valNum > 100) {
+            showToast('Giảm theo phần trăm không được vượt quá 100%.');
             couponValueInput?.focus();
             return;
         }
@@ -3133,7 +3376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         value: valNum,
                         min_order: Number(minRaw) || 0,
                         description: desc,
-                        is_active: true,
+                        is_active: isActive,
                     },
                 }),
             });
@@ -3142,11 +3385,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 cachedActiveCoupons = data.coupons || [];
                 renderCouponManagerTable(cachedActiveCoupons);
                 populateCouponPresetDropdown(cachedActiveCoupons);
-                if (couponCodeInput) couponCodeInput.value = '';
-                if (couponValueInput) couponValueInput.value = '';
-                if (couponMinOrderInput) couponMinOrderInput.value = '0';
-                if (couponDescInput) couponDescInput.value = '';
-                showToast(data.message || `Đã lưu mã giảm giá ${code}.`);
+                resetCouponForm();
+                showToast(data.message || `Đã lưu mã giảm giá ${code} thành công.`);
             } else {
                 showToast(data.error || 'Không thể lưu mã giảm giá.');
             }
