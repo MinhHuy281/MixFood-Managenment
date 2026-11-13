@@ -30,6 +30,7 @@
         openMenuBtn: document.getElementById('open-sales-stats-menu'),
         fromInput: document.getElementById('sales-stats-from-input'),
         toInput: document.getElementById('sales-stats-to-input'),
+        cashierSelect: document.getElementById('sales-stats-cashier-select'),
         markSelect: document.getElementById('sales-stats-mark-select'),
         refreshBtn: document.getElementById('sales-stats-btn-refresh'),
         printBtn: document.getElementById('sales-stats-btn-print'),
@@ -134,6 +135,7 @@
         const els = getElements();
         const fromVal = (els.fromInput?.value || '').trim();
         const toVal = (els.toInput?.value || '').trim();
+        const cashierVal = (els.cashierSelect?.value || '').trim();
 
         // Update loading UI
         const loadingRow3 = '<tr><td colspan="3" class="stats-loading">Đang tải...</td></tr>';
@@ -149,6 +151,7 @@
         const params = new URLSearchParams();
         if (fromVal) params.append('from', fromVal);
         if (toVal) params.append('to', toVal);
+        if (cashierVal) params.append('cashier', cashierVal);
 
         // Update Excel download link
         if (els.exportBtn) {
@@ -162,6 +165,15 @@
             if (!res.ok) throw new Error(res.error || 'Lỗi khi xử lý dữ liệu.');
 
             const stats = res.stats;
+
+            // Populate cashier filter dropdown dynamically while keeping current selection
+            if (els.cashierSelect && Array.isArray(stats.cashier_options) && stats.cashier_options.length) {
+                const currentCashier = els.cashierSelect.value;
+                els.cashierSelect.innerHTML = '<option value="">Tất cả</option>' + stats.cashier_options.map(
+                    (c) => `<option value="${c.username}">${c.label}</option>`
+                ).join('');
+                els.cashierSelect.value = currentCashier;
+            }
 
             // Render 4 Left Tables
             renderSimpleTable(els.cashiersTbody, stats.cashiers, 'name', 'count', 'revenue_formatted', 3);
@@ -272,14 +284,21 @@
             els.markSelect.addEventListener('change', renderDishesTable);
         }
 
+        // Cashier filter selector
+        if (els.cashierSelect) {
+            els.cashierSelect.addEventListener('change', fetchStatistics);
+        }
+
         // Print button (In kiểm bán)
         if (els.printBtn) {
             els.printBtn.addEventListener('click', () => {
                 const fromVal = (els.fromInput?.value || '').trim();
                 const toVal = (els.toInput?.value || '').trim();
+                const cashierVal = (els.cashierSelect?.value || '').trim();
                 const params = new URLSearchParams();
                 if (fromVal) params.append('from', fromVal);
                 if (toVal) params.append('to', toVal);
+                if (cashierVal) params.append('cashier', cashierVal);
                 params.append('auto', '1');
                 window.open(`/sales/statistics/print/?${params.toString()}`, '_blank', 'width=920,height=850,menubar=no,toolbar=no');
             });

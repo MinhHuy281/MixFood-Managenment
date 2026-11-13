@@ -421,15 +421,37 @@
         const modal = document.querySelector('#modal-inventory-manager') || document.querySelector('.inv-manager-dialog');
         const apiUrl = modal?.dataset.apiLedger || '/inventory/api/ledger/';
 
-        const ingId = document.querySelector('#inv-ledger-ingredient')?.value || '';
+        const ledgerIngSelect = document.querySelector('#inv-ledger-ingredient');
+        if (ledgerIngSelect && ledgerIngSelect.children.length <= 1) {
+            try {
+                if (!cachedIngredients.length) {
+                    const dashUrl = modal?.dataset.apiDashboard || '/inventory/api/dashboard/';
+                    const dashResp = await fetch(`${dashUrl}?range=${encodeURIComponent(currentRangePreset)}`);
+                    const dashData = await dashResp.json();
+                    if (dashData.ok && Array.isArray(dashData.ingredients)) {
+                        cachedIngredients = dashData.ingredients;
+                    }
+                }
+                cachedIngredients.forEach((ing) => {
+                    const opt = document.createElement('option');
+                    opt.value = ing.id;
+                    opt.textContent = `${ing.code} - ${ing.name} (${ing.unit})`;
+                    ledgerIngSelect.appendChild(opt);
+                });
+            } catch (_) {
+                // Ignore ingredient dropdown preload error
+            }
+        }
+
+        const ingId = ledgerIngSelect?.value || '';
         const txType = document.querySelector('#inv-ledger-type')?.value || '';
-        const fromDate = document.querySelector('#inv-date-from')?.value || '';
-        const toDate = document.querySelector('#inv-date-to')?.value || '';
+        const fromDate = document.querySelector('#inv-ledger-date-from')?.value || document.querySelector('#inv-date-from')?.value || '';
+        const toDate = document.querySelector('#inv-ledger-date-to')?.value || document.querySelector('#inv-date-to')?.value || '';
 
         const params = new URLSearchParams({
             ingredient_id: ingId,
             type: txType,
-            range: currentRangePreset,
+            range: (fromDate || toDate) ? 'custom' : currentRangePreset,
             start_date: fromDate,
             end_date: toDate,
         });
@@ -1398,39 +1420,89 @@
     // =========================================================================
     // OPEN POS INVENTORY MODAL (GLOBAL EXPORT)
     // =========================================================================
-    window.openPosInventoryModal = (targetTab = 'xnt') => {
+    let isStandaloneLedgerMode = false;
+
+    window.openPosInventoryModal = (targetTab = 'xnt', options = {}) => {
         const modal = document.querySelector('#modal-inventory-manager');
         if (!modal) return;
 
+        const standaloneLedger = Boolean(options && options.standaloneLedger);
         const doOpen = () => {
+            isStandaloneLedgerMode = standaloneLedger;
             modal.hidden = false;
-            switchTab(targetTab);
+            switchTab(targetTab, { standaloneLedger });
         };
 
+        const permKey = standaloneLedger ? 'view_sales_report' : 'manage_inventory';
+        const permLabel = standaloneLedger ? 'Hàng bán chi tiết' : 'Quản lý kho hàng & Xuất Nhập Tồn';
         if (typeof window.requirePosPermission === 'function') {
-            window.requirePosPermission('manage_inventory', doOpen, 'Quản lý kho hàng & Xuất Nhập Tồn');
+            window.requirePosPermission(permKey, doOpen, permLabel);
         } else {
             doOpen();
         }
     };
 
-    const switchTab = (tabName) => {
+    const switchTab = (tabName, options = {}) => {
         currentActiveTab = tabName;
+        const standaloneLedger = options.standaloneLedger !== undefined ? Boolean(options.standaloneLedger) : (tabName === 'ledger' && isStandaloneLedgerMode);
+        if (tabName !== 'ledger') {
+            isStandaloneLedgerMode = false;
+        }
+        const isManageMode = tabName === 'unpack';
+
+        const tabsNav = document.querySelector('#modal-inventory-manager .inv-tabs-nav');
+        if (tabsNav) {
+            tabsNav.style.display = (isManageMode || standaloneLedger) ? 'none' : '';
+        }
+
         document.querySelectorAll('.inv-tab-btn').forEach((btn) => {
+            const isUnpackBtn = btn.dataset.tab === 'unpack';
+            if (standaloneLedger) {
+                btn.style.display = btn.dataset.tab === 'ledger' ? '' : 'none';
+            } else if (isUnpackBtn) {
+                btn.style.display = isManageMode ? '' : 'none';
+            } else {
+                btn.style.display = isManageMode ? 'none' : '';
+            }
             btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
+
         document.querySelectorAll('.inv-tab-panel').forEach((panel) => {
             panel.classList.toggle('active', panel.id === `inv-panel-${tabName}`);
         });
 
         const titleEl = document.querySelector('#inv-modal-title');
+        const iconEl = document.querySelector('#modal-inventory-manager .inv-header-icon');
+        const subtitleEl = document.querySelector('#inv-range-badge');
+        const btnReceipt = document.querySelector('#inv-top-btn-receipt');
+        const btnIssue = document.querySelector('#inv-top-btn-issue');
+        const btnAdj = document.querySelector('#inv-top-btn-adj');
+        const btnExport = document.querySelector('#inv-top-btn-export');
+
         if (titleEl) {
-            if (tabName === 'unpack') {
+            if (standaloneLedger) {
+                titleEl.textContent = 'Hàng bán chi tiết — Sổ thẻ kho (Biến động)';
+            } else if (isManageMode) {
                 titleEl.textContent = 'Quản lý Kho hàng — Nhập Kho & Xuất Từ Thùng Tách Ra Đồ Hộp / Suất Chờ Bán';
             } else {
-                titleEl.textContent = 'Quản lý Kho hàng & Báo cáo Xuất - Nhập - Tồn';
+                titleEl.textContent = 'Báo cáo Xuất - Nhập - Tồn Kho';
             }
         }
+        if (iconEl) {
+            iconEl.textContent = standaloneLedger ? '🍱' : (isManageMode ? '📦' : '📊');
+        }
+        if (subtitleEl) {
+            if (standaloneLedger) {
+                subtitleEl.textContent = 'Theo dõi chi tiết trừ nguyên liệu đã bán theo g, ml, lon, phần, quả... và tồn sau giao dịch';
+            } else if (isManageMode) {
+                subtitleEl.textContent = 'Quản lý 3 khu vực kho: Tự nhập kho & Xuất tách ra quầy chờ bán';
+            }
+        }
+        if (btnReceipt) btnReceipt.style.display = standaloneLedger ? 'none' : '';
+        if (btnIssue) btnIssue.style.display = standaloneLedger ? 'none' : '';
+        if (btnAdj) btnAdj.style.display = (isManageMode || standaloneLedger) ? 'none' : '';
+        if (btnExport) btnExport.style.display = (isManageMode || standaloneLedger) ? 'none' : '';
+
         if (tabName === 'unpack') loadUnpackData();
         else if (tabName === 'xnt') loadXntData();
         else if (tabName === 'receipts') loadReceiptsData();
@@ -1748,6 +1820,21 @@
                 }
             });
         });
+
+        // Trigger "Hàng bán chi tiết" -> opens Sổ thẻ kho (Biến động) standalone view
+        const detailReportMenu = document.querySelector('#open-invoice-report-menu-detail');
+        if (detailReportMenu) {
+            detailReportMenu.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                document.querySelectorAll('.pos-menu-item').forEach((item) => {
+                    item.classList.remove('open');
+                    const b = item.querySelector('.nav-menu-btn') || item.querySelector(':scope > button');
+                    if (b) b.setAttribute('aria-expanded', 'false');
+                });
+                window.openPosInventoryModal('ledger', { standaloneLedger: true });
+            });
+        }
 
         // Escape key handling
         document.addEventListener('keydown', (e) => {

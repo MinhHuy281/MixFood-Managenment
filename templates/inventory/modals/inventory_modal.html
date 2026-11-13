@@ -8,7 +8,7 @@
      data-url-export="{% url 'inventory:export_excel' %}"
      data-api-manage-action="{% url 'inventory:manage_action_api' %}"
      role="dialog" aria-modal="true" aria-labelledby="inv-modal-title" hidden>
-    <div class="menu-modal-dialog inv-manager-dialog">
+    <div class="inv-manager-dialog">
         <!-- # Modal Topbar -->
         <div class="menu-modal-header inv-manager-header">
             <div class="modal-title-wrap">
@@ -253,6 +253,15 @@
                     </div>
                 </div>
 
+                <!-- # Chú thích các cột Xuất - Nhập - Tồn -->
+                <div style="display: flex; flex-wrap: wrap; gap: 10px 18px; padding: 8px 14px; margin-bottom: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 12px; color: #475569; line-height: 1.4;">
+                    <span><strong style="color: #0f172a;">Tồn đầu:</strong> Số lượng còn từ kỳ trước chuyển sang</span>
+                    <span><strong style="color: #059669;">Nhập kỳ:</strong> Nhập vào kho tổng (theo ĐVT gốc: Thùng/Kg/Lít)</span>
+                    <span><strong style="color: #4f46e5;">Xuất bán:</strong> Đã bán cho khách trên POS (tự đổi ra lon/g/ml nếu bán lẻ)</span>
+                    <span><strong style="color: #d97706;">Xuất tách / Khác:</strong> Xuất từ kho tổng tách ra quầy chờ bán (kèm số lon/hộp/gói)</span>
+                    <span><strong style="color: #0f172a;">Tồn cuối:</strong> Còn lại thực tế trong kho tổng</span>
+                </div>
+
                 <!-- # Main XNT Table -->
                 <div class="inv-table-container">
                     <table class="inv-data-table" id="inv-xnt-table">
@@ -266,8 +275,8 @@
                                 <th class="text-right u-inve-a4a5ac1d">Giá vốn</th>
                                 <th class="text-right u-inve-a190bdb2">Tồn đầu</th>
                                 <th class="text-right text-emerald u-inve-a190bdb2">Nhập kỳ</th>
-                                <th class="text-right text-indigo u-inve-a190bdb2">Xuất bán</th>
-                                <th class="text-right text-amber u-inve-a190bdb2">Xuất khác</th>
+                                <th class="text-right text-indigo u-inve-a190bdb2" title="Số lượng đã bán cho khách qua POS">Xuất bán</th>
+                                <th class="text-right text-amber u-inve-a190bdb2" title="Xuất từ kho tổng để tách ra quầy chờ bán hoặc xuất hủy/nội bộ">Xuất tách / Khác</th>
                                 <th class="text-right u-inve-de7faf05">Cân đối</th>
                                 <th class="text-right text-bold u-inve-588c2dd8">Tồn cuối</th>
                                 <th class="text-right text-bold text-blue u-inve-e3d221c5">Giá trị tồn</th>
@@ -281,7 +290,6 @@
                         <tfoot id="inv-xnt-tfoot">
                             <tr class="inv-tfoot-row">
                                 <td colspan="6" class="text-bold text-center">TỔNG CỘNG</td>
-                                <td class="text-right">-</td>
                                 <td class="text-right" id="inv-foot-open-qty">-</td>
                                 <td class="text-right text-emerald text-bold" id="inv-foot-receipt-qty">-</td>
                                 <td class="text-right text-indigo text-bold" id="inv-foot-sale-qty">-</td>
@@ -450,6 +458,16 @@
             <!-- # =================================================================== -->
             <div class="inv-tab-panel" id="inv-panel-ledger">
                 <div class="inv-filter-toolbar">
+                    <div class="inv-date-custom-group">
+                        <div class="inv-date-input-wrap">
+                            <label>Từ ngày</label>
+                            <input type="date" id="inv-ledger-date-from" class="inv-input-date">
+                        </div>
+                        <div class="inv-date-input-wrap">
+                            <label>Đến ngày</label>
+                            <input type="date" id="inv-ledger-date-to" class="inv-input-date">
+                        </div>
+                    </div>
                     <div class="inv-search-group u-inve-199b6f0e">
                         <select id="inv-ledger-ingredient" class="inv-input-select u-inve-351b3caa">
                             <option value="">-- Tất cả nguyên liệu --</option>
@@ -458,7 +476,7 @@
                             <option value="">-- Tất cả loại biến động --</option>
                             <option value="receipt">Nhập kho (Phiếu nhập)</option>
                             <option value="sale">Xuất kho bán hàng (POS)</option>
-                            <option value="issue">Xuất kho thủ công / hủy</option>
+                            <option value="issue">Xuất kho thủ công / tách</option>
                             <option value="increase">Điều chỉnh tăng (Kiểm kê)</option>
                             <option value="decrease">Điều chỉnh giảm (Kiểm kê)</option>
                         </select>
@@ -497,7 +515,7 @@
 <!-- # SUB-MODAL: LẬP PHIẾU NHẬP KHO MỚI -->
 <!-- # =============================================================================== -->
 <div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-new-receipt" role="dialog" aria-modal="true" hidden>
-    <div class="menu-modal-dialog inv-form-dialog">
+    <div class="inv-form-dialog">
         <div class="menu-modal-header inv-form-header bg-emerald-header">
             <div class="modal-title-wrap">
                 <span>📥</span>
@@ -571,7 +589,7 @@
 <!-- # SUB-MODAL: LẬP PHIẾU XUẤT KHO MỚI -->
 <!-- # =============================================================================== -->
 <div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-new-issue" role="dialog" aria-modal="true" hidden>
-    <div class="menu-modal-dialog inv-form-dialog">
+    <div class="inv-form-dialog">
         <div class="menu-modal-header inv-form-header bg-amber-header">
             <div class="modal-title-wrap">
                 <span>📤</span>
@@ -643,7 +661,7 @@
 <!-- # SUB-MODAL: XEM CHI TIẾT & IN PHIẾU NHẬP / XUẤT KHO -->
 <!-- # =============================================================================== -->
 <div class="menu-modal-backdrop inv-sub-backdrop" id="modal-inv-view-slip" role="dialog" aria-modal="true" hidden>
-    <div class="menu-modal-dialog inv-slip-dialog">
+    <div class="inv-slip-dialog">
         <div class="menu-modal-header inv-slip-header">
             <div class="modal-title-wrap">
                 <span>🧾</span>
@@ -667,7 +685,7 @@
 <!-- # SUB-MODAL: THIẾT LẬP QUY CÁCH ĐÓNG GÓI & TÁCH LẺ (THÙNG/VỈ ➔ HỘP/QUẢ/PHẦN) -->
 <!-- # =============================================================================== -->
 <div class="menu-modal-backdrop inv-sub-backdrop u-inve-520ab4f7" id="modal-inv-pack-rule" role="dialog" aria-modal="true" hidden>
-    <div class="menu-modal-dialog inv-form-dialog u-inve-e44853ff">
+    <div class="inv-form-dialog u-inve-e44853ff">
         <div class="menu-modal-header inv-form-header u-inve-36c58f47">
             <div class="modal-title-wrap u-inve-b512c985">
                 <span class="u-inve-07a66733">📦</span>

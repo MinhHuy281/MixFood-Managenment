@@ -1,6 +1,6 @@
 <!-- # File này chịu trách nhiệm hiển thị hộp thoại Thống kê bán hàng chi tiết (Sales Statistics Modal) theo thu ngân, khu vực, bàn, nhóm món và mặt hàng. -->
 <div class="menu-modal-backdrop" id="modal-sales-statistics" hidden>
-    <div class="menu-modal-dialog sales-stats-modal-container">
+    <div class="sales-stats-modal-container">
         <!-- # Modal Header -->
         <div class="menu-modal-header sales-stats-modal-header">
             <div class="modal-title-wrap">
@@ -28,6 +28,13 @@
             </div>
 
             <div class="sales-stats-control-group">
+                <label for="sales-stats-cashier-select">Thu ngân</label>
+                <select id="sales-stats-cashier-select" class="stats-select-mark">
+                    <option value="" selected>Tất cả</option>
+                    <option value="thungan1">Thu Ngân 1 (thungan1)</option>
+                    <option value="thungan2">Thu Ngân 2 (thungan2)</option>
+                </select>
+
                 <label for="sales-stats-mark-select">Cột dấu danh sách món</label>
                 <select id="sales-stats-mark-select" class="stats-select-mark">
                     <option value="mark" selected>Mã</option>

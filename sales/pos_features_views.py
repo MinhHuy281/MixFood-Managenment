@@ -370,7 +370,7 @@ def pos_features_api(request):
                     'full_name': (prof.full_name if prof and prof.full_name else u.get_full_name()) or u.username,
                     'department': dept_label,
                     'area_code': area_val,
-                    'shift_name': shift_info.get('shift_name', 'Ca Gãy / Toàn thời gian (08:00 - 22:00)'),
+                    'shift_name': shift_info.get('shift_name', 'Toàn thời gian (09:00 - 22:00)'),
                     'note': shift_info.get('note', 'Đang trực ca'),
                 })
             return JsonResponse({'ok': True, 'staff': staff_rows, 'areas': areas})

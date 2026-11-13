@@ -104,6 +104,103 @@ def _ensure_sample_ingredients_exist():
         Ingredient.objects.get_or_create(code=d['code'], defaults=d)
 
 
+def _format_xnt_qty(val, unit, pack_size, unpacked_unit, mode='base'):
+    # Định dạng số lượng Xuất - Nhập - Tồn trực quan kèm đơn vị (Thùng/Kg/Lít và quy đổi lon/hộp/g/ml).
+    v = float(val or 0)
+    if abs(v) < 1e-6:
+        return '0'
+
+    sign = '-' if v < 0 else ''
+    abs_v = abs(v)
+    u = (unit or '').strip()
+    u_lower = u.lower()
+    sub = (unpacked_unit or '').strip()
+    sub_lower = sub.lower()
+    psz = float(pack_size or 1)
+    is_weight_vol = u_lower in ('kg', 'lít', 'lit', 'l')
+
+    def _fmt_num(num):
+        if abs(num - round(num)) <= 0.05 and num >= 0.95:
+            return str(int(round(num)))
+        for dec in (2, 3, 4):
+            s = f'{num:.{dec}f}'.rstrip('0').rstrip('.')
+            if s and s != '0':
+                return s
+        return f'{num:g}'
+
+    def _try_extract_sub_measure(sub_label, qty_val):
+        import re
+        m = re.search(r'\((\d+(?:\.\d+)?)\s*(kg|g|gr|l|lít|lit|ml)\)', sub_label, re.IGNORECASE)
+        if not m:
+            return None
+        factor = float(m.group(1))
+        unit_m = m.group(2).lower()
+        total = qty_val * factor
+        if unit_m == 'kg':
+            if total < 1:
+                return f'{_fmt_num(total * 1000)} g'
+            return f'{_fmt_num(total)} Kg'
+        if unit_m in ('g', 'gr'):
+            return f'{_fmt_num(total)} g'
+        if unit_m in ('l', 'lít', 'lit'):
+            if total < 1:
+                return f'{_fmt_num(total * 1000)} ml'
+            return f'{_fmt_num(total)} Lít'
+        if unit_m == 'ml':
+            return f'{_fmt_num(total)} ml'
+        return None
+
+    # 1. Đơn vị Kg / Lít: dưới 1 đổi sang g / ml; từ 1 trở lên giữ Kg / Lít
+    if is_weight_vol:
+        if abs_v < 1:
+            if u_lower == 'kg':
+                g_val = round(abs_v * 1000, 1)
+                g_fmt = f'{g_val:.1f}'.rstrip('0').rstrip('.')
+                return f'{sign}{g_fmt} g'
+            ml_val = round(abs_v * 1000, 1)
+            ml_fmt = f'{ml_val:.1f}'.rstrip('0').rstrip('.')
+            return f'{sign}{ml_fmt} ml'
+
+        base_s = f'{abs_v:.3f}'.rstrip('0').rstrip('.')
+        base_str = f'{sign}{base_s} {u}'.strip()
+        if mode == 'issue' and psz > 1 and sub and sub_lower != u_lower:
+            sub_fmt = _fmt_num(abs_v * psz)
+            return f'{base_str} ({sub_fmt} {sub})'
+        return base_str
+
+    # 2. Hàng đóng gói có quy cách (Thùng -> lon/hộp/gói, Hộp -> phần, Vỉ -> quả...)
+    if psz > 1 and sub and sub_lower != u_lower:
+        if abs_v < 1:
+            sub_qty = abs_v * psz
+            if sub_qty < 1:
+                extracted = _try_extract_sub_measure(sub, sub_qty)
+                if extracted:
+                    return f'{sign}{extracted}'
+            sub_fmt = _fmt_num(sub_qty)
+            return f'{sign}{sub_fmt} {sub}'
+
+        whole = int(abs_v)
+        frac = abs_v - whole
+        rem_sub = round(frac * psz)
+        if rem_sub >= int(round(psz)):
+            whole += 1
+            rem_sub = 0
+
+        if rem_sub > 0:
+            base_str = f'{sign}{whole} {u} {rem_sub} {sub}'.strip()
+        else:
+            base_str = f'{sign}{whole} {u}'.strip()
+
+        if mode == 'issue':
+            sub_fmt = _fmt_num(abs_v * psz)
+            return f'{base_str} ({sub_fmt} {sub})'
+        return base_str
+
+    # 3. Đơn vị thông thường không có quy cách phụ
+    s = f'{abs_v:.3f}'.rstrip('0').rstrip('.')
+    return f'{sign}{s} {u}'.strip()
+
+
 def _compute_xnt_report(start_date, end_date, group=None, query=None, low_stock_only=False, warehouse=None):
     # Hàm này dùng để thực hiện xử lý nghiệp vụ hỗ trợ '_compute_xnt_report' trong module views.py. Input: start_date, end_date, group, query, low_stock_only, warehouse. Output: trả về dữ liệu đã chuẩn hóa/tính toán theo logic nghiệp vụ.
     _ensure_sample_ingredients_exist()
@@ -244,25 +341,25 @@ def _compute_xnt_report(start_date, end_date, group=None, query=None, low_stock_
             'average_cost': float(cost),
             'cost_formatted': f'{cost:,.0f}'.replace(',', '.'),
             'opening_stock': float(opening_stock),
-            'opening_stock_formatted': f'{opening_stock:.2f}'.rstrip('0').rstrip('.') if '.' in f'{opening_stock:.2f}' else f'{opening_stock:.0f}',
+            'opening_stock_formatted': _format_xnt_qty(opening_stock, ing.unit, pack_sz, ing.unpacked_unit, mode='base'),
             'opening_val': float(opening_val),
             'opening_val_formatted': f'{opening_val:,.0f}'.replace(',', '.'),
             'receipt_qty': float(receipt_qty),
-            'receipt_qty_formatted': f'{receipt_qty:.2f}'.rstrip('0').rstrip('.') if '.' in f'{receipt_qty:.2f}' else f'{receipt_qty:.0f}',
+            'receipt_qty_formatted': _format_xnt_qty(receipt_qty, ing.unit, pack_sz, ing.unpacked_unit, mode='base'),
             'receipt_val': float(receipt_val),
             'receipt_val_formatted': f'{receipt_val:,.0f}'.replace(',', '.'),
             'sale_qty': float(sale_qty),
-            'sale_qty_formatted': f'{sale_qty:.2f}'.rstrip('0').rstrip('.') if '.' in f'{sale_qty:.2f}' else f'{sale_qty:.0f}',
+            'sale_qty_formatted': _format_xnt_qty(sale_qty, ing.unit, pack_sz, ing.unpacked_unit, mode='sale'),
             'sale_val': float(sale_val),
             'sale_val_formatted': f'{sale_val:,.0f}'.replace(',', '.'),
             'issue_qty': float(issue_qty),
-            'issue_qty_formatted': f'{issue_qty:.2f}'.rstrip('0').rstrip('.') if '.' in f'{issue_qty:.2f}' else f'{issue_qty:.0f}',
+            'issue_qty_formatted': _format_xnt_qty(issue_qty, ing.unit, pack_sz, ing.unpacked_unit, mode='issue'),
             'issue_val': float(issue_val),
             'issue_val_formatted': f'{issue_val:,.0f}'.replace(',', '.'),
             'adjust_qty': float(adjust_qty),
-            'adjust_qty_formatted': f'{adjust_qty:.2f}'.rstrip('0').rstrip('.') if '.' in f'{adjust_qty:.2f}' else f'{adjust_qty:.0f}',
+            'adjust_qty_formatted': _format_xnt_qty(adjust_qty, ing.unit, pack_sz, ing.unpacked_unit, mode='base'),
             'closing_stock': float(closing_stock),
-            'closing_stock_formatted': f'{closing_stock:.2f}'.rstrip('0').rstrip('.') if '.' in f'{closing_stock:.2f}' else f'{closing_stock:.0f}',
+            'closing_stock_formatted': _format_xnt_qty(closing_stock, ing.unit, pack_sz, ing.unpacked_unit, mode='base'),
             'closing_val': float(closing_val),
             'closing_val_formatted': f'{closing_val:,.0f}'.replace(',', '.'),
             'minimum_stock': float(ing.minimum_stock),
@@ -655,17 +752,96 @@ def stock_ledger_api(request):
     if tx_type:
         qs = qs.filter(transaction_type=tx_type)
 
-    txs = qs.order_by('-created_at')[:200]
+    txs = list(qs.order_by('-created_at')[:200])
+
+    # Nạp sẵn Định lượng nguyên liệu (RecipeItem) theo các đơn hàng xuất bán để hiển thị đúng đơn vị thực tế (g, ml, lon, phần, quả...)
+    from sales.models import OrderItem
+    from inventory.models import RecipeItem
+    sale_order_ids = {
+        tx.reference_id for tx in txs
+        if tx.transaction_type in (StockTransaction.TransactionType.SALE, StockTransaction.TransactionType.RESTORE) and tx.reference_id
+    }
+    order_recipe_map = {}  # (order_id, ingredient_id) -> {'units': {unit: qty}, 'dishes': [str]}
+    if sale_order_ids:
+        order_items = list(OrderItem.objects.filter(order_id__in=sale_order_ids).select_related('product'))
+        product_ids = {oi.product_id for oi in order_items}
+        recipe_by_product = {}
+        if product_ids:
+            for ri in RecipeItem.objects.filter(recipe__product_id__in=product_ids).select_related('recipe'):
+                recipe_by_product.setdefault(ri.recipe.product_id, []).append(ri)
+        for oi in order_items:
+            for ri in recipe_by_product.get(oi.product_id, []):
+                key = (oi.order_id, ri.ingredient_id)
+                bucket = order_recipe_map.setdefault(key, {'units': {}, 'dishes': []})
+                u_key = (ri.unit or '').strip() or ri.ingredient.unit
+                used_q = float(ri.quantity) * float(oi.quantity)
+                bucket['units'][u_key] = bucket['units'].get(u_key, 0.0) + used_q
+                oi_q_str = f'{float(oi.quantity):g}'
+                dish_tag = f'{oi.product.name} x{oi_q_str}'
+                if dish_tag not in bucket['dishes']:
+                    bucket['dishes'].append(dish_tag)
+
+    def _fmt_recipe_num(val):
+        if abs(val - round(val)) <= 1e-6:
+            return str(int(round(val)))
+        return f'{val:.2f}'.rstrip('0').rstrip('.')
+
     data = []
     for tx in txs:
-        qty_fmt = f'{tx.quantity:+.2f}'.rstrip('0').rstrip('.') if '.' in f'{tx.quantity:.2f}' else f'{tx.quantity:+.0f}'
-        bal_fmt = f'{tx.balance_after:.2f}'.rstrip('0').rstrip('.') if '.' in f'{tx.balance_after:.2f}' else f'{tx.balance_after:.0f}'
+        ing = tx.ingredient
+        pack_sz = ing.pack_size or Decimal('1')
+        tx_mode = 'sale' if tx.transaction_type in ('sale', 'restore') else ('issue' if tx.transaction_type == 'issue' else 'base')
+
+        recipe_info = order_recipe_map.get((tx.reference_id, tx.ingredient_id)) if tx.reference_id else None
+        if recipe_info and recipe_info['units'] and tx.transaction_type in (StockTransaction.TransactionType.SALE, StockTransaction.TransactionType.RESTORE):
+            parts = [f'{_fmt_recipe_num(q)} {u}' for u, q in recipe_info['units'].items() if q > 0]
+            qty_abs_fmt = ' + '.join(parts) if parts else _format_xnt_qty(abs(tx.quantity), ing.unit, pack_sz, ing.unpacked_unit, mode=tx_mode)
+            dishes_str = ', '.join(recipe_info['dishes'][:2])
+            if len(recipe_info['dishes']) > 2:
+                dishes_str += f" (+{len(recipe_info['dishes']) - 2} món)"
+        else:
+            qty_abs_fmt = _format_xnt_qty(abs(tx.quantity), ing.unit, pack_sz, ing.unpacked_unit, mode=tx_mode)
+            dishes_str = ''
+
+        if tx.quantity > 0:
+            qty_fmt = f'+{qty_abs_fmt}'
+        elif tx.quantity < 0:
+            qty_fmt = f'-{qty_abs_fmt}'
+        else:
+            qty_fmt = '0'
+
+        bal_fmt = _format_xnt_qty(tx.balance_after, ing.unit, pack_sz, ing.unpacked_unit, mode='base')
+        raw_note = (tx.note or '').strip()
+        display_note = raw_note
+
+        if tx.transaction_type == StockTransaction.TransactionType.SALE:
+            import re
+            order_match = re.search(r'(đơn\s*#\d+)', raw_note, re.IGNORECASE)
+            order_part = order_match.group(1) if order_match else (f'đơn #{tx.reference_id}' if tx.reference_id else '')
+            ctx_parts = [p for p in (order_part, dishes_str) if p]
+            ctx_label = f" ({' - '.join(ctx_parts)})" if ctx_parts else ''
+            if tx.reference_type == 'order_prep':
+                display_note = f'Xuất bán{ctx_label}: đã bán {qty_abs_fmt} (Kho tổng còn {bal_fmt})'
+            else:
+                before_stock = tx.balance_after - tx.quantity
+                before_fmt = _format_xnt_qty(before_stock, ing.unit, pack_sz, ing.unpacked_unit, mode='base')
+                display_note = f'Xuất bán{ctx_label}: có {before_fmt}, bán {qty_abs_fmt}, còn {bal_fmt}'
+        elif tx.transaction_type in (
+            StockTransaction.TransactionType.RECEIPT,
+            StockTransaction.TransactionType.ISSUE,
+            StockTransaction.TransactionType.INCREASE,
+            StockTransaction.TransactionType.DECREASE,
+        ) and not display_note:
+            before_stock = tx.balance_after - tx.quantity
+            before_fmt = _format_xnt_qty(before_stock, ing.unit, pack_sz, ing.unpacked_unit, mode='base')
+            display_note = f'Trước GD: {before_fmt} → Sau GD: {bal_fmt}'
+
         data.append({
             'id': tx.id,
             'ingredient_id': tx.ingredient_id,
-            'ingredient_code': tx.ingredient.code,
-            'ingredient_name': tx.ingredient.name,
-            'unit': tx.ingredient.unit,
+            'ingredient_code': ing.code,
+            'ingredient_name': ing.name,
+            'unit': ing.unit,
             'transaction_type': tx.transaction_type,
             'transaction_type_display': tx.get_transaction_type_display(),
             'quantity': float(tx.quantity),
@@ -676,7 +852,7 @@ def stock_ledger_api(request):
             'balance_after_formatted': bal_fmt,
             'reference_type': tx.reference_type or '',
             'reference_id': tx.reference_id,
-            'note': tx.note or '',
+            'note': display_note,
             'created_by': tx.created_by.get_full_name() or tx.created_by.username,
             'created_at_formatted': timezone.localtime(tx.created_at).strftime('%d/%m/%Y %H:%M'),
         })

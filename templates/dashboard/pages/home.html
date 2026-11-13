@@ -1025,9 +1025,9 @@
                     <option value="all">&lt;Khách hàng&gt;</option>
                 </select>
                 <select id="inv-filter-cashier" class="filter-select" title="Nhân viên">
-                    <option value="all">&lt;Nhân viên&gt;</option>
+                    <option value="all" selected>&lt;Nhân viên&gt;</option>
                     {% for c in cashiers %}
-                    <option value="{{ c.pk }}" {% if c.pk == user.pk %}selected{% endif %}>{{ c.get_full_name|default:c.username }}</option>
+                    <option value="{{ c.pk }}">{{ c.get_full_name|default:c.username }}</option>
                     {% endfor %}
                 </select>
                 <select id="inv-filter-payment" class="filter-select" title="Kiểu thanh toán">

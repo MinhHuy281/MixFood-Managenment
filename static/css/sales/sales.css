@@ -854,16 +854,18 @@
    15. SALES STATISTICS / THỐNG KÊ BÁN HÀNG (MODAL & FULL POS INTEGRATION)
    -------------------------------------------------------------------------- */
 .sales-stats-modal-container {
-    width: 96vw;
-    max-width: 1280px;
-    height: 90vh;
-    max-height: 880px;
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.4);
+    width: min(1380px, 97vw) !important;
+    max-width: min(1380px, 97vw) !important;
+    min-width: min(1180px, 95vw) !important;
+    height: 92vh !important;
+    max-height: 92vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.4) !important;
+    margin: auto !important;
 }
 
 .sales-stats-modal-header {
@@ -1223,14 +1225,15 @@
 }
 
 .rev-time-modal-container {
-    width: 650px;
-    max-width: 96vw;
+    width: 760px !important;
+    max-width: 96vw !important;
     background: #f1f5f9;
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 25px 60px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(148, 163, 184, 0.35);
     display: flex;
     flex-direction: column;
+    margin: auto !important;
 }
 
 .rev-time-modal-header {

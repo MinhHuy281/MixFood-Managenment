@@ -83,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     area: tData.area || '',
                     arrivalTime: tData.arrivalTime || '',
                     combinedWith: tData.combinedWith || null,
+                    mergedTableIds: Array.isArray(tData.mergedTableIds) ? tData.mergedTableIds : [],
+                    mergedTableNames: Array.isArray(tData.mergedTableNames) ? tData.mergedTableNames : [],
                     surchargeAmount: Number(tData.surchargeAmount) || 0,
                     orderDiscountAmount: Number(tData.orderDiscountAmount) || 0,
                     taxAmount: Number(tData.taxAmount) || 0,
@@ -114,6 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         area: data.area || btn.dataset.area,
                         arrivalTime: data.arrivalTime || '',
                         combinedWith: data.combinedWith || null,
+                        mergedTableIds: Array.isArray(data.mergedTableIds) ? data.mergedTableIds.map(String) : [],
+                        mergedTableNames: Array.isArray(data.mergedTableNames) ? data.mergedTableNames.map(String) : [],
                         surchargeAmount: Number(data.surchargeAmount) || 0,
                         orderDiscountAmount: Number(data.orderDiscountAmount) || 0,
                         taxAmount: Number(data.taxAmount) || 0,
@@ -356,11 +360,15 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.toggle('active', btn.dataset.tableTool === toolName);
         });
         document.querySelector('.table-sidebar')?.classList.add('table-map-selecting');
+        const curData = selectedTableId ? tableOrders.get(String(selectedTableId)) : null;
+        const hasMerged = Boolean(curData && Array.isArray(curData.mergedTableIds) && curData.mergedTableIds.length > 0);
         const toolLabels = {
             transfer: 'Chuyển bàn: Nhấn chọn bàn đích trên sơ đồ bàn bên trái',
             import: 'Nhập bàn: Nhấn chọn bàn đích trên sơ đồ bàn bên trái',
-            combine: 'Ghép bàn: Nhấn chọn bàn cần ghép trên sơ đồ bàn bên trái',
-            split: 'Tách bàn: Nhấn chọn bàn đích trên sơ đồ bàn bên trái',
+            combine: 'Ghép bàn: Nhấn chọn bàn cần ghép vào bàn hiện tại trên sơ đồ bàn bên trái',
+            split: hasMerged
+                ? `Tách bàn: Nhấn vào bàn ${curData.tableName || selectedTableId} để xác nhận tách bàn trở về vị trí cũ`
+                : 'Tách bàn: Nhấn chọn bàn đích trên sơ đồ bàn bên trái',
         };
         if (tableToolHint && tableToolHintText) {
             tableToolHintText.textContent = toolLabels[toolName] || 'Chọn bàn đích trên sơ đồ bàn...';
@@ -546,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
             activeTable.classList.remove('selected', 'preview', 'table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied', 'reserved');
             updateTableLastPaidBadge(activeTable);
         }
+        syncMergedTableBlankStates();
         if (cancelingTableId) {
             postTableAction({ action: 'cancel_open', source_table_id: cancelingTableId });
         }
@@ -566,6 +575,30 @@ document.addEventListener('DOMContentLoaded', () => {
             if (orderMode) orderMode.textContent = '';
         }
         tablePreviewArmed = false;
+    };
+
+    const syncMergedTableBlankStates = () => {
+        document.querySelectorAll('.table').forEach((btn) => {
+            btn.classList.remove('table-merged-blank');
+            btn.querySelectorAll('.table-merged-badge').forEach((b) => b.remove());
+        });
+        tableOrders.forEach((tData, hostId) => {
+            if (!Array.isArray(tData.mergedTableIds) || !tData.mergedTableIds.length) return;
+            tData.mergedTableIds.forEach((mId) => {
+                const mBtn = document.querySelector(`.table[data-table-id="${mId}"]`);
+                if (mBtn && String(mId) !== String(hostId)) {
+                    mBtn.classList.add('table-merged-blank');
+                    mBtn.classList.remove('selected', 'preview', 'table-opening', 'table-red', 'kitchen-sent', 'table-green', 'occupied', 'reserved');
+                }
+            });
+            const hostBtn = document.querySelector(`.table[data-table-id="${hostId}"]`);
+            if (hostBtn && Array.isArray(tData.mergedTableNames) && tData.mergedTableNames.length) {
+                const badge = document.createElement('span');
+                badge.className = 'table-merged-badge';
+                badge.textContent = `Ghép ${tData.mergedTableNames.join('+')}`;
+                hostBtn.appendChild(badge);
+            }
+        });
     };
 
     const applyTableVisualState = (tableButton, tableData) => {
@@ -701,7 +734,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tableConfirmMsg) tableConfirmMsg.textContent = `Nhập từ bàn ${sName} vào bàn ${tName}, Nhấn OK để xác nhận!`;
         } else if (tool === 'combine') {
             if (tableConfirmTitle) tableConfirmTitle.textContent = 'Ghép bàn';
-            if (tableConfirmMsg) tableConfirmMsg.textContent = `Ghép bàn ${sName} với bàn ${tName}, Nhấn OK để xác nhận!`;
+            if (tableConfirmMsg) tableConfirmMsg.textContent = `Ghép bàn ${sName} với bàn ${tName} thành bàn ${sName} (ô bàn ${tName} sẽ để trống), Nhấn OK để xác nhận!`;
+        } else if (tool === 'split_unmerge') {
+            const curData = tableOrders.get(String(selectedTableId));
+            const mergedNames = (curData?.mergedTableNames || []).join(', ');
+            if (tableConfirmTitle) tableConfirmTitle.textContent = 'Tách bàn';
+            if (tableConfirmMsg) tableConfirmMsg.textContent = `Tách bàn ${sName} và bàn ${mergedNames} trở về vị trí cũ, Nhấn OK để xác nhận!`;
         }
         tableConfirmDialog.hidden = false;
     };
@@ -812,35 +850,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 detail: `Nhập từ bàn ${sName} vào bàn ${tName}`,
             });
         } else if (tool === 'combine') {
-            sourceData.combinedWith = tName;
-            tableOrders.set(sourceId, sourceData);
-            let targetData = tableOrders.get(targetId);
-            if (!targetData) {
-                targetData = {
-                    cart: cloneCartMap(sourceData.cart),
-                    itemsSentToKitchen: sourceData.itemsSentToKitchen,
-                    tableName: tName,
-                    area: targetButton.dataset.area,
-                    arrivalTime: sourceData.arrivalTime || getArrivalTime(),
-                    combinedWith: sName,
-                };
-            } else {
-                targetData.combinedWith = sName;
+            const targetData = tableOrders.get(targetId);
+            if (targetData && targetData.cart && targetData.cart.size) {
+                mergeCartInto(sourceData.cart, targetData.cart);
+                sourceData.itemsSentToKitchen = sourceData.itemsSentToKitchen || targetData.itemsSentToKitchen;
             }
-            tableOrders.set(targetId, targetData);
+            const nextIds = Array.isArray(sourceData.mergedTableIds) ? [...sourceData.mergedTableIds] : [];
+            const nextNames = Array.isArray(sourceData.mergedTableNames) ? [...sourceData.mergedTableNames] : [];
+            if (!nextIds.includes(String(targetId))) nextIds.push(String(targetId));
+            if (!nextNames.includes(String(tName))) nextNames.push(String(tName));
+            sourceData.mergedTableIds = nextIds;
+            sourceData.mergedTableNames = nextNames;
+            sourceData.combinedWith = nextNames.join(', ');
+
+            tableOrders.set(sourceId, sourceData);
+            tableOrders.delete(targetId);
             saveTableOrdersToSession();
 
+            applyTableVisualState(targetButton, null);
             applyTableVisualState(sourceButton, sourceData);
-            applyTableVisualState(targetButton, targetData);
+            syncMergedTableBlankStates();
 
             showSelectedTable(sourceButton);
             setMenuUnlocked(menuUnlocked);
-            showTableSpeechBubble(targetButton, `Đã ghép với bàn ${sName}!`);
+            showTableSpeechBubble(sourceButton, `Đã ghép bàn ${tName} vào bàn ${sName}!`);
             await postTableAction({
                 action: 'combine',
                 source_table_id: sourceId,
                 target_table_id: targetId,
                 detail: `Ghép bàn ${sName} với bàn ${tName}`,
+            });
+        } else if (tool === 'split') {
+            const restoredIds = Array.isArray(sourceData.mergedTableIds) ? [...sourceData.mergedTableIds] : [];
+            const restoredNames = Array.isArray(sourceData.mergedTableNames) ? [...sourceData.mergedTableNames] : [];
+            sourceData.mergedTableIds = [];
+            sourceData.mergedTableNames = [];
+            sourceData.combinedWith = null;
+            tableOrders.set(sourceId, sourceData);
+            saveTableOrdersToSession();
+
+            restoredIds.forEach((mId) => {
+                const mBtn = document.querySelector(`.table[data-table-id="${mId}"]`);
+                if (mBtn) applyTableVisualState(mBtn, null);
+            });
+            applyTableVisualState(sourceButton, sourceData);
+            syncMergedTableBlankStates();
+
+            showSelectedTable(sourceButton);
+            setMenuUnlocked(menuUnlocked);
+            showTableSpeechBubble(sourceButton, `Đã tách bàn ${restoredNames.join(', ')} về vị trí cũ!`);
+            await postTableAction({
+                action: 'split',
+                source_table_id: sourceId,
+                target_table_id: restoredIds[0] || sourceId,
+                detail: `Tách bàn ${sName} và bàn ${restoredNames.join(', ')} trở về vị trí cũ`,
             });
         }
     });
@@ -1210,6 +1273,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectedTableId) {
                 tableOrders.delete(String(selectedTableId));
                 saveTableOrdersToSession();
+                syncMergedTableBlankStates();
             }
             closePaymentDialog();
             const printCheckbox = document.querySelector('#print-invoice');
@@ -2217,6 +2281,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Nếu đang trong chế độ Chuyển / Nhập / Ghép / Tách bàn và người dùng nhấn vào bàn đích
             if (activeTableTool && selectedTableId) {
                 if (clickedId === String(selectedTableId)) {
+                    const curData = tableOrders.get(clickedId);
+                    if (activeTableTool === 'split' && curData && Array.isArray(curData.mergedTableIds) && curData.mergedTableIds.length > 0) {
+                        openTableConfirmModal('split_unmerge', tableButton);
+                        return;
+                    }
                     showToast('Vui lòng chọn một bàn khác với bàn hiện tại.');
                     return;
                 }
@@ -2625,6 +2694,7 @@ document.addEventListener('DOMContentLoaded', () => {
             syncTableOrderToServer(tId, tData.itemsSentToKitchen);
         }
     });
+    syncMergedTableBlankStates();
     updateAllTableLastPaidBadges();
 
     setMenuUnlocked(false);

@@ -226,16 +226,6 @@
             });
         }
 
-        const detailMenuLink = document.getElementById('open-invoice-report-menu-detail');
-        if (detailMenuLink) {
-            detailMenuLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                const parentMenu = detailMenuLink.closest('.pos-menu-item');
-                if (parentMenu) parentMenu.classList.remove('open');
-                openDialog();
-            });
-        }
-
         const tabInvoices = document.querySelector('.record-tab');
         if (tabInvoices) {
             tabInvoices.addEventListener('dblclick', (e) => {

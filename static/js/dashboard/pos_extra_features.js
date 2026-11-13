@@ -836,9 +836,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const staff = data.staff || [];
         const areas = data.areas || ['Ngoài trời', 'Tầng 1', 'Tầng 2', 'Mang về'];
 
-        const sangCount = staff.filter((s) => (s.shift_name || '').includes('Sáng')).length;
-        const chieuCount = staff.filter((s) => (s.shift_name || '').includes('Chiều')).length;
-        const gayCount = staff.length - sangCount - chieuCount;
+        // Tạo danh sách mốc giờ hoạt động của quán: 09:00 -> 22:00 (mỗi 30 phút)
+        const timeSlots = [];
+        for (let h = 9; h <= 22; h++) {
+            const hh = String(h).padStart(2, '0');
+            timeSlots.push(`${hh}:00`);
+            if (h < 22) timeSlots.push(`${hh}:30`);
+        }
+
+        const parseShiftTimes = (shiftStr) => {
+            const m = String(shiftStr || '').match(/(\d{2}:\d{2})\s*[-–]\s*(\d{2}:\d{2})/);
+            if (m) {
+                const start = timeSlots.includes(m[1]) ? m[1] : '09:00';
+                const end = timeSlots.includes(m[2]) ? m[2] : '22:00';
+                return { start, end };
+            }
+            if ((shiftStr || '').toLowerCase().includes('sáng')) return { start: '09:00', end: '17:00' };
+            if ((shiftStr || '').toLowerCase().includes('tối') || (shiftStr || '').toLowerCase().includes('chiều')) return { start: '17:00', end: '22:00' };
+            return { start: '09:00', end: '22:00' };
+        };
+
+        const formatShiftLabel = (start, end) => {
+            if (start === '09:00' && end === '17:00') return 'Ca Sáng (09:00 - 17:00)';
+            if (start === '17:00' && end === '22:00') return 'Ca Tối (17:00 - 22:00)';
+            if (start === '09:00' && end === '22:00') return 'Toàn thời gian (09:00 - 22:00)';
+            return `Ca làm (${start} - ${end})`;
+        };
+
+        const sangCount = staff.filter((s) => {
+            const t = parseShiftTimes(s.shift_name);
+            return t.start === '09:00' && t.end === '17:00';
+        }).length;
+        const toiCount = staff.filter((s) => {
+            const t = parseShiftTimes(s.shift_name);
+            return t.start === '17:00' && t.end === '22:00';
+        }).length;
+        const otherCount = staff.length - sangCount - toiCount;
 
         hubBody.innerHTML = `
             <div class="pos-hub-kpis">
@@ -847,16 +880,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="kpi-val">${staff.length} nhân sự</div>
                 </div>
                 <div class="pos-hub-kpi-card blue">
-                    <div class="kpi-label">Ca Sáng (06:00 - 14:00)</div>
+                    <div class="kpi-label">Ca Sáng (09:00 - 17:00)</div>
                     <div class="kpi-val">${sangCount} nhân viên</div>
                 </div>
                 <div class="pos-hub-kpi-card amber">
-                    <div class="kpi-label">Ca Chiều (14:00 - 22:00)</div>
-                    <div class="kpi-val">${chieuCount} nhân viên</div>
+                    <div class="kpi-label">Ca Tối (17:00 - 22:00)</div>
+                    <div class="kpi-val">${toiCount} nhân viên</div>
                 </div>
                 <div class="pos-hub-kpi-card rose">
-                    <div class="kpi-label">Ca Gãy / Toàn Thời Gian</div>
-                    <div class="kpi-val">${gayCount} nhân viên</div>
+                    <div class="kpi-label">Toàn Thời Gian / Khác (09:00 - 22:00)</div>
+                    <div class="kpi-val">${otherCount} nhân viên</div>
                 </div>
             </div>
 
@@ -865,17 +898,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <table class="pos-hub-table">
                         <thead>
                             <tr>
-                                <th style="width:130px;">Tài khoản</th>
-                                <th style="width:190px;">Họ và tên nhân viên</th>
-                                <th style="width:140px;">Bộ phận / Vai trò</th>
-                                <th style="min-width:240px;">Khu vực bàn phụ trách</th>
-                                <th style="min-width:260px;">Ca làm việc phân công</th>
-                                <th style="min-width:220px;">Trạng thái / Ghi chú ca</th>
-                                <th class="text-center" style="width:100px;">Thao tác</th>
+                                <th style="width:120px;">Tài khoản</th>
+                                <th style="width:170px;">Họ và tên nhân viên</th>
+                                <th style="width:130px;">Bộ phận / Vai trò</th>
+                                <th style="min-width:210px;">Khu vực bàn phụ trách</th>
+                                <th style="min-width:340px;">Mốc giờ làm việc (09:00 - 22:00)</th>
+                                <th style="min-width:190px;">Trạng thái / Ghi chú ca</th>
+                                <th class="text-center" style="width:95px;">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${staff.map((s) => `
+                            ${staff.map((s) => {
+                                const t = parseShiftTimes(s.shift_name);
+                                return `
                                 <tr data-uid="${s.user_id}">
                                     <td><strong style="color:#0369a1;">${escapeHtml(s.username)}</strong></td>
                                     <td><strong style="color:#0f172a;">${escapeHtml(s.full_name)}</strong></td>
@@ -887,37 +922,65 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </select>
                                     </td>
                                     <td>
-                                        <select class="sa-shift" style="height:38px;border-radius:7px;border:1px solid #cbd5e1;padding:0 10px;width:100%;background:#ffffff;font-size:13.5px;outline:none;">
-                                            <option value="Ca Sáng (06:00 - 14:00)" ${s.shift_name.includes('Sáng') ? 'selected' : ''}>Ca Sáng (06:00 - 14:00)</option>
-                                            <option value="Ca Chiều (14:00 - 22:00)" ${s.shift_name.includes('Chiều') ? 'selected' : ''}>Ca Chiều (14:00 - 22:00)</option>
-                                            <option value="Ca Gãy / Toàn thời gian (08:00 - 22:00)" ${s.shift_name.includes('Gãy') ? 'selected' : ''}>Ca Gãy / Toàn thời gian (08:00 - 22:00)</option>
-                                        </select>
+                                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
+                                            <select class="sa-time-start" style="height:36px;border-radius:7px;border:1px solid #cbd5e1;padding:0 6px;background:#ffffff;font-size:13px;font-weight:600;outline:none;">
+                                                ${timeSlots.slice(0, -1).map((slot) => `<option value="${slot}" ${t.start === slot ? 'selected' : ''}>${slot}</option>`).join('')}
+                                            </select>
+                                            <span style="color:#64748b;font-weight:700;">→</span>
+                                            <select class="sa-time-end" style="height:36px;border-radius:7px;border:1px solid #cbd5e1;padding:0 6px;background:#ffffff;font-size:13px;font-weight:600;outline:none;">
+                                                ${timeSlots.slice(1).map((slot) => `<option value="${slot}" ${t.end === slot ? 'selected' : ''}>${slot}</option>`).join('')}
+                                            </select>
+                                            <button type="button" class="sa-quick-shift" data-start="09:00" data-end="17:00" style="height:30px;padding:0 8px;border-radius:6px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;" title="Ca Sáng 09:00 - 17:00">Sáng</button>
+                                            <button type="button" class="sa-quick-shift" data-start="17:00" data-end="22:00" style="height:30px;padding:0 8px;border-radius:6px;border:1px solid #fde68a;background:#fffbeb;color:#b45309;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;" title="Ca Tối 17:00 - 22:00">Tối</button>
+                                            <button type="button" class="sa-quick-shift" data-start="09:00" data-end="22:00" style="height:30px;padding:0 8px;border-radius:6px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;" title="Toàn thời gian 09:00 - 22:00">Full</button>
+                                        </div>
                                     </td>
                                     <td>
                                         <input type="text" class="sa-note" value="${escapeHtml(s.note)}" style="height:38px;border-radius:7px;border:1px solid #cbd5e1;padding:0 10px;width:100%;font-size:13.5px;outline:none;" placeholder="Ghi chú phân công...">
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="pos-hub-btn primary sa-btn-save" style="height:36px;padding:0 16px;font-size:13px;">💾 Lưu</button>
+                                        <button type="button" class="pos-hub-btn primary sa-btn-save" style="height:36px;padding:0 14px;font-size:13px;">💾 Lưu</button>
                                     </td>
                                 </tr>
-                            `).join('')}
+                            `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
             </div>
         `;
 
+        hubBody.querySelectorAll('.sa-quick-shift').forEach((qBtn) => {
+            qBtn.addEventListener('click', () => {
+                const tr = qBtn.closest('tr');
+                const startSel = tr.querySelector('.sa-time-start');
+                const endSel = tr.querySelector('.sa-time-end');
+                if (startSel) startSel.value = qBtn.dataset.start;
+                if (endSel) endSel.value = qBtn.dataset.end;
+            });
+        });
+
         hubBody.querySelectorAll('.sa-btn-save').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 const tr = btn.closest('tr');
+                const startVal = tr.querySelector('.sa-time-start')?.value || '09:00';
+                const endVal = tr.querySelector('.sa-time-end')?.value || '22:00';
+                if (startVal >= endVal) {
+                    showNotice('Giờ kết thúc phải lớn hơn giờ bắt đầu.', false);
+                    return;
+                }
+                const shiftLabel = formatShiftLabel(startVal, endVal);
                 const res = await postHubAction({
                     action: 'save_shift_assign',
                     user_id: tr.dataset.uid,
                     area_code: tr.querySelector('.sa-area')?.value,
-                    shift_name: tr.querySelector('.sa-shift')?.value,
+                    shift_name: shiftLabel,
                     note: tr.querySelector('.sa-note')?.value,
                 });
-                if (res.ok) showNotice(res.message);
+                if (res.ok) {
+                    showNotice(res.message);
+                    await renderShiftAssignModule();
+                }
             });
         });
     };
@@ -1360,12 +1423,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // HÀM ĐIỀU PHỐI MỞ MODAL THEO TÊN MODULE
     // =========================================================================
     window.openPosFeatureHub = (featureKey) => {
+        if (featureKey === 'drawer') {
+            postHubAction({ action: 'open_drawer', reason: 'Mở két thối tiền' })
+                .then((res) => {
+                    if (res && res.ok) {
+                        showNotice('💵 Đã mở két đựng tiền để thối tiền!');
+                    } else {
+                        showNotice((res && res.error) || '💵 Đã gửi lệnh mở két thối tiền!');
+                    }
+                })
+                .catch(() => {
+                    showNotice('💵 Đã gửi lệnh mở két thối tiền!');
+                });
+            return;
+        }
+
         const runOpen = () => {
             hubModal.hidden = false;
             switch (featureKey) {
-                case 'drawer':
-                    renderDrawerModule();
-                    break;
                 case 'device':
                     renderDeviceModule();
                     break;

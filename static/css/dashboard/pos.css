@@ -2674,3 +2674,25 @@
 .u-dash-972ba828 { padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--slate-200); display: flex; justify-content: flex-end; gap: 10px; }
 .u-dash-a47c297a { background: #dc2626; border-color: #b91c1c; }
 .u-dash-39b2332b { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Bàn đã được ghép vào bàn khác: để ô trống hoàn toàn đúng vị trí cũ */
+.table.table-merged-blank {
+    background: transparent !important;
+    border: 1px dashed rgba(148, 163, 184, 0.35) !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+    cursor: default !important;
+}
+.table.table-merged-blank > * {
+    visibility: hidden !important;
+}
+.table-merged-badge {
+    display: inline-block;
+    margin-top: 2px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.14);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.3;
+}

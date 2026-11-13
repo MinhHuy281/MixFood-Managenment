@@ -340,7 +340,7 @@ def _format_order_items(order, show_full_name=False):
 @require_GET
 def invoice_list(request):
     # Hàm này dùng để xử lý yêu cầu HTTP cho chức năng 'invoice_list' trong phân hệ sales/views.py. Input: đối tượng HttpRequest (request). Output: trả về HttpResponse render giao diện HTML hoặc JsonResponse dữ liệu API.
-    from datetime import datetime
+    from datetime import datetime, time, timedelta
     import csv
     from django.http import HttpResponse
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -372,9 +372,11 @@ def invoice_list(request):
     date_to = _parse_date(date_to_str)
 
     if date_from:
-        queryset = queryset.filter(paid_at__date__gte=date_from)
+        start_dt = timezone.make_aware(datetime.combine(date_from, time.min))
+        queryset = queryset.filter(paid_at__gte=start_dt)
     if date_to:
-        queryset = queryset.filter(paid_at__date__lte=date_to)
+        end_dt = timezone.make_aware(datetime.combine(date_to + timedelta(days=1), time.min))
+        queryset = queryset.filter(paid_at__lt=end_dt)
 
     # Cashier filtering
     cashier_val = request.GET.get('cashier', '').strip()
@@ -451,7 +453,7 @@ def invoice_list(request):
             area_name = inv.order.table.area.name if (inv.order and inv.order.table and inv.order.table.area) else ('Mang về' if (inv.order and inv.order.order_type == Order.OrderType.TAKEAWAY) else '-')
             payment_str = ', '.join([p.get_method_display() for p in inv.payments.all()]) or 'Tiền mặt'
             items_str = _format_order_items(inv.order, show_full_name=show_full_name)
-            time_str = inv.paid_at.strftime('%d/%m/%Y %I:%M %p') if inv.paid_at else '-'
+            time_str = timezone.localtime(inv.paid_at).strftime('%d/%m/%Y %I:%M %p') if inv.paid_at else '-'
             writer.writerow([
                 inv.invoice_code,
                 time_str,
@@ -491,7 +493,7 @@ def invoice_list(request):
             items_full = _format_order_items(inv.order, show_full_name=True)
             items_data.append({
                 'invoice_code': inv.invoice_code,
-                'time': inv.paid_at.strftime('%d/%m/%Y %I:%M %p') if inv.paid_at else '-',
+                'time': timezone.localtime(inv.paid_at).strftime('%d/%m/%Y %I:%M %p') if inv.paid_at else '-',
                 'cashier': inv.cashier.get_full_name() or inv.cashier.username,
                 'subtotal': float(inv.subtotal),
                 'subtotal_formatted': f'{inv.subtotal:,.0f}'.replace(',', '.'),
@@ -1233,9 +1235,10 @@ def sales_statistics_api(request):
     from .statistics import get_sales_statistics_data, parse_datetime_param
     from_str = request.GET.get('from', '') or request.GET.get('from_time', '')
     to_str = request.GET.get('to', '') or request.GET.get('to_time', '')
+    cashier_filter = (request.GET.get('cashier', '') or '').strip()
     start_dt = parse_datetime_param(from_str, is_end_of_day=False)
     end_dt = parse_datetime_param(to_str, is_end_of_day=True)
-    stats = get_sales_statistics_data(start_dt, end_dt)
+    stats = get_sales_statistics_data(start_dt, end_dt, cashier_filter=cashier_filter)
     return JsonResponse({'ok': True, 'stats': stats})
 
 
@@ -1247,9 +1250,10 @@ def sales_statistics_export_excel(request):
     from .statistics import get_sales_statistics_data, export_sales_statistics_csv, parse_datetime_param
     from_str = request.GET.get('from', '') or request.GET.get('from_time', '')
     to_str = request.GET.get('to', '') or request.GET.get('to_time', '')
+    cashier_filter = (request.GET.get('cashier', '') or '').strip()
     start_dt = parse_datetime_param(from_str, is_end_of_day=False)
     end_dt = parse_datetime_param(to_str, is_end_of_day=True)
-    stats = get_sales_statistics_data(start_dt, end_dt)
+    stats = get_sales_statistics_data(start_dt, end_dt, cashier_filter=cashier_filter)
     return export_sales_statistics_csv(stats)
 
 
@@ -1261,9 +1265,10 @@ def sales_statistics_print(request):
     from .statistics import get_sales_statistics_data, parse_datetime_param
     from_str = request.GET.get('from', '') or request.GET.get('from_time', '')
     to_str = request.GET.get('to', '') or request.GET.get('to_time', '')
+    cashier_filter = (request.GET.get('cashier', '') or '').strip()
     start_dt = parse_datetime_param(from_str, is_end_of_day=False)
     end_dt = parse_datetime_param(to_str, is_end_of_day=True)
-    stats = get_sales_statistics_data(start_dt, end_dt)
+    stats = get_sales_statistics_data(start_dt, end_dt, cashier_filter=cashier_filter)
     return render(request, 'sales/prints/sales_statistics_print.html', {
         'stats': stats,
         'current_user': request.user,

@@ -3,6 +3,7 @@ import csv
 from decimal import Decimal
 from datetime import datetime, time
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 from django.db.models import Sum, Count, Q
 from django.http import HttpResponse
 
@@ -61,8 +62,8 @@ def format_num(val):
     return f"{v:,.0f}".replace(',', '.')
 
 
-def get_sales_statistics_data(start_dt, end_dt):
-    # Hàm này dùng để: Tính toán toàn bộ số liệu thống kê bán hàng theo chuẩn DRS POS: 1. Nhân viên (Số h/đơn, Doanh thu) 2. Kiểu thanh toán (Số h/đơn, Doanh thu) 3. Khu vực (Số h/đơn, Doanh thu) 4. Điểm bàn (Số h/đơn, Doanh thu) 5. Danh sách món đã bán (Mã/Dấu, Tên món, ĐVT, SL, Số giảm, Tiền giảm, Doanh thu, Giá vốn) 6. Nhóm món (Doanh thu) 7. Loại món (Doanh thu) 8. Tổng hợp DTT, Giảm giá, Giá vốn (GVH), Lợi nhuận gộp (Input: start_dt, end_dt; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
+def get_sales_statistics_data(start_dt, end_dt, cashier_filter=None):
+    # Hàm này dùng để: Tính toán toàn bộ số liệu thống kê bán hàng theo chuẩn DRS POS: 1. Nhân viên (Số h/đơn, Doanh thu) 2. Kiểu thanh toán (Số h/đơn, Doanh thu) 3. Khu vực (Số h/đơn, Doanh thu) 4. Điểm bàn (Số h/đơn, Doanh thu) 5. Danh sách món đã bán (Mã/Dấu, Tên món, ĐVT, SL, Số giảm, Tiền giảm, Doanh thu, Giá vốn) 6. Nhóm món (Doanh thu) 7. Loại món (Doanh thu) 8. Tổng hợp DTT, Giảm giá, Giá vốn (GVH), Lợi nhuận gộp (Input: start_dt, end_dt, cashier_filter; Output: kết quả xử lý hoặc HttpResponse/JsonResponse tương ứng).
     if start_dt > end_dt:
         start_dt, end_dt = end_dt, start_dt
 
@@ -76,6 +77,13 @@ def get_sales_statistics_data(start_dt, end_dt):
         'order__items__product__category',
         'payments'
     )
+
+    cf = (cashier_filter or '').strip()
+    if cf and cf.lower() != 'all':
+        if cf.isdigit():
+            invoices = invoices.filter(cashier_id=int(cf))
+        else:
+            invoices = invoices.filter(cashier__username__iexact=cf)
 
     total_invoices = invoices.count()
     total_subtotal = Decimal(0)
@@ -320,6 +328,13 @@ def get_sales_statistics_data(start_dt, end_dt):
                 'revenue': float(t['revenue']),
                 'revenue_formatted': format_num(t['revenue']),
             } for t in types_list
+        ],
+        'cashier_options': [
+            {
+                'username': u.username,
+                'label': f"{u.get_full_name() or u.username} ({u.username})",
+            }
+            for u in get_user_model().objects.filter(is_active=True).order_by('username')
         ],
     }
 

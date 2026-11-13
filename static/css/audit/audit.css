@@ -3,16 +3,18 @@
    14. ACTIVITY LOG / NHẬT KÝ HOẠT ĐỘNG (MODAL & FULL PAGE)
    -------------------------------------------------------------------------- */
 .activity-admin-modal-container {
-    width: 95vw;
-    max-width: 1180px;
-    height: 88vh;
-    max-height: 840px;
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.35);
+    width: min(1380px, 97vw) !important;
+    max-width: min(1380px, 97vw) !important;
+    min-width: min(1180px, 95vw) !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.35) !important;
+    margin: auto !important;
 }
 
 .activity-modal-header {
